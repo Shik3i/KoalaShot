@@ -1,6 +1,10 @@
-# Phase 2 editor specification
+# Phase 2 editor specification and implementation contract
 
-Phase 1 provides an editor page, local temporary capture loading, and one export abstraction. Phase 2 extends that foundation without replacing the handoff contract.
+Phase 2 is implemented in the local editor page. This document is the durable contract for its non-destructive model and the boundary for future editor work. The popup capture flow remains unchanged: the original is copied or saved before optional editor handoff.
+
+Implemented tools: Select, Pan, Freehand Pen, Highlighter, Arrow, Line, Rectangle, Text, secure opaque Redact, Undo, Redo, Delete selected annotation, Clear all annotations, Zoom in/out, Fit to width, Actual size, Copy edited, Save edited PNG, and Close and discard.
+
+Future tools outside this phase: Crop, Ellipse, Pixelation, Blur, numbered markers, resize handles, configurable arrowheads, text outlines, and image insertion.
 
 ## Model
 
@@ -29,11 +33,11 @@ The original PNG remains immutable. Annotation geometry is stored in original-im
 
 ## Tools and actions
 
-The direct Phase 2 toolbar adds Select, Freehand pen, Highlighter, Arrow, Line, Rectangle, Text, secure redaction, Undo, Redo, Zoom, Pan, and Delete selected annotation. Copy edited PNG and Save edited PNG use the same shared final-render path. Later additions may include Crop, Ellipse, Pixelation, numbered markers, resize handles, configurable arrowheads, text outlines, and keyboard shortcuts.
+The Phase 2 toolbar implements Select, Freehand pen, Highlighter, Arrow, Line, Rectangle, Text, secure redaction, Undo, Redo, Zoom, Pan, Delete selected annotation, Clear all, Copy edited PNG, Save edited PNG, and keyboard shortcuts. These controls are functional; the UI does not expose placeholder future tools.
 
 ## Rendering
 
-Use Canvas 2D and vanilla JavaScript only. Keep the original image as an `<img>`/decoded source and maintain an annotation object list. Render the edited result only when an export is requested or when a visible preview must be refreshed. Copy and Save must both call `renderEditorResultBlob()` so they cannot diverge. The export canvas must use original-image dimensions and preserve full output resolution.
+Use Canvas 2D and vanilla JavaScript only. Keep the original image as an `<img>` and maintain an annotation object list. The editor uses a viewport-sized overlay canvas for visible interaction; it does not keep a permanent full-resolution display canvas. Render the edited result only when an export is requested. Copy and Save both call `renderEditorResultBlob()` so they cannot diverge. The temporary export canvas uses original-image dimensions and preserves full output resolution.
 
 ## History
 
@@ -46,6 +50,10 @@ Hit-test in original-image coordinates after inverting the display transform. Us
 ## Redaction security
 
 Opaque redaction is security-sensitive and distinct from cosmetic blur or pixelation. A redaction object must paint an opaque solid region into the final export, cover every pixel of its bounds, and never preserve the original pixels in the exported PNG. The UI must not call blur or pixelation “secure redaction.” Export tests must reopen the PNG and verify that redacted regions contain only the opaque redaction color within the chosen tolerance.
+
+## Draft state
+
+The existing temporary IndexedDB capture record contains a validated `annotations` array. Editor changes are debounced into the same record; no screenshot Base64 or browser sync storage is introduced. Reload restores the draft, while expiry and Close and discard remove the image and annotations together.
 
 ## Memory and export
 

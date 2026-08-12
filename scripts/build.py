@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 EXTENSION = ROOT / "extension"
 LANDING = ROOT / "landing"
 DIST = ROOT / "dist"
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 
 
 def fail(message: str) -> None:

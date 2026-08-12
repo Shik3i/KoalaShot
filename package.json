@@ -1,12 +1,13 @@
 {
   "name": "koalashot",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Privacy-first full-page screenshot extension foundation.",
   "scripts": {
     "icons": "python3 scripts/generate_icons.py",
     "test": "node --test tests/unit/*.test.js",
+    "test:browser": "node tests/browser/extension-flow.test.mjs",
     "build": "python3 scripts/build.py",
     "validate": "python3 scripts/validate.py"
   }

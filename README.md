@@ -1,8 +1,8 @@
 # KoalaShot
 
-KoalaShot – Full Page Screenshot is a privacy-first browser extension foundation for capturing a complete vertical webpage as one PNG. It is built from readable vanilla HTML, CSS, and JavaScript with no runtime dependencies.
+KoalaShot – Full Page Screenshot is a privacy-first browser extension for capturing a complete vertical webpage as one PNG and annotating it locally. It is built from readable vanilla HTML, CSS, and JavaScript with no runtime dependencies.
 
-## Phase 1
+## Phase 1 and Phase 2
 
 Implemented:
 
@@ -11,11 +11,12 @@ Implemented:
 - Measured CSS-to-bitmap scale detection, overlap-aware vertical stitching, conservative memory limits, and PNG output.
 - Copy original PNG, save original PNG, cancellation, progress, page-state restoration, and bounded dynamic-height handling.
 - Optional local editor handoff through temporary extension-local IndexedDB storage.
-- Phase 1 editor preview with Copy, Save PNG, dimensions, source hostname, expiry cleanup, and discard.
+- Non-destructive editor with Select, Pan, Pen, Highlighter, Arrow, Line, Rectangle, Text, secure opaque Redact, Undo, Redo, Delete, Clear all, zoom, fit-to-width, actual size, Copy edited, Save edited PNG, and discard.
+- Original-pixel annotation model, viewport-sized interaction canvas, shared geometry/render primitives, bounded history, and debounced local draft restoration.
 - Static local landing page at `landing/` with `/`, `/privacy/`, and `/legal/`.
 - Dependency-free Python build/validation scripts and Node built-in unit tests.
 
-Not implemented in Phase 1: annotation tools, horizontal stitching, nested scroll-container capture, store publishing, localization beyond the English catalog, and deployment.
+Not implemented: crop, ellipse, pixelation, blur, numbered markers, resize handles, image insertion, cloud sharing, horizontal stitching, nested scroll-container capture, store publishing, localization beyond the English catalog, and deployment.
 
 ## Privacy principles
 
@@ -56,8 +57,8 @@ Build output:
 ```text
 dist/chrome/
 dist/firefox/
-dist/koalashot-chrome-0.1.0.zip
-dist/koalashot-firefox-0.1.0.zip
+dist/koalashot-chrome-0.2.0.zip
+dist/koalashot-firefox-0.2.0.zip
 dist/landing/
 ```
 
@@ -80,6 +81,12 @@ Firefox:
 
 The manual fixtures are in `tests/fixtures/` and are intended to be served by a local static server. See [docs/TESTING.md](docs/TESTING.md) for the matrix and expected results. The automated suite uses only Node's built-in test runner.
 
+## Editor behavior
+
+Annotations are plain validated objects in original screenshot pixels. Zoom and device-pixel ratio change only the display transform. The original PNG remains immutable; Copy edited and Save edited PNG call the same full-resolution export function. Redact paints an opaque rectangle into the exported PNG and does not retroactively alter the temporary original capture.
+
+Keyboard shortcuts include `V` Select, `Space` temporary Pan, `P` Pen, `H` Highlighter, `A` Arrow, `L` Line, `R` Rectangle, `T` Text, `X` Redact, `Delete`, `Escape`, `Ctrl/Cmd+Z`, `Ctrl+Y`, `Cmd+Shift+Z`, `Ctrl/Cmd++`, `Ctrl/Cmd+-`, and `Ctrl/Cmd+0`.
+
 ## Known limitations
 
 - Phase 1 captures normal document scrolling only; dominant internal scroll roots are detected and rejected.
@@ -88,9 +95,7 @@ The manual fixtures are in `tests/fixtures/` and are intended to be served by a 
 - Canvas allocation is conservatively capped; KoalaShot never silently downscales or crops an over-limit page.
 - The landing legal page contains a clearly marked canonical-details placeholder because the empty repository had no verified legal identity material.
 
-## Upcoming editor tools
-
-Phase 2 will add a non-destructive Canvas 2D editor for select, pen, highlighter, arrow, line, rectangle, text, secure opaque redaction, undo/redo, zoom, pan, selection, and edited PNG export. The contract is documented in [docs/EDITOR_SPEC.md](docs/EDITOR_SPEC.md).
+The direct future editor work is crop, ellipse, pixelation, numbered markers, resize handles, configurable arrowheads, text outlines, and image insertion. The current Phase 2 contract is documented in [docs/EDITOR_SPEC.md](docs/EDITOR_SPEC.md).
 
 ## License
 

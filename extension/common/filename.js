@@ -30,3 +30,10 @@ export function makeFilename(sourceUrl, date = new Date()) {
   const filename = `KoalaShot_${hostname}_${formatLocalTimestamp(date)}.png`;
   return filename.slice(0, 128).replace(/\.png$/i, ".png");
 }
+
+export function makeEditedFilename(filename) {
+  const safe = typeof filename === "string" && filename.toLowerCase().endsWith(".png")
+    ? filename.slice(0, -4)
+    : "KoalaShot_screenshot";
+  return `${safe.slice(0, 120)}_edited.png`;
+}

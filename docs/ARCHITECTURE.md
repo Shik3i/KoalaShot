@@ -18,7 +18,11 @@ The popup calls `captureVisibleTab` only after verifying the same window, tab, U
 
 ## Temporary editor handoff
 
-The one PNG Blob is stored in extension-local IndexedDB with source metadata, dimensions, filename, and creation time. The popup opens `editor/editor.html?capture=<id>`, never a remote or data URL. Popup and editor startup prune records older than 24 hours. The editor can copy or save through `editor-export.js`, discard immediately, and keeps the original image immutable.
+The one PNG Blob is stored in extension-local IndexedDB with source metadata, dimensions, filename, creation time, and a validated annotation draft. The popup opens `editor/editor.html?capture=<id>`, never a remote or data URL. Popup and editor startup prune records older than 24 hours. The editor debounces local draft writes, can copy or save through one `renderEditorResultBlob()` path, discards immediately, and keeps the original image immutable.
+
+## Phase 2 editor
+
+`editor/annotation-model.js` owns explicit schemas, secure IDs, validation, cloning, moving, and style updates. `editor/geometry.js` owns original-pixel coordinate transforms, rectangle normalization, point reduction, hit testing, arrowheads, text bounds, and both viewport and export drawing. `editor/history.js` stores bounded before/after annotation arrays rather than screenshot snapshots. The page displays the immutable PNG as an `<img>` and uses one viewport-sized overlay canvas for interaction; it does not allocate a permanent full-resolution display canvas.
 
 ## Compatibility boundary
 

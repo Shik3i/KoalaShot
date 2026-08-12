@@ -4,6 +4,7 @@ import {
   STORAGE_OBJECT_STORE,
   TEMP_CAPTURE_TTL_MS,
 } from "./constants.js";
+import { tryValidateAnnotations } from "../editor/annotation-model.js";
 
 function openDatabase() {
   return new Promise((resolve, reject) => {
@@ -67,6 +68,13 @@ export async function saveCapture(record) {
   if (!record?.id || !(record.blob instanceof Blob)) {
     throw new Error("Invalid temporary capture record.");
   }
+  if (record.annotations !== undefined) {
+    const validation = tryValidateAnnotations(record.annotations);
+    if (!validation.valid) {
+      throw new Error("Invalid temporary annotation draft.");
+    }
+    record = { ...record, annotations: validation.annotations };
+  }
   await runTransaction("readwrite", (store) => store.put(record));
 }
 
@@ -77,7 +85,15 @@ export async function getCapture(id) {
   return runTransaction("readonly", (store) => new Promise((resolve, reject) => {
     const request = store.get(id);
     request.onerror = () => reject(request.error || new Error("Could not read temporary capture."));
-    request.onsuccess = () => resolve(request.result || null);
+    request.onsuccess = () => {
+      const record = request.result || null;
+      if (!record) {
+        resolve(null);
+        return;
+      }
+      const validation = tryValidateAnnotations(record.annotations || []);
+      resolve({ ...record, annotations: validation.valid ? validation.annotations : [] });
+    };
   }));
 }
 

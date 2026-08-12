@@ -73,8 +73,8 @@ export async function injectCaptureScript(tabId) {
   }]);
 }
 
-export function connectCapture(sessionId) {
-  return browserNamespace.runtime.connect({ name: `koalashot-capture:${sessionId}` });
+export function connectCapture(tabId, sessionId) {
+  return browserNamespace.tabs.connect(tabId, { name: `koalashot-capture:${sessionId}` });
 }
 
 export async function captureVisibleTab(windowId) {

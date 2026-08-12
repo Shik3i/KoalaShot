@@ -156,7 +156,7 @@ async function captureFullPage(tab, { signal, onProgress }) {
   try {
     onProgress?.({ phase: "preparing", message: "Preparing page…" });
     await injectCaptureScript(tab.id);
-    channel = createPortChannel(connectCapture(sessionId), sessionId, signal);
+    channel = createPortChannel(connectCapture(tab.id, sessionId), sessionId, signal);
     const ready = await channel.request({ type: "start" });
     const initialHeight = ready.documentHeight;
     const viewportHeight = ready.viewportHeight;

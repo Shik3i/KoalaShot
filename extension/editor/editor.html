@@ -7,44 +7,79 @@
     <link rel="stylesheet" href="editor.css">
   </head>
   <body>
-    <header class="editor-toolbar">
-      <a class="brand" href="editor.html" aria-label="KoalaShot Editor home">
-        <img src="../icons/icon-32.png" alt="" width="28" height="28">
-        <span>KoalaShot Editor</span>
-      </a>
-      <div class="toolbar-actions" aria-label="Export controls">
-        <button id="copy-button" class="button button-primary" type="button" disabled>Copy</button>
-        <button id="save-button" class="button button-secondary" type="button" disabled>Save PNG</button>
+    <header class="editor-header">
+      <div class="identity-block">
+        <a class="brand" href="editor.html" aria-label="KoalaShot Editor home">
+          <img src="../icons/icon-32.png" alt="" width="30" height="30">
+          <span>KoalaShot</span>
+        </a>
+        <div class="source-summary">
+          <strong id="source-hostname">Loading screenshot…</strong>
+          <span id="capture-meta"></span>
+        </div>
+      </div>
+      <div class="top-actions" aria-label="Document actions">
+        <button id="undo-button" class="icon-button" type="button" title="Undo (Ctrl/Cmd+Z)" aria-label="Undo" disabled>↶</button>
+        <button id="redo-button" class="icon-button" type="button" title="Redo (Ctrl+Y or Cmd+Shift+Z)" aria-label="Redo" disabled>↷</button>
+        <span class="action-divider" aria-hidden="true"></span>
+        <button id="zoom-out-button" class="icon-button" type="button" title="Zoom out (Ctrl/Cmd+-)" aria-label="Zoom out">−</button>
+        <output id="zoom-value" class="zoom-value" aria-live="polite">100%</output>
+        <button id="zoom-in-button" class="icon-button" type="button" title="Zoom in (Ctrl/Cmd++)" aria-label="Zoom in">+</button>
+        <button id="fit-button" class="text-button" type="button" title="Fit to width (Ctrl/Cmd+0)">Fit</button>
+        <button id="actual-size-button" class="text-button" type="button" title="Actual size / 100%">100%</button>
+        <span class="action-divider" aria-hidden="true"></span>
+        <button id="copy-button" class="button button-primary" type="button" disabled>Copy edited</button>
+        <button id="save-button" class="button button-secondary" type="button" disabled>Save edited PNG</button>
         <button id="discard-button" class="button button-quiet" type="button" disabled>Close and discard</button>
       </div>
     </header>
 
-    <main class="editor-main">
-      <section id="loading-state" class="message-card" role="status" aria-live="polite">
-        <h1>Loading screenshot…</h1>
-        <p>The temporary local capture is being opened.</p>
-      </section>
+    <div class="editor-layout">
+      <aside class="tool-sidebar" aria-label="Annotation tools">
+        <div class="tool-group">
+          <p class="tool-label">Tools</p>
+          <button class="tool-button is-active" data-tool="select" type="button" aria-pressed="true" title="Select (V)"><span class="tool-glyph">↖</span><span>Select</span></button>
+          <button class="tool-button" data-tool="pan" type="button" aria-pressed="false" title="Pan (Space)"><span class="tool-glyph">✋</span><span>Pan</span></button>
+          <button class="tool-button" data-tool="pen" type="button" aria-pressed="false" title="Pen (P)"><span class="tool-glyph">╱</span><span>Pen</span></button>
+          <button class="tool-button" data-tool="highlighter" type="button" aria-pressed="false" title="Highlighter (H)"><span class="tool-glyph">▰</span><span>Highlight</span></button>
+          <button class="tool-button" data-tool="arrow" type="button" aria-pressed="false" title="Arrow (A)"><span class="tool-glyph">➜</span><span>Arrow</span></button>
+          <button class="tool-button" data-tool="line" type="button" aria-pressed="false" title="Line (L)"><span class="tool-glyph">╱</span><span>Line</span></button>
+          <button class="tool-button" data-tool="rectangle" type="button" aria-pressed="false" title="Rectangle (R)"><span class="tool-glyph">□</span><span>Rectangle</span></button>
+          <button class="tool-button" data-tool="text" type="button" aria-pressed="false" title="Text (T)"><span class="tool-glyph">T</span><span>Text</span></button>
+          <button class="tool-button" data-tool="redact" type="button" aria-pressed="false" title="Redact (X)"><span class="tool-glyph">▰</span><span>Redact</span></button>
+        </div>
+        <div class="tool-group tool-group-bottom">
+          <button id="delete-button" class="tool-button danger-tool" type="button" title="Delete selected annotation (Delete)" disabled><span class="tool-glyph">⌫</span><span>Delete</span></button>
+          <button id="clear-button" class="tool-button danger-tool" type="button" title="Clear all annotations" disabled><span class="tool-glyph">×</span><span>Clear all</span></button>
+        </div>
+      </aside>
 
-      <section id="error-state" class="message-card" hidden>
-        <h1>Screenshot unavailable</h1>
-        <p id="error-message">This temporary capture may have expired.</p>
-      </section>
-
-      <section id="image-state" class="image-section" hidden aria-labelledby="image-heading">
-        <div class="image-heading-row">
-          <div>
-            <p class="eyebrow">Original capture</p>
-            <h1 id="image-heading">Full-page screenshot</h1>
-            <p id="capture-meta" class="meta"></p>
+      <main class="workspace">
+        <section class="context-bar" aria-label="Tool options">
+          <div class="context-copy"><strong id="active-tool-name">Select</strong><span id="context-help">Select, move, or edit an annotation.</span></div>
+          <div class="context-controls">
+            <div class="control-group" id="color-controls"><span class="control-label">Color</span><div class="palette" role="group" aria-label="Annotation color"><button class="swatch is-selected" data-color="#287a4a" type="button" aria-label="Koala green" title="Koala green"></button><button class="swatch" data-color="#e53935" type="button" aria-label="Red" title="Red"></button><button class="swatch" data-color="#1565c0" type="button" aria-label="Blue" title="Blue"></button><button class="swatch" data-color="#f9a825" type="button" aria-label="Yellow" title="Yellow"></button><button class="swatch" data-color="#111111" type="button" aria-label="Black" title="Black"></button><input id="custom-color" type="color" value="#287a4a" aria-label="Custom annotation color"></div></div>
+            <label class="control-group compact-control" for="stroke-width"><span class="control-label">Width <output id="stroke-width-value">6</output></span><input id="stroke-width" type="range" min="1" max="40" step="1" value="6"></label>
+            <label class="control-group compact-control" id="font-size-control" for="font-size"><span class="control-label">Text size <output id="font-size-value">32</output></span><input id="font-size" type="range" min="8" max="120" step="1" value="32"></label>
+            <button id="edit-text-button" class="text-button" type="button" hidden>Edit text</button>
           </div>
-          <span class="phase-badge">Phase 1 preview</span>
-        </div>
-        <div class="image-scroll">
-          <img id="capture-image" alt="Full-page screenshot preview">
-        </div>
-      </section>
-    </main>
-    <p id="status" class="visually-hidden" role="status" aria-live="polite"></p>
+        </section>
+
+        <section class="stage-panel" aria-label="Screenshot workspace">
+          <div id="loading-state" class="message-card" role="status" aria-live="polite"><h1>Loading screenshot…</h1><p>The temporary local capture is being opened.</p></div>
+          <div id="error-state" class="message-card" hidden><h1>Screenshot unavailable</h1><p id="error-message">This temporary capture may have expired.</p></div>
+          <div id="stage-wrap" class="stage-wrap" hidden>
+            <div id="stage-scroll" class="stage-scroll" tabindex="0" aria-label="Scrollable screenshot canvas">
+              <div id="stage" class="stage"><img id="capture-image" alt="Original screenshot"><div id="image-spacer" aria-hidden="true"></div></div>
+            </div>
+            <canvas id="interaction-canvas" aria-label="Annotation overlay"></canvas>
+            <div id="text-editor" class="text-editor" hidden><label for="text-input">Annotation text</label><textarea id="text-input" rows="4" maxlength="10000"></textarea><div class="text-editor-actions"><button id="cancel-text-button" class="text-button" type="button">Cancel</button><button id="apply-text-button" class="button button-primary" type="button">Apply text</button></div></div>
+          </div>
+        </section>
+        <p id="status" class="status-line" role="status" aria-live="polite">Loading local screenshot…</p>
+        <p class="editor-hint">Shortcuts: <kbd>V</kbd> select · <kbd>Space</kbd> temporary pan · <kbd>Ctrl/Cmd+Z</kbd> undo · <kbd>Delete</kbd> remove · <kbd>Ctrl/Cmd+0</kbd> fit width</p>
+      </main>
+    </div>
     <script type="module" src="editor.js"></script>
   </body>
 </html>
