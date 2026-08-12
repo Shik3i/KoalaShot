@@ -199,7 +199,7 @@ async function captureFullPage(tab, { signal, onProgress }) {
         throw new CaptureError("Capture stopped because the page navigated.", "navigation");
       }
       if (scrolled.viewportWidth !== viewportWidth || scrolled.viewportHeight !== viewportHeight) {
-        throw new CaptureError("Capture stopped because the browser viewport changed.", "viewport-changed");
+        throw new CaptureError(`Capture stopped because the browser viewport changed (${viewportWidth}x${viewportHeight} → ${scrolled.viewportWidth}x${scrolled.viewportHeight}).`, "viewport-changed");
       }
 
       const bounded = getBoundedDocumentHeight(initialHeight, scrolled.documentHeight, MAX_DYNAMIC_GROWTH_RATIO);

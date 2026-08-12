@@ -80,6 +80,8 @@ let pointerOperation = null;
 let temporaryPan = false;
 let textOperation = null;
 let draftTimer = null;
+let draftSaveChain = Promise.resolve();
+let discardInProgress = false;
 let devicePixelRatioValue = globalThis.devicePixelRatio || 1;
 let annotationColor = "#287a4a";
 let strokeWidth = 6;
@@ -116,9 +118,13 @@ function currentAnnotations() {
 }
 
 function scheduleDraftSave() {
+  if (discardInProgress) {
+    return;
+  }
   window.clearTimeout(draftTimer);
   draftTimer = window.setTimeout(() => {
-    void persistDraft();
+    draftTimer = null;
+    draftSaveChain = draftSaveChain.then(() => persistDraft()).catch(() => {});
   }, 500);
 }
 
@@ -561,12 +567,21 @@ async function saveEdited() {
 }
 
 async function discardCapture() {
-  if (!capture) {
+  if (!capture || discardInProgress) {
     return;
   }
+  discardInProgress = true;
   discardButton.disabled = true;
   window.clearTimeout(draftTimer);
-  await deleteCapture(capture.id);
+  try {
+    await draftSaveChain;
+    await deleteCapture(capture.id);
+  } catch {
+    discardInProgress = false;
+    discardButton.disabled = false;
+    setStatus("Screenshot could not be discarded locally; try again.");
+    return;
+  }
   capture = null;
   if (imageUrl) {
     URL.revokeObjectURL(imageUrl);

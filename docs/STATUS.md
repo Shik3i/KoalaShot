@@ -13,12 +13,24 @@
 
 ## Automated verification
 
-On 2026-08-12, the Phase 2 baseline `npm test` passed 13/13 tests. After implementation, `npm test` passed 23/23 tests, `npm run build` produced both 0.2.0 unpacked browser directories, both versioned ZIP archives, and `dist/landing/`, `npm run validate` passed, and `node --check` passed for every extension JavaScript file.
+On 2026-08-12, the Phase 2 baseline `npm test` passed 13/13 tests. The current gate passes 23/23 unit tests, ESLint, production audit, extension build, archive validation, and AMO validation.
+
+The Windows npm entry points `npm run icons`, `npm run build`, and `npm run validate` now select an available Python 3 interpreter. `npm ci --offline` and `npm audit --omit=dev` pass with the repository lockfile. The full `npm test` release gate now runs 23 unit tests, ESLint, the production audit, both extension builds, archive validation, and Firefox AMO validation with warnings treated as errors; the AMO result is 0 errors, 0 notices, and 0 warnings.
+
+`npm audit` reports 0 vulnerabilities. `addons-linter` is intentionally invoked isolated through `npx` for the AMO pretest, so its transitive toolchain does not enter the shipped dependency graph or lockfile.
+
+## Browser verification
+
+- Chrome-for-Testing 149.0.7827.55 passed the full CDP flow against the built extension: long-page capture, PNG downloads, page cleanup, internal-scroll rejection, editor handoff, three annotations, IndexedDB draft persistence, reload, undo/redo, zoom, clear, discard, and capture-store cleanup. Final artifacts: `KoalaShot_127.0.0.1_2026-08-12_17-25-04.png`, `KoalaShot_127.0.0.1_2026-08-12_17-25-09.png`, and `KoalaShot_127.0.0.1_2026-08-12_17-25-09_edited.png`.
+- The installed Google Chrome 151.0.7922.137 ignores `--load-extension`/`--disable-extensions-except`; the automated Chrome run therefore uses the installed Chrome-for-Testing binary when available. No extension ID is required by the user or by the harness.
+- The Chrome CDP smoke profile copies `dist/chrome/` to a temporary directory and adds only test-profile permissions needed to replace a trusted toolbar gesture (`<all_urls>` and `tabs`). The source/release manifest remains `activeTab`-only.
+- Firefox 152.0.6 passed the full WebDriver BiDi flow against a temporary test archive: long-page copy/save path, page cleanup, internal-scroll rejection, editor handoff, three annotations, IndexedDB draft persistence, reload, undo/redo, zoom, clear, discard, and PNG downloads. Final artifacts: `KoalaShot_127.0.0.1_2026-08-12_17-25-18.png` and `KoalaShot_127.0.0.1_2026-08-12_17-25-18_edited.png`. Clipboard permission denial is reported explicitly by Firefox and does not block PNG output. Firefox AMO validation is green.
+- The Firefox test archive adds temporary `<all_urls>` access and `tabs`; the shipped Firefox archive remains `activeTab`-only. BiDi pointer actions are used for editor input, so synthetic untrusted pointer events are not part of the runtime proof.
 
 ## Partially tested
 
-- Browser API compatibility is source-implemented but requires actual Chrome/Chromium and Firefox loading for manual confirmation.
-- Fixed/sticky suppression, scrollbar compensation, lazy loading, dynamic growth, HiDPI scale, popup closure, and clipboard permission UX have local fixtures and unit-level helpers but require manual browser runs.
+- Other Chromium browsers, non-default zoom, HiDPI, color schemes, cancellation, tab-switch/navigation abort, protected pages, and the remaining fixture matrix still require manual target-browser runs.
+- The automated Chrome clipboard check records the expected CDP limitation: `ClipboardItem` requires a trusted user gesture. Firefox records the expected permission-denial message while retaining the save path.
 
 ## Planned
 
@@ -34,6 +46,6 @@ On 2026-08-12, the Phase 2 baseline `npm test` passed 13/13 tests. After impleme
 - Text metrics use a deterministic system-font approximation for hit bounds; final rendering uses the local system font stack and is not guaranteed pixel-identical across operating systems.
 - The empty repository contained no verified legal identity details, so `landing/legal/index.html` requires configuration before deployment.
 
-No manual Chrome, Vivaldi/Edge/Brave, or Firefox browser run was performed in this implementation turn; those matrix rows remain pending rather than being claimed as tested.
+Loading the built `dist/chrome/` directory in Chrome does not require an extension ID. The Chrome smoke was run against Chrome-for-Testing with an isolated temporary profile; the managed Google Chrome binary was not used because it ignored the extension-loading flags. Firefox installation uses the WebDriver BiDi `archivePath` form and a temporary profile UUID map to address the installed extension page.
 
 The Codex in-app browser was used for a local static smoke check of the landing page and the editor's missing-capture loading/error state. It did not load an unpacked extension or exercise a real IndexedDB screenshot record, so it is not counted as target-browser editor validation.
