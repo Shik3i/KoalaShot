@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>KoalaShot Editor</title>
+    <link rel="stylesheet" href="editor.css">
+  </head>
+  <body>
+    <header class="editor-toolbar">
+      <a class="brand" href="editor.html" aria-label="KoalaShot Editor home">
+        <img src="../icons/icon-32.png" alt="" width="28" height="28">
+        <span>KoalaShot Editor</span>
+      </a>
+      <div class="toolbar-actions" aria-label="Export controls">
+        <button id="copy-button" class="button button-primary" type="button" disabled>Copy</button>
+        <button id="save-button" class="button button-secondary" type="button" disabled>Save PNG</button>
+        <button id="discard-button" class="button button-quiet" type="button" disabled>Close and discard</button>
+      </div>
+    </header>
+
+    <main class="editor-main">
+      <section id="loading-state" class="message-card" role="status" aria-live="polite">
+        <h1>Loading screenshot…</h1>
+        <p>The temporary local capture is being opened.</p>
+      </section>
+
+      <section id="error-state" class="message-card" hidden>
+        <h1>Screenshot unavailable</h1>
+        <p id="error-message">This temporary capture may have expired.</p>
+      </section>
+
+      <section id="image-state" class="image-section" hidden aria-labelledby="image-heading">
+        <div class="image-heading-row">
+          <div>
+            <p class="eyebrow">Original capture</p>
+            <h1 id="image-heading">Full-page screenshot</h1>
+            <p id="capture-meta" class="meta"></p>
+          </div>
+          <span class="phase-badge">Phase 1 preview</span>
+        </div>
+        <div class="image-scroll">
+          <img id="capture-image" alt="Full-page screenshot preview">
+        </div>
+      </section>
+    </main>
+    <p id="status" class="visually-hidden" role="status" aria-live="polite"></p>
+    <script type="module" src="editor.js"></script>
+  </body>
+</html>

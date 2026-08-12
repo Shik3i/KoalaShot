@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="KoalaShot privacy information.">
+    <meta property="og:title" content="KoalaShot Privacy">
+    <meta property="og:description" content="How KoalaShot processes screenshots locally.">
+    <meta property="og:image" content="https://shot.koalastuff.net/assets/og-card.svg">
+    <title>Privacy · KoalaShot</title>
+    <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../styles.css">
+  </head>
+  <body>
+    <header class="site-shell site-header"><a class="brand" href="../"><img src="../assets/favicon.svg" alt="" width="34" height="34"><span>KoalaShot</span></a><nav class="site-nav" aria-label="Primary navigation"><a href="../">Home</a><a href="../legal/">Legal</a></nav></header>
+    <main class="site-shell legal-content"><p class="eyebrow">Privacy</p><h1>Local by default.</h1><p class="lede">KoalaShot is designed so the screenshot does not leave the browser profile.</p>
+      <h2>What happens when you capture</h2><p>KoalaShot captures only after you explicitly start Capture &amp; Copy or Save PNG. The extension scrolls the active page, captures viewport sections, and stitches them into one PNG in local browser memory.</p>
+      <h2>What we do not collect</h2><ul><li>Screenshots and page content are not uploaded.</li><li>There is no account, browsing-history collection, tracking, telemetry, analytics, or error-reporting service.</li><li>KoalaShot does not use cookies, remote configuration, advertising, or remote code.</li></ul>
+      <h2>Clipboard and downloads</h2><p>Copying to the clipboard and saving a file are user-initiated actions. KoalaShot requests the optional clipboard permission only when Capture &amp; Copy is selected, before capture begins. It does not read the clipboard and does not request the downloads permission.</p>
+      <h2>Temporary editor captures</h2><p>If you enable Open editor after capture, the original PNG is stored in extension-local IndexedDB so the packaged editor page can load it. Temporary records expire after no more than 24 hours and can be discarded immediately in the editor. There is no screenshot history interface and records are not synchronized.</p>
+      <h2>Access limitations</h2><p>Browser-protected pages, extension stores, built-in PDF viewers, and other privileged pages may block extension access. KoalaShot does not work around those browser boundaries. No browsing history is collected as a result.</p>
+    </main>
+    <footer class="site-shell site-footer"><span>© <span data-current-year>2026</span> Shik3i · KoalaShot</span><span class="footer-links"><a href="../">Home</a><a href="../legal/">Legal</a><a href="https://github.com/Shik3i/KoalaShot">GitHub</a></span></footer>
+    <script src="../main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="KoalaShot captures an entire webpage to your clipboard or as a PNG, entirely on your device.">
+    <meta property="og:title" content="KoalaShot – Full Page Screenshot">
+    <meta property="og:description" content="Capture the whole page. Copy or save it locally as a PNG.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://shot.koalastuff.net/">
+    <meta property="og:image" content="https://shot.koalastuff.net/assets/og-card.svg">
+    <title>KoalaShot – Full Page Screenshot</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="site-shell site-header">
+      <a class="brand" href="./"><img src="assets/favicon.svg" alt="" width="34" height="34"><span>KoalaShot</span></a>
+      <nav class="site-nav" aria-label="Primary navigation"><a href="#workflow">Workflow</a><a href="#privacy">Privacy</a><a href="privacy/">Privacy page</a></nav>
+    </header>
+
+    <main>
+      <section class="site-shell hero">
+        <div>
+          <p class="eyebrow">Full-page screenshot for your browser</p>
+          <h1>Capture the whole page.</h1>
+          <p class="lede">Copy an entire webpage to your clipboard or save it as a PNG. Free, open source, and processed entirely on your device.</p>
+          <div class="hero-actions"><a class="button button-primary" href="#workflow">See how it works</a><a class="button button-secondary" href="https://github.com/Shik3i/KoalaShot">View source on GitHub</a></div>
+        </div>
+        <div class="hero-visual" aria-label="Illustration of a webpage being captured as a PNG">
+          <div class="browser-frame"><div class="browser-bar"><i></i><i></i><i></i></div><div class="page-lines"><span></span><span></span><span></span><span></span><span></span></div></div>
+          <div class="capture-frame"></div>
+        </div>
+      </section>
+
+      <section id="workflow" class="section">
+        <div class="site-shell">
+          <p class="eyebrow">Simple by design</p>
+          <h2>From page to PNG in a few seconds.</h2>
+          <p class="section-intro">KoalaShot scrolls through the current page, captures each viewport, and stitches the sections into one vertical image. The original capture stays available for your next step.</p>
+          <div class="grid-3">
+            <article class="card"><span class="number">1</span><h3>Capture</h3><p>Open KoalaShot and capture the complete vertical page, not just the visible viewport.</p></article>
+            <article class="card"><span class="number">2</span><h3>Copy or save</h3><p>Copy the original PNG directly to the clipboard or start a normal local file download.</p></article>
+            <article class="card"><span class="number">3</span><h3>Editor handoff</h3><p>Optionally open the same local capture in KoalaShot Editor. Annotation tools are planned for a future phase.</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section id="privacy" class="section">
+        <div class="site-shell trust-row">
+          <div><p class="eyebrow">Privacy first</p><h2>Your screenshot stays with you.</h2><p class="section-intro">KoalaShot has no account system, upload pipeline, analytics, or remote configuration. Processing happens in the browser after an explicit action.</p></div>
+          <ul class="trust-list"><li>No accounts or uploads.</li><li>No tracking, telemetry, cookies, or history.</li><li>No remote code, fonts, scripts, or third-party embeds.</li><li>Temporary editor captures stay local and expire within 24 hours.</li></ul>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="site-shell grid-3">
+          <article class="card"><h3>Chrome and Chromium</h3><p>Designed for Chrome and Chromium-based browsers such as Vivaldi, Edge, and Brave. Install from an unpacked build during Phase 1.</p></article>
+          <article class="card"><h3>Firefox</h3><p>A separate Manifest V3 build supports temporary installation for local testing.</p></article>
+          <article class="card"><h3>Open source</h3><p>Readable vanilla HTML, CSS, JavaScript, and Python build tooling live in the <a href="https://github.com/Shik3i/KoalaShot">public repository</a>.</p></article>
+        </div>
+        <div class="card store-placeholder"><h3>Store links are coming later</h3><p>Chrome Web Store: link pending. Firefox Add-ons: link pending. Phase 1 is for local unpacked and temporary installation; this page intentionally shows no inactive store buttons.</p></div>
+      </section>
+
+      <section class="section">
+        <div class="site-shell"><p class="eyebrow">Questions</p><h2>FAQ</h2><div class="faq">
+          <details><summary>Does KoalaShot upload screenshots?</summary><p>No. Capture, stitching, clipboard operations, and temporary editor storage are local browser operations.</p></details>
+          <details><summary>Can it capture every page?</summary><p>Normal document scrolling is supported. Browser-protected pages and pages whose main content lives in an internal scroll area are not supported in Phase 1.</p></details>
+          <details><summary>Are annotations available now?</summary><p>Not yet. The editor page is a functional preview and export foundation; annotation tools are the direct next phase.</p></details>
+          <details><summary>Where are store links?</summary><p>Store publishing is planned for a later phase. This site does not show fake or inactive store badges.</p></details>
+        </div></div>
+      </section>
+    </main>
+
+    <footer class="site-shell site-footer"><span>© <span data-current-year>2026</span> Shik3i · KoalaShot</span><span class="footer-links"><a href="privacy/">Privacy</a><a href="legal/">Legal</a><a href="https://github.com/Shik3i/KoalaShot">GitHub</a></span></footer>
+    <script src="main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>KoalaShot</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main class="popup-shell">
+      <header class="brand-row">
+        <img src="../icons/icon-32.png" alt="" width="32" height="32">
+        <div>
+          <p class="eyebrow">KoalaShot</p>
+          <h1>Full-page screenshot</h1>
+        </div>
+      </header>
+
+      <section class="action-card" aria-labelledby="capture-heading">
+        <h2 id="capture-heading">Capture this page</h2>
+        <p class="muted">Capture the complete vertical page at the current browser resolution.</p>
+        <div class="button-stack">
+          <button id="copy-button" class="button button-primary" type="button">Capture &amp; Copy</button>
+          <button id="save-button" class="button button-secondary" type="button">Save PNG</button>
+        </div>
+        <label class="checkbox-row" for="open-editor">
+          <input id="open-editor" type="checkbox">
+          <span>Open editor after capture</span>
+        </label>
+      </section>
+
+      <section class="status-card" aria-labelledby="status-heading">
+        <h2 id="status-heading">Status</h2>
+        <p id="status" class="status-line" role="status" aria-live="polite">Ready.</p>
+        <div class="progress-track" aria-hidden="true"><span id="progress-bar"></span></div>
+        <button id="cancel-button" class="button button-cancel" type="button" hidden>Cancel</button>
+      </section>
+
+      <footer class="privacy-note">
+        <span class="privacy-mark" aria-hidden="true">●</span>
+        <span>Screenshots are processed entirely on your device.</span>
+      </footer>
+    </main>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

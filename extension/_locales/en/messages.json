@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "KoalaShot – Full Page Screenshot",
+    "description": "Store-facing extension name."
+  },
+  "extensionDescription": {
+    "message": "Capture an entire webpage locally as one PNG.",
+    "description": "Store-facing extension description."
+  },
+  "privacyNotice": {
+    "message": "Screenshots are processed entirely on your device.",
+    "description": "Popup privacy notice."
+  }
+}

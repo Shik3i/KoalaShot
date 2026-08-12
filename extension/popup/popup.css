@@ -1,0 +1,106 @@
+:root {
+  color-scheme: light dark;
+  --bg: #f4f7f4;
+  --surface: #ffffff;
+  --surface-muted: #e9f0e9;
+  --text: #18301f;
+  --muted: #53655a;
+  --border: #c9d7cb;
+  --accent: #287a4a;
+  --accent-strong: #1d6039;
+  --danger: #9b3030;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #142019;
+    --surface: #1b2b21;
+    --surface-muted: #22382a;
+    --text: #edf6ee;
+    --muted: #b3c4b6;
+    --border: #385340;
+    --accent: #62c784;
+    --accent-strong: #8ee3a5;
+    --danger: #ff9f9f;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-width: 336px;
+  max-width: 390px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+button, input { font: inherit; }
+
+.popup-shell { padding: 18px; }
+
+.brand-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.brand-row img { border-radius: 9px; }
+
+.eyebrow {
+  margin: 0 0 2px;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+h1, h2, p { margin-top: 0; }
+h1 { margin-bottom: 0; font-size: 1.1rem; line-height: 1.2; }
+h2 { margin-bottom: 7px; font-size: 0.93rem; }
+.muted { margin-bottom: 15px; color: var(--muted); font-size: 0.83rem; line-height: 1.45; }
+
+.action-card, .status-card {
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.status-card { margin-top: 10px; }
+
+.button-stack { display: grid; gap: 9px; }
+
+.button {
+  min-height: 42px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: background-color 120ms ease, border-color 120ms ease, transform 120ms ease;
+}
+
+.button:hover:not(:disabled) { transform: translateY(-1px); }
+.button:focus-visible, input:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 2px; }
+.button:disabled { cursor: wait; opacity: 0.6; }
+.button-primary { background: var(--accent); color: #fff; }
+.button-primary:hover:not(:disabled) { background: var(--accent-strong); }
+.button-secondary { border-color: var(--border); background: transparent; color: var(--text); }
+.button-secondary:hover:not(:disabled) { background: var(--surface-muted); }
+.button-cancel { width: 100%; margin-top: 11px; border-color: color-mix(in srgb, var(--danger) 50%, var(--border)); background: transparent; color: var(--danger); }
+
+.checkbox-row { display: flex; gap: 9px; align-items: center; margin-top: 14px; color: var(--text); font-size: 0.85rem; cursor: pointer; }
+.checkbox-row input { width: 17px; height: 17px; accent-color: var(--accent); }
+.status-line { min-height: 2.7em; margin-bottom: 10px; color: var(--muted); font-size: 0.84rem; line-height: 1.4; }
+.progress-track { height: 5px; overflow: hidden; border-radius: 99px; background: var(--surface-muted); }
+.progress-track span { display: block; width: 0; height: 100%; border-radius: inherit; background: var(--accent); transition: width 120ms ease; }
+.privacy-note { display: flex; gap: 8px; align-items: center; padding: 14px 2px 2px; color: var(--muted); font-size: 0.75rem; line-height: 1.35; }
+.privacy-mark { color: var(--accent); font-size: 0.9rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .button, .progress-track span { transition: none; }
+  .button:hover:not(:disabled) { transform: none; }
+}

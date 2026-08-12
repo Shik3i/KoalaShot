@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#f5f8f5"/>
+  <circle cx="1030" cy="110" r="230" fill="#e2eee4"/>
+  <rect x="88" y="110" width="108" height="108" rx="28" fill="#287a4a"/>
+  <circle cx="142" cy="169" r="29" fill="#9fc5a7"/>
+  <circle cx="120" cy="145" r="15" fill="#739d7d"/>
+  <circle cx="164" cy="145" r="15" fill="#739d7d"/>
+  <circle cx="132" cy="165" r="5" fill="#18301f"/>
+  <circle cx="152" cy="165" r="5" fill="#18301f"/>
+  <ellipse cx="142" cy="183" rx="10" ry="7" fill="#18301f"/>
+  <text x="88" y="335" fill="#18301f" font-family="system-ui, sans-serif" font-size="88" font-weight="800">Capture the whole page.</text>
+  <text x="92" y="415" fill="#596b5f" font-family="system-ui, sans-serif" font-size="34">KoalaShot · local PNG screenshots</text>
+</svg>

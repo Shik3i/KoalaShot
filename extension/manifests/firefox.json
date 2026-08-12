@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "KoalaShot – Full Page Screenshot",
+  "short_name": "KoalaShot",
+  "version": "0.1.0",
+  "description": "Capture an entire webpage locally as one PNG.",
+  "default_locale": "en",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "optional_permissions": [
+    "clipboardWrite"
+  ],
+  "action": {
+    "default_title": "Capture full page with KoalaShot",
+    "default_popup": "popup/popup.html"
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "96": "icons/icon-96.png",
+    "128": "icons/icon-128.png"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "koalashot@koalastuff.net",
+      "strict_min_version": "128.0"
+    }
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'"
+  }
+}

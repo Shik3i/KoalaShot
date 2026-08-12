@@ -1,0 +1,17 @@
+dist/
+.DS_Store
+*.log
+__pycache__/
+node_modules/
+coverage/
+*.zip
+*.tmp
+*.swp
+.env
+.env.*
+!.env.example
+.idea/
+.vscode/
+browser-profile/
+browser-profiles/
+screenshots/
