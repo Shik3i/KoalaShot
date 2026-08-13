@@ -69,7 +69,7 @@ export async function getTab(tabId) {
 export async function injectCaptureScript(tabId) {
   return invoke(browserNamespace.scripting.executeScript, browserNamespace.scripting, [{
     target: { tabId },
-    files: ["content/capture-page.js"],
+    files: ["/content/capture-page.js"],
   }]);
 }
 

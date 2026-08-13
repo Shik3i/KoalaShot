@@ -13,6 +13,7 @@
   "optional_permissions": [
     "clipboardWrite"
   ],
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsnLZ4OJFXDycC4kPmXGERHwq+gtCpmhD1PJxMJynmdva4npwS0HpRvmJ9MsDhYyKOicQl8/lP4rTu1XQQaz2osMKl1xRl8UqfKsI4YPiqJD7puNCiG/ewuorG4FvHtCOYjz4L4dh/CmWc7L5q2wI+z3GyXcFdJyX8bXvXco0y1HR+5cVtzckul6M4IUPBw1enLwawcslRHKTwJhkdvDdmgqDvAcw1zbOiC0rBoCCpldysFRJf9h2j7noN37dqFXKorJi9RsSOxmZIPa0vOPMkc7tYksX2yXVeA1Xqfep56LbpgS8FlumUHrrzqxZNEq2pdUF2hXEExVNSlVvEszASQIDAQAB",
   "action": {
     "default_title": "Capture full page with KoalaShot",
     "default_popup": "popup/popup.html"

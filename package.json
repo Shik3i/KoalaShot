@@ -5,10 +5,16 @@
   "type": "module",
   "description": "Privacy-first full-page screenshot extension foundation.",
   "scripts": {
-    "icons": "python3 scripts/generate_icons.py",
-    "test": "node --test tests/unit/*.test.js",
+    "icons": "node scripts/run-python.cjs scripts/generate_icons.py",
+    "lint": "eslint extension scripts tests",
+    "test:unit": "node --test tests/unit/*.test.js",
+    "test": "npm run verify",
     "test:browser": "node tests/browser/extension-flow.test.mjs",
-    "build": "python3 scripts/build.py",
-    "validate": "python3 scripts/validate.py"
+    "build": "node scripts/run-python.cjs scripts/build.py",
+    "validate": "node scripts/run-python.cjs scripts/validate.py",
+    "verify": "node scripts/verify.mjs"
+  },
+  "devDependencies": {
+    "eslint": "^10.8.1"
   }
 }

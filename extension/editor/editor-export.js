@@ -4,19 +4,20 @@ import { drawAnnotation } from "./geometry.js";
 
 async function decodeOriginal(blob) {
   if (typeof createImageBitmap === "function") {
-    return createImageBitmap(blob);
+    return { image: await createImageBitmap(blob), url: null };
   }
   const url = URL.createObjectURL(blob);
   try {
     const image = new Image();
     await new Promise((resolve, reject) => {
       image.onload = resolve;
-      image.onerror = reject;
+      image.onerror = () => reject(new Error("The original PNG could not be decoded."));
       image.src = url;
     });
-    return image;
-  } finally {
+    return { image, url };
+  } catch (error) {
     URL.revokeObjectURL(url);
+    throw error;
   }
 }
 
@@ -40,7 +41,12 @@ export async function renderEditorResultBlob(capture, annotations = capture?.ann
     || capture.width * capture.height > MAX_CANVAS_PIXELS || rawBytes * 2 > MAX_RAW_CANVAS_BYTES) {
     throw new Error("This page is too large to export as one PNG at the current resolution.");
   }
-  const original = await decodeOriginal(capture.blob);
+    const existingImage = typeof document !== "undefined" && typeof document.querySelector === "function"
+      ? document.querySelector("#capture-image")
+      : null;
+    const original = existingImage?.complete && existingImage.naturalWidth > 0
+      ? { image: existingImage, url: null }
+      : await decodeOriginal(capture.blob);
   let canvas = null;
   try {
     canvas = document.createElement("canvas");
@@ -53,7 +59,7 @@ export async function renderEditorResultBlob(capture, annotations = capture?.ann
     if (!context) {
       throw new Error("The browser could not allocate an export canvas.");
     }
-    context.drawImage(original, 0, 0, capture.width, capture.height);
+    context.drawImage(original.image, 0, 0, capture.width, capture.height);
     validation.annotations.forEach((annotation) => {
       validateAnnotation(annotation);
       drawAnnotation(context, annotation);
@@ -64,7 +70,10 @@ export async function renderEditorResultBlob(capture, annotations = capture?.ann
     }
     return blob;
   } finally {
-    releaseImage(original);
+    releaseImage(original?.image);
+    if (original?.url) {
+      URL.revokeObjectURL(original.url);
+    }
     if (canvas) {
       canvas.width = 1;
       canvas.height = 1;

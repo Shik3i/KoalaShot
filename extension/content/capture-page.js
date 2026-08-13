@@ -209,7 +209,9 @@
       session.styleElement.remove();
     }
     if (document.documentElement) {
-      document.documentElement.className = session.rootClassName;
+      if (!session.captureClassWasPresent) {
+        document.documentElement.classList.remove("koalashot-capturing");
+      }
       restoreStyle(session.rootScrollBehavior);
     }
     if (document.body) {
@@ -248,7 +250,7 @@
       port,
       scrollX: before.scrollX,
       scrollY: before.scrollY,
-      rootClassName: root?.className || "",
+      captureClassWasPresent: root?.classList.contains("koalashot-capturing") || false,
       rootScrollBehavior: root ? recordStyle(root, "scroll-behavior") : null,
       bodyScrollBehavior: body ? recordStyle(body, "scroll-behavior") : null,
       bodyPaddingRight: body ? recordStyle(body, "padding-right") : null,

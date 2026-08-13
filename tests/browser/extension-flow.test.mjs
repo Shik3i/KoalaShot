@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { createServer } from "node:http";
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { join, normalize, resolve } from "node:path";
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { spawn } from "node:child_process";
+import { tmpdir } from "node:os";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 
@@ -25,21 +26,55 @@ function assertNotEmpty(value, message) {
 async function waitFor(description, read, predicate = Boolean, timeout = 30_000) {
   const deadline = Date.now() + timeout;
   let lastError = null;
+  let lastValue;
   while (Date.now() < deadline) {
     try {
       const value = await read();
+      lastValue = value;
       if (predicate(value)) return value;
     } catch (error) {
       lastError = error;
     }
     await delay(100);
   }
-  throw new Error(`${description} timed out${lastError ? `: ${lastError.message}` : ""}`);
+  const observed = lastValue === undefined ? "" : `; last value: ${JSON.stringify(lastValue)}`;
+  throw new Error(`${description} timed out${lastError ? `: ${lastError.message}` : ""}${observed}`);
 }
 
-function extensionIdFromPath(extensionPath) {
-  const digest = createHash("sha256").update(extensionPath).digest();
-  return [...digest.subarray(0, 16)]
+function runProcess(command, args) {
+  return new Promise((resolvePromise, reject) => {
+    const child = spawn(command, args, { stdio: ["ignore", "ignore", "pipe"] });
+    let stderr = "";
+    child.stderr.on("data", (chunk) => { stderr += chunk; });
+    child.on("error", reject);
+    child.on("exit", (code) => {
+      if (code === 0) resolvePromise();
+      else reject(new Error(`${command} ${args.join(" ")} failed with exit code ${code}: ${stderr.trim()}`));
+    });
+  });
+}
+
+function firstExisting(override, candidates) {
+  return override || candidates.find((candidate) => existsSync(candidate)) || candidates[0];
+}
+
+function playwrightChromiumCandidates() {
+  if (process.platform !== "win32") {
+    return [];
+  }
+  const root = join(process.env.LOCALAPPDATA || "", "ms-playwright");
+  if (!existsSync(root)) {
+    return [];
+  }
+  return readdirSync(root, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && /^chromium-\d+$/.test(entry.name))
+    .sort((left, right) => right.name.localeCompare(left.name, undefined, { numeric: true }))
+    .map((entry) => join(root, entry.name, "chrome-win64", "chrome.exe"));
+}
+
+function extensionIdFromManifestKey(key) {
+  const digest = createHash("sha256").update(Buffer.from(key, "base64")).digest().subarray(0, 16);
+  return [...digest]
     .flatMap((byte) => [byte >> 4, byte & 15])
     .map((nibble) => String.fromCharCode("a".charCodeAt(0) + nibble))
     .join("");
@@ -47,8 +82,7 @@ function extensionIdFromPath(extensionPath) {
 
 function evaluatePointerScript(tool, start, end) {
   return `(() => {
-    const button = document.querySelector('[data-tool="${tool}"]');
-    button.click();
+    document.querySelector('[data-tool="${tool}"]').click();
     const canvas = document.querySelector('#interaction-canvas');
     const rect = canvas.getBoundingClientRect();
     const point = (x, y) => ({ clientX: rect.left + x, clientY: rect.top + y });
@@ -58,15 +92,51 @@ function evaluatePointerScript(tool, start, end) {
     canvas.dispatchEvent(new PointerEvent('pointerdown', init(first)));
     canvas.dispatchEvent(new PointerEvent('pointermove', init(last)));
     canvas.dispatchEvent(new PointerEvent('pointerup', init(last)));
-    return { width: rect.width, height: rect.height };
   })()`;
+}
+
+function decodeBiDiValue(remote) {
+  if (!remote || typeof remote !== "object") return remote;
+  if (["undefined", "null"].includes(remote.type)) return remote.type === "null" ? null : undefined;
+  if (["string", "number", "boolean", "bigint"].includes(remote.type)) return remote.value;
+  if (remote.type === "array") return (remote.value || []).map(decodeBiDiValue);
+  if (remote.type === "object") return Object.fromEntries((remote.value || []).map(([key, value]) => [key, decodeBiDiValue(value)]));
+  return remote.value;
+}
+
+function chromeExecutable() {
+  if (process.platform === "win32") {
+    return firstExisting(process.env.KOALASHOT_CHROME, [
+      ...playwrightChromiumCandidates(),
+      join(process.env.ProgramFiles || "C:\\Program Files", "Google", "Chrome", "Application", "chrome.exe"),
+      join(process.env["ProgramFiles(x86)"] || "C:\\Program Files (x86)", "Google", "Chrome", "Application", "chrome.exe"),
+      join(process.env.LOCALAPPDATA || "", "Google", "Chrome", "Application", "chrome.exe"),
+    ]);
+  }
+  return firstExisting(process.env.KOALASHOT_CHROME, process.platform === "darwin"
+    ? ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"]
+    : ["google-chrome", "chromium", "chromium-browser"]);
+}
+
+function firefoxExecutable() {
+  if (process.platform === "win32") {
+    return firstExisting(process.env.KOALASHOT_FIREFOX, [
+      join(process.env.ProgramFiles || "C:\\Program Files", "Mozilla Firefox", "firefox.exe"),
+      join(process.env["ProgramFiles(x86)"] || "C:\\Program Files (x86)", "Mozilla Firefox", "firefox.exe"),
+    ]);
+  }
+  return firstExisting(process.env.KOALASHOT_FIREFOX, process.platform === "darwin"
+    ? ["/Applications/Firefox.app/Contents/MacOS/firefox"]
+    : ["firefox"]);
 }
 
 function staticServer() {
   const server = createServer((request, response) => {
     const pathname = decodeURIComponent(new URL(request.url, "http://127.0.0.1").pathname);
-    const filePath = normalize(join(ROOT, pathname));
-    if (!filePath.startsWith(`${ROOT}/`) || !existsSync(filePath)) {
+    const filePath = resolve(ROOT, `.${pathname}`);
+    const relativePath = relative(ROOT, filePath);
+    const outsideRoot = !relativePath || relativePath === ".." || relativePath.startsWith(`..${sep}`) || isAbsolute(relativePath);
+    if (outsideRoot || !existsSync(filePath)) {
       response.writeHead(404).end("Not found");
       return;
     }
@@ -92,7 +162,7 @@ class JsonSocket {
       const pending = this.pending.get(message.id);
       if (!pending) return;
       this.pending.delete(message.id);
-      if (message.error) pending.reject(new Error(`${message.error}: ${message.message || ""}`));
+      if (message.error) pending.reject(new Error(`${pending.method}${pending.sessionId ? ` [${pending.sessionId}]` : ""} ${typeof message.error === "string" ? message.error : JSON.stringify(message.error)}: ${message.message || ""}`));
       else pending.resolve(message);
     });
     await new Promise((resolvePromise, reject) => {
@@ -109,6 +179,8 @@ class JsonSocket {
         reject(new Error(`Timed out waiting for ${method}`));
       }, 30_000);
       this.pending.set(id, {
+        method,
+        sessionId,
         resolve: (message) => { clearTimeout(timer); resolvePromise(message); },
         reject: (error) => { clearTimeout(timer); reject(error); },
       });
@@ -122,23 +194,32 @@ class JsonSocket {
 }
 
 class ChromeBrowser {
-  constructor(baseUrl, profile, downloads) {
+  constructor(baseUrl, profile, downloads, initialPath = FIXTURE) {
     this.baseUrl = baseUrl;
     this.profile = profile;
     this.downloads = downloads;
+    this.initialPath = initialPath;
     this.extensionPath = join(DIST, "chrome");
-    this.extensionId = extensionIdFromPath(this.extensionPath);
+    this.extensionId = extensionIdFromManifestKey(JSON.parse(readFileSync(join(this.extensionPath, "manifest.json"), "utf8")).key);
     this.process = null;
   }
 
   async start() {
-    const executable = process.env.KOALASHOT_CHROME || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+    this.extensionPath = join(this.profile, "koalashot-chrome");
+    cpSync(join(DIST, "chrome"), this.extensionPath, { recursive: true });
+    const testManifestPath = join(this.extensionPath, "manifest.json");
+    const testManifest = JSON.parse(readFileSync(testManifestPath, "utf8"));
+    testManifest.host_permissions = ["<all_urls>"];
+    testManifest.permissions = [...new Set([...(testManifest.permissions || []), "tabs"])];
+    writeFileSync(testManifestPath, `${JSON.stringify(testManifest, null, 2)}\n`);
+    const executable = chromeExecutable();
     const port = 9322 + Math.floor(Math.random() * 200);
+    this.debugPort = port;
     const headless = process.env.KOALASHOT_CHROME_HEADLESS !== "0";
     this.process = spawn(executable, [
       ...(headless ? ["--headless=new"] : []), "--no-sandbox", "--disable-gpu", "--no-first-run", "--no-default-browser-check",
       `--user-data-dir=${this.profile}`, `--load-extension=${this.extensionPath}`, `--disable-extensions-except=${this.extensionPath}`,
-      `--remote-debugging-port=${port}`, "--window-size=1280,900", `${this.baseUrl}${FIXTURE}`,
+      `--remote-debugging-port=${port}`, "--window-size=1280,900", `${this.baseUrl}${this.initialPath}`,
     ], { stdio: ["ignore", "pipe", "pipe"] });
     await waitFor("Chrome DevTools endpoint", async () => {
       try {
@@ -154,8 +235,8 @@ class ChromeBrowser {
     await this.socket.request("Browser.setDownloadBehavior", { behavior: "allow", downloadPath: this.downloads });
   }
 
-  async open(url, background = true) {
-    const created = await this.socket.request("Target.createTarget", { url, background });
+  async open(url, background = true, newWindow = false) {
+    const created = await this.socket.request("Target.createTarget", { url, background, newWindow });
     const targetId = created.result.targetId;
     const attached = await this.socket.request("Target.attachToTarget", { targetId, flatten: true });
     const page = { targetId, sessionId: attached.result.sessionId };
@@ -164,8 +245,19 @@ class ChromeBrowser {
   }
 
   async navigate(page, url) {
-    await this.socket.request("Page.navigate", { url }, page.sessionId);
+    await (page.socket || this.socket).request("Page.navigate", { url }, page.sessionId);
     await this.wait(page, "document.readyState === 'complete'");
+  }
+
+  async lockViewport(page) {
+    await this.socket.request("Emulation.setDeviceMetricsOverride", {
+      width: 1262,
+      height: 804,
+      deviceScaleFactor: 1,
+      mobile: false,
+      screenWidth: 1262,
+      screenHeight: 804,
+    }, page.sessionId);
   }
 
   async activate(page) {
@@ -176,8 +268,28 @@ class ChromeBrowser {
     return waitFor("page state", () => this.evaluate(page, expression), Boolean);
   }
 
+  async draw(page, tool, start, end) {
+    return this.evaluate(page, evaluatePointerScript(tool, start, end));
+  }
+
   async evaluate(page, expression) {
-    const result = await this.socket.request("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true }, page.sessionId);
+    let result;
+    if (page.socket) {
+      result = await page.socket.request("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true });
+      const remote = result.result?.result;
+      if (remote?.subtype === "error") throw new Error(remote.description || "Browser evaluation failed.");
+      return remote?.value;
+    }
+    try {
+      result = await this.socket.request("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true }, page.sessionId);
+    } catch (error) {
+      if (!error.message.includes("Session with given id not found")) {
+        throw error;
+      }
+      const attached = await this.socket.request("Target.attachToTarget", { targetId: page.targetId, flatten: true });
+      page.sessionId = attached.result.sessionId;
+      result = await this.socket.request("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true }, page.sessionId);
+    }
     const remote = result.result?.result;
     if (remote?.subtype === "error") throw new Error(remote.description || "Browser evaluation failed.");
     return remote?.value;
@@ -188,17 +300,46 @@ class ChromeBrowser {
     return result.result.targetInfos.filter((target) => target.type === "page");
   }
 
+  async existing(url) {
+    const target = await waitFor("existing Chrome page", async () => (await this.pages()).find((item) => item.url === url) || null);
+    const attached = await this.socket.request("Target.attachToTarget", { targetId: target.targetId, flatten: true });
+    const page = { targetId: target.targetId, sessionId: attached.result.sessionId };
+    await this.wait(page, "document.readyState === 'complete'");
+    return page;
+  }
+
   async findEditor() {
     return waitFor("editor tab", async () => {
-      const target = (await this.pages()).find((item) => item.url.includes(`chrome-extension://${this.extensionId}/editor/editor.html?capture=`));
-      if (!target) return null;
-      const attached = await this.socket.request("Target.attachToTarget", { targetId: target.targetId, flatten: true });
-      return { targetId: target.targetId, sessionId: attached.result.sessionId };
-    });
+      const targets = await this.pages();
+      const target = targets.find((item) => item.url.includes(`/editor/editor.html?capture=`));
+      if (!target) return { observedTargets: targets.map(({ type, url }) => ({ type, url })) };
+      const response = await fetch(`http://127.0.0.1:${this.debugPort}/json/list`);
+      const descriptors = response.ok ? await response.json() : [];
+      const descriptor = descriptors.find((item) => item.id === target.targetId && item.webSocketDebuggerUrl);
+      if (!descriptor) return null;
+      const socket = new JsonSocket(descriptor.webSocketDebuggerUrl);
+      await socket.connect();
+      const page = { targetId: target.targetId, socket };
+      try {
+        const state = await socket.request("Runtime.evaluate", {
+          expression: "document.readyState",
+          returnByValue: true,
+        });
+        if (state.result?.result?.value !== "complete") {
+          socket.close();
+          return null;
+        }
+      } catch (error) {
+        socket.close();
+        throw error;
+      }
+      return page;
+    }, (value) => Boolean(value?.socket));
   }
 
   async close(page) {
     await this.socket.request("Target.closeTarget", { targetId: page.targetId }).catch(() => {});
+    page.socket?.close();
   }
 
   async stop() {
@@ -213,6 +354,8 @@ class FirefoxBrowser {
     this.baseUrl = baseUrl;
     this.profile = profile;
     this.downloads = downloads;
+    this.extensionUuid = "00000000-0000-4000-8000-000000000001";
+    this.extensionArchive = join(profile, "koalashot-firefox-test.zip");
     this.process = null;
   }
 
@@ -223,8 +366,9 @@ class FirefoxBrowser {
       `user_pref("browser.helperApps.neverAsk.saveToDisk", "image/png,application/octet-stream");`,
       `user_pref("browser.download.manager.showWhenStarting", false);`,
       `user_pref("browser.download.alwaysOpenPanel", false);`,
+      `user_pref("extensions.webextensions.uuids", ${JSON.stringify(JSON.stringify({ "koalashot@koalastuff.net": this.extensionUuid }))});`,
     ].join("\n"));
-    const executable = process.env.KOALASHOT_FIREFOX || "/Applications/Firefox.app/Contents/MacOS/firefox";
+    const executable = firefoxExecutable();
     const port = 9522 + Math.floor(Math.random() * 200);
     this.process = spawn(executable, ["--headless", "--no-remote", "--marionette", `--profile`, this.profile, `--remote-debugging-port=${port}`], { stdio: ["ignore", "pipe", "pipe"] });
     await waitFor("Firefox BiDi endpoint", async () => {
@@ -239,11 +383,11 @@ class FirefoxBrowser {
     await this.socket.connect();
     const session = await this.socket.request("session.new", { capabilities: { alwaysMatch: {} } });
     this.sessionId = session.result.sessionId;
-    await this.socket.request("webExtension.install", { extensionData: { type: "path", path: join(DIST, "koalashot-firefox-0.2.0.zip"), temporary: true } }, this.sessionId);
-    const prefs = readFileSync(join(this.profile, "prefs.js"), "utf8");
-    const uuid = prefs.match(/"koalashot@koalastuff\.net":"([^"]+)"/)?.[1];
+    await runProcess(process.execPath, [join(ROOT, "scripts", "run-python.cjs"), join(ROOT, "scripts", "create-firefox-test-archive.py"), join(DIST, "firefox"), this.extensionArchive]);
+    const installation = await this.socket.request("webExtension.install", { extensionData: { type: "archivePath", path: this.extensionArchive } }, this.sessionId);
+    const uuid = installation.result?.extension;
     assertNotEmpty(uuid, "Firefox did not expose the KoalaShot extension UUID.");
-    this.extensionUrl = `moz-extension://${uuid}`;
+    this.extensionUrl = `moz-extension://${this.extensionUuid}`;
   }
 
   async open(url) {
@@ -254,7 +398,22 @@ class FirefoxBrowser {
   }
 
   async navigate(page, url) {
-    await this.socket.request("browsingContext.navigate", { context: page.context, url, wait: "complete" }, this.sessionId);
+    try {
+      await this.socket.request("browsingContext.navigate", { context: page.context, url, wait: "none" }, this.sessionId);
+    } catch (error) {
+      if (!error.message.includes("NS_ERROR_NOT_AVAILABLE")) {
+        throw error;
+      }
+      await delay(250);
+      try {
+        await this.socket.request("browsingContext.navigate", { context: page.context, url, wait: "none" }, this.sessionId);
+      } catch (retryError) {
+        if (!retryError.message.includes("NS_ERROR_NOT_AVAILABLE")) throw retryError;
+      }
+      await waitFor("Firefox fallback navigation", () => this.evaluate(page, "({ href: location.href, readyState: document.readyState })"), (state) => state?.href === url && state?.readyState === "complete");
+      return;
+    }
+    await this.wait(page, "document.readyState === 'complete'");
   }
 
   async activate(page) {
@@ -265,11 +424,37 @@ class FirefoxBrowser {
     const result = await this.socket.request("script.evaluate", {
       expression, awaitPromise: true, resultOwnership: "none", target: { context: page.context },
     }, this.sessionId);
-    return result.result?.result?.value;
+    return decodeBiDiValue(result.result?.result);
   }
 
   async wait(page, expression) {
     return waitFor("page state", () => this.evaluate(page, expression), Boolean);
+  }
+
+  async draw(page, tool, start, end) {
+    await this.evaluate(page, `document.querySelector('[data-tool="${tool}"]').click()`);
+    const rect = await this.evaluate(page, "document.querySelector('#interaction-canvas').getBoundingClientRect().toJSON()");
+    const point = (coordinates) => ({ x: Math.round(rect.left + coordinates[0]), y: Math.round(rect.top + coordinates[1]) });
+    const first = point(start);
+    const last = point(end);
+    try {
+      await this.socket.request("input.performActions", {
+        context: page.context,
+        actions: [{
+          type: "pointer",
+          id: "koalashot-mouse",
+          parameters: { pointerType: "mouse" },
+          actions: [
+            { type: "pointerMove", x: first.x, y: first.y, duration: 0 },
+            { type: "pointerDown", button: 0 },
+            { type: "pointerMove", x: last.x, y: last.y, duration: 50 },
+            { type: "pointerUp", button: 0 },
+          ],
+        }],
+      }, this.sessionId);
+    } finally {
+      await this.socket.request("input.releaseActions", { context: page.context }, this.sessionId).catch(() => {});
+    }
   }
 
   async findEditor() {
@@ -297,6 +482,117 @@ class FirefoxBrowser {
   }
 }
 
+async function runFlow() {
+  const server = staticServer();
+  await new Promise((resolvePromise) => server.listen(0, "127.0.0.1", resolvePromise));
+  const port = server.address().port;
+  const baseUrl = `http://127.0.0.1:${port}`;
+  const profile = join(tmpdir(), `koalashot-${browserName}-${Date.now()}`);
+  const downloads = join(profile, "downloads");
+  mkdirSync(downloads, { recursive: true });
+  const browser = browserName === "chrome" ? new ChromeBrowser(baseUrl, profile, downloads) : new FirefoxBrowser(baseUrl, profile, downloads);
+  let fixture = null;
+  let popup = null;
+  let editor = null;
+  const result = { browser: browserName, clipboard: [], downloads: [] };
+  try {
+    await browser.start();
+    fixture = await browser.open(`${baseUrl}${FIXTURE}`, false);
+    if (browserName === "chrome") await browser.lockViewport(fixture);
+    await browser.activate(fixture);
+    popup = browserName === "chrome" ? await browser.open(`chrome-extension://${browser.extensionId}/popup/popup.html`, false) : await browser.open(`${browser.extensionUrl}/popup/popup.html`);
+    await waitFor("Firefox popup page", () => browser.evaluate(popup, "({ href: location.href, readyState: document.readyState, body: document.body?.innerText || '' })"), (state) => state?.body.includes("Capture this page"));
+    popup.browser = browser;
+    const popupState = await browser.evaluate(popup, "({ href: location.href, readyState: document.readyState, body: document.body?.innerText || '', markup: document.documentElement?.outerHTML.slice(0, 300) || '' })");
+    assert.ok(popupState?.body.includes("Capture this page"), `Popup did not load (extensionId=${browser.extensionId || "n/a"}): ${JSON.stringify(popupState)}`);
+    await browser.activate(fixture);
+    await browser.evaluate(popup, "document.querySelector('#open-editor').checked = false; document.querySelector('#open-editor').dispatchEvent(new Event('change', { bubbles: true }));");
+
+    await browser.evaluate(popup, `document.querySelector('#${browserName === "chrome" ? "save-button" : "copy-button"}').click()`);
+    const firstCaptureStatus = await waitFor("popup capture status", () => browser.evaluate(popup, "document.querySelector('#status').textContent"), (value) => browserName === "chrome" ? /PNG save started/i.test(value) : /Full-page screenshot copied|PNG is ready|Copy failed/i.test(value));
+    if (browserName === "chrome") assert.match(firstCaptureStatus, /PNG save started/i);
+    else result.clipboard.push(`popup: ${firstCaptureStatus}`);
+    await waitFor("page cleanup after popup capture", () => browser.evaluate(fixture, "({ scrollY, className: document.documentElement.className, style: Boolean(document.querySelector('#koalashot-capture-styles')) })"), (state) => state?.scrollY === 0 && !state.className.includes("koalashot-capturing") && !state.style);
+
+    await browser.navigate(fixture, `${baseUrl}${INTERNAL_FIXTURE}`);
+    if (browserName === "chrome") await browser.lockViewport(fixture);
+    await browser.activate(fixture);
+    await browser.evaluate(popup, "document.querySelector('#save-button').click()");
+    const internalStatus = await waitFor("internal-scroll rejection", () => browser.evaluate(popup, "document.querySelector('#status').textContent"), (value) => /internal scroll area|not supported/i.test(value));
+    assert.match(internalStatus, /internal scroll area|not supported/i);
+    await waitFor("cleanup after unsupported capture", () => browser.evaluate(fixture, "!document.documentElement.className.includes('koalashot-capturing')"));
+
+    await browser.navigate(fixture, `${baseUrl}${FIXTURE}`);
+    if (browserName === "chrome") await browser.lockViewport(fixture);
+    await browser.activate(fixture);
+    await browser.evaluate(popup, "document.querySelector('#open-editor').checked = true; document.querySelector('#open-editor').dispatchEvent(new Event('change', { bubbles: true })); document.querySelector('#save-button').click()");
+    const editorTriggerStatus = await waitFor("editor trigger", () => browser.evaluate(popup, "document.querySelector('#status').textContent"), (value) => /Editor opened|save failed|could not|failed/i.test(value));
+    assert.match(editorTriggerStatus, /Editor opened/i, `Editor trigger status: ${editorTriggerStatus}`);
+    editor = await browser.findEditor();
+    await delay(300);
+    editor.browser = browser;
+    await browser.wait(editor, "document.querySelector('#stage-wrap') && !document.querySelector('#stage-wrap').hidden && !document.querySelector('#save-button').disabled");
+    assert.equal(await browser.evaluate(editor, "document.querySelector('#source-hostname').textContent"), "127.0.0.1");
+    assert.equal(await browser.evaluate(editor, "document.querySelector('#capture-image').naturalWidth > 0"), true);
+
+    await browser.draw(editor, "rectangle", [80, 80], [260, 210]);
+    await browser.draw(editor, "redact", [300, 90], [470, 180]);
+    await browser.draw(editor, "text", [90, 240], [90, 240]);
+    await browser.evaluate(editor, `(() => {
+      document.querySelector('#text-input').value = 'Browser regression note';
+      document.querySelector('#apply-text-button').click();
+    })()`);
+    const annotationCount = await waitFor("annotation draft persistence", () => browser.evaluate(editor, `new Promise((resolve, reject) => {
+      const request = indexedDB.open('koalashot-captures', 1);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => { const getAll = request.result.transaction('captures').objectStore('captures').getAll(); getAll.onsuccess = () => { resolve(getAll.result[0]?.annotations?.length || 0); request.result.close(); }; };
+    })`), (count) => count === 3);
+    assert.equal(annotationCount, 3);
+
+    await browser.evaluate(editor, "document.querySelector('#save-button').click()");
+    const editorSaveStatus = await waitFor("edited PNG save", () => browser.evaluate(editor, "document.querySelector('#status').textContent"), (value) => /save started/i.test(value));
+    assert.match(editorSaveStatus, /save started/i);
+    await browser.evaluate(editor, "document.querySelector('#copy-button').click()");
+    const editorCopyStatus = await waitFor("edited clipboard status", () => browser.evaluate(editor, "document.querySelector('#status').textContent"), (value) => /copied|Copy failed|permission/i.test(value));
+    result.clipboard.push(`editor: ${editorCopyStatus}`);
+
+    assert.equal(await browser.evaluate(editor, "document.querySelector('#undo-button').disabled"), false);
+    await browser.evaluate(editor, "document.querySelector('#undo-button').click(); document.querySelector('#redo-button').click(); document.querySelector('#zoom-in-button').click(); document.querySelector('#zoom-out-button').click(); document.querySelector('#actual-size-button').click(); document.querySelector('#fit-button').click();");
+    assert.match(await browser.evaluate(editor, "document.querySelector('#zoom-value').textContent"), /%$/);
+
+    assert.equal(await readCaptureCount(editor), 1);
+    const editorUrl = await browser.evaluate(editor, "location.href");
+    await browser.navigate(editor, editorUrl);
+    await browser.wait(editor, "document.querySelector('#stage-wrap') && !document.querySelector('#stage-wrap').hidden");
+    assert.equal(await browser.evaluate(editor, `new Promise((resolve, reject) => {
+      const request = indexedDB.open('koalashot-captures', 1);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => { const getAll = request.result.transaction('captures').objectStore('captures').getAll(); getAll.onsuccess = () => { resolve(getAll.result[0]?.annotations?.length || 0); request.result.close(); }; };
+    })`), 3);
+
+    await browser.evaluate(editor, "document.querySelector('#clear-button').click()");
+    await delay(800);
+    assert.equal(await browser.evaluate(editor, `new Promise((resolve, reject) => {
+      const request = indexedDB.open('koalashot-captures', 1);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => { const getAll = request.result.transaction('captures').objectStore('captures').getAll(); getAll.onsuccess = () => { resolve(getAll.result[0]?.annotations?.length || 0); request.result.close(); }; };
+    })`), 0);
+    await browser.evaluate(editor, "document.querySelector('#discard-button').click()");
+    await delay(800);
+    assert.equal(await readCaptureCount(popup), 0);
+    result.downloads = readdirSync(downloads).filter((name) => name.endsWith(".png"));
+    assert.ok(result.downloads.length >= 2, `Expected popup and editor PNG downloads, found ${result.downloads.length}`);
+
+    return result;
+  } finally {
+    if (editor) await browser.close(editor);
+    if (popup) await browser.close(popup);
+    if (fixture) await browser.close(fixture);
+    await browser.stop();
+    await new Promise((resolvePromise) => server.close(resolvePromise));
+  }
+}
+
 async function readCaptureCount(page) {
   return page.browser.evaluate(page, `new Promise((resolve, reject) => {
     const request = indexedDB.open('koalashot-captures', 1);
@@ -308,127 +604,6 @@ async function readCaptureCount(page) {
       getAll.onsuccess = () => { resolve(getAll.result.length); request.result.close(); };
     };
   })`);
-}
-
-async function runFlow() {
-  const server = staticServer();
-  await new Promise((resolvePromise) => server.listen(0, "127.0.0.1", resolvePromise));
-  const port = server.address().port;
-  const baseUrl = `http://127.0.0.1:${port}`;
-  const profile = join("/private/tmp", `koalashot-${browserName}-${Date.now()}`);
-  const downloads = join(profile, "downloads");
-  mkdirSync(downloads, { recursive: true });
-  const browser = browserName === "chrome" ? new ChromeBrowser(baseUrl, profile, downloads) : new FirefoxBrowser(baseUrl, profile, downloads);
-  let fixture = null;
-  let popup = null;
-  let editor = null;
-  const result = { browser: browserName, clipboard: [], downloads: [] };
-  try {
-    await browser.start();
-    fixture = await browser.open(`${baseUrl}${FIXTURE}`, false);
-    await browser.activate(fixture);
-    const extensionUrl = browserName === "chrome" ? `chrome-extension://${browser.extensionId}` : browser.extensionUrl;
-    popup = await browser.open(`${extensionUrl}/popup/popup.html`);
-    await browser.activate(fixture);
-    await browser.evaluate(popup, `document.querySelector('#open-editor').checked = false; document.querySelector('#open-editor').dispatchEvent(new Event('change', { bubbles: true }));`);
-
-    await browser.evaluate(popup, "document.querySelector('#copy-button').click()");
-    const copyStatus = await waitFor("popup capture and clipboard status", () => browser.evaluate(popup, "document.querySelector('#status').textContent"), (value) => /copied|Clipboard permission|Copy failed/i.test(value));
-    result.clipboard.push(`popup: ${copyStatus}`);
-    assert.match(copyStatus, /copied|Clipboard permission|Copy failed/i);
-    await waitFor("page cleanup after popup copy", () => browser.evaluate(fixture, "({ scrollY, className: document.documentElement.className, style: Boolean(document.querySelector('#koalashot-capture-styles')) })"), (state) => state?.scrollY === 0 && !state.className.includes("koalashot-capturing") && !state.style);
-
-    await browser.navigate(fixture, `${baseUrl}${INTERNAL_FIXTURE}`);
-    await browser.activate(fixture);
-    await browser.evaluate(popup, "document.querySelector('#save-button').click()");
-    const internalStatus = await waitFor("internal-scroll rejection", () => browser.evaluate(popup, "document.querySelector('#status').textContent"), (value) => /internal scroll area|not supported/i.test(value));
-    assert.match(internalStatus, /internal scroll area|not supported/i);
-    await waitFor("cleanup after unsupported capture", () => browser.evaluate(fixture, "!document.documentElement.className.includes('koalashot-capturing')"));
-
-    await browser.navigate(fixture, `${baseUrl}${FIXTURE}`);
-    await browser.activate(fixture);
-    await browser.evaluate(popup, `document.querySelector('#open-editor').checked = true; document.querySelector('#open-editor').dispatchEvent(new Event('change', { bubbles: true })); document.querySelector('#save-button').click();`);
-    editor = await browser.findEditor();
-    editor.browser = browser;
-    await browser.wait(editor, "document.querySelector('#stage-wrap') && !document.querySelector('#stage-wrap').hidden && !document.querySelector('#save-button').disabled");
-    assert.equal(await browser.evaluate(editor, "document.querySelector('#source-hostname').textContent"), "127.0.0.1");
-    assert.equal(await browser.evaluate(editor, "document.querySelector('#capture-image').naturalWidth > 0"), true);
-
-    await browser.evaluate(editor, evaluatePointerScript("rectangle", [80, 80], [260, 210]));
-    await browser.evaluate(editor, evaluatePointerScript("redact", [300, 90], [470, 180]));
-    await browser.evaluate(editor, `(() => {
-      document.querySelector('[data-tool="text"]').click();
-      const canvas = document.querySelector('#interaction-canvas');
-      const rect = canvas.getBoundingClientRect();
-      canvas.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerId: 2, pointerType: 'mouse', isPrimary: true, clientX: rect.left + 90, clientY: rect.top + 240 }));
-      const input = document.querySelector('#text-input');
-      input.value = 'Browser regression note';
-      document.querySelector('#apply-text-button').click();
-    })()`);
-    await waitFor("annotation draft persistence", () => readCaptureCount(editor), (count) => count === 1);
-    const annotationCount = await browser.evaluate(editor, `new Promise((resolve, reject) => {
-      const request = indexedDB.open('koalashot-captures', 1);
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => { const getAll = request.result.transaction('captures').objectStore('captures').getAll(); getAll.onsuccess = () => { resolve(getAll.result[0]?.annotations?.length || 0); request.result.close(); }; };
-    })`);
-    assert.equal(annotationCount, 3);
-
-    await browser.evaluate(editor, "document.querySelector('#save-button').click()");
-    const editorSaveStatus = await waitFor("edited PNG save", () => browser.evaluate(editor, "document.querySelector('#status').textContent"), (value) => /save started/i.test(value));
-    assert.match(editorSaveStatus, /save started/i);
-    await browser.evaluate(editor, "document.querySelector('#copy-button').click()");
-    const editorCopyStatus = await waitFor("edited clipboard status", () => browser.evaluate(editor, "document.querySelector('#status').textContent"), (value) => /copied|Copy failed|permission/i.test(value));
-    result.clipboard.push(`editor: ${editorCopyStatus}`);
-
-    const beforeUndo = await browser.evaluate(editor, "document.querySelector('#undo-button').disabled");
-    assert.equal(beforeUndo, false);
-    await browser.evaluate(editor, "document.querySelector('#undo-button').click(); document.querySelector('#redo-button').click();");
-    await browser.evaluate(editor, "document.querySelector('#zoom-in-button').click(); document.querySelector('#zoom-out-button').click(); document.querySelector('#actual-size-button').click(); document.querySelector('#fit-button').click();");
-    assert.match(await browser.evaluate(editor, "document.querySelector('#zoom-value').textContent"), /%$/);
-
-    const persistedBeforeReload = await readCaptureCount(editor);
-    assert.equal(persistedBeforeReload, 1);
-    const editorUrl = await browser.evaluate(editor, "location.href");
-    await browser.navigate(editor, editorUrl);
-    await browser.wait(editor, "document.querySelector('#stage-wrap') && !document.querySelector('#stage-wrap').hidden");
-    const persistedAfterReload = await browser.evaluate(editor, `new Promise((resolve, reject) => {
-      const request = indexedDB.open('koalashot-captures', 1);
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => { const getAll = request.result.transaction('captures').objectStore('captures').getAll(); getAll.onsuccess = () => { resolve(getAll.result[0]?.annotations?.length || 0); request.result.close(); }; };
-    })`);
-    assert.equal(persistedAfterReload, 3);
-
-    await browser.evaluate(editor, `(() => {
-      const canvas = document.querySelector('#interaction-canvas');
-      const rect = canvas.getBoundingClientRect();
-      canvas.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerId: 3, pointerType: 'mouse', isPrimary: true, clientX: rect.left + 120, clientY: rect.top + 120 }));
-      document.querySelector('#delete-button').click();
-    })()`);
-    await delay(800);
-    await browser.evaluate(editor, "document.querySelector('#clear-button').click()");
-    await delay(800);
-    const afterClear = await readCaptureCount(editor);
-    assert.equal(afterClear, 1);
-    const annotationsAfterClear = await browser.evaluate(editor, `new Promise((resolve, reject) => {
-      const request = indexedDB.open('koalashot-captures', 1);
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => { const getAll = request.result.transaction('captures').objectStore('captures').getAll(); getAll.onsuccess = () => { resolve(getAll.result[0]?.annotations?.length || 0); request.result.close(); }; };
-    })`);
-    assert.equal(annotationsAfterClear, 0);
-
-    await browser.evaluate(editor, "document.querySelector('#discard-button').click()");
-    await delay(800);
-    assert.equal(await readCaptureCount(editor), 0);
-    result.downloads = readdirSync(downloads).filter((name) => name.endsWith(".png"));
-    assert.ok(result.downloads.length >= 2, `Expected popup and editor PNG downloads, found ${result.downloads.length}`);
-    return result;
-  } finally {
-    if (editor) await browser.close(editor);
-    if (popup) await browser.close(popup);
-    if (fixture) await browser.close(fixture);
-    await browser.stop();
-    await new Promise((resolvePromise) => server.close(resolvePromise));
-  }
 }
 
 const result = await runFlow();

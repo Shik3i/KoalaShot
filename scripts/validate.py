@@ -46,6 +46,11 @@ def validate_manifests() -> None:
             fail(f"optional permissions in {browser} must contain only clipboardWrite")
         if manifest.get("manifest_version") != 3 or manifest.get("version") != "0.2.0":
             fail(f"unexpected manifest version in {browser}")
+        if browser == "firefox":
+            gecko = manifest.get("browser_specific_settings", {}).get("gecko", {})
+            collection = gecko.get("data_collection_permissions")
+            if not isinstance(collection, dict) or collection.get("required") != ["none"]:
+                fail("Firefox must declare required data_collection_permissions as ['none']")
 
 
 def validate_required_files() -> None:
