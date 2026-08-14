@@ -13,7 +13,17 @@ ROOT = Path(__file__).resolve().parents[1]
 EXTENSION = ROOT / "extension"
 LANDING = ROOT / "landing"
 DIST = ROOT / "dist"
-VERSION = "0.3.0"
+
+
+def project_version() -> str:
+    try:
+        metadata = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        fail(f"cannot read package version: {error}")
+    version = metadata.get("version")
+    if not isinstance(version, str) or not version:
+        fail("package.json must define a non-empty string version")
+    return version
 
 
 def fail(message: str) -> None:
@@ -50,7 +60,7 @@ def copy_tree(source: Path, destination: Path) -> None:
         shutil.copy2(path, target)
 
 
-def build_extension(browser: str) -> Path:
+def build_extension(browser: str, version: str) -> Path:
     manifest_path = EXTENSION / "manifests" / f"{browser}.json"
     if not manifest_path.is_file():
         fail(f"missing manifest: {manifest_path}")
@@ -58,8 +68,8 @@ def build_extension(browser: str) -> Path:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as error:
         fail(f"malformed {browser} manifest: {error}")
-    if manifest.get("version") != VERSION:
-        fail(f"{browser} manifest version must be {VERSION}")
+    if manifest.get("version") != version:
+        fail(f"{browser} manifest version must be {version}")
 
     output = DIST / browser
     output.mkdir(parents=True, exist_ok=True)
@@ -89,6 +99,7 @@ def zip_directory(directory: Path, archive: Path) -> None:
 
 
 def main() -> None:
+    version = project_version()
     missing = [str(path.relative_to(ROOT)) for path in required_files() if not path.is_file()]
     if missing:
         fail(f"required files are missing: {', '.join(missing)}")
@@ -99,13 +110,13 @@ def main() -> None:
         shutil.rmtree(DIST)
     DIST.mkdir(parents=True)
     for browser in ("chrome", "firefox"):
-        output = build_extension(browser)
-        zip_directory(output, DIST / f"koalashot-{browser}-{VERSION}.zip")
+        output = build_extension(browser, version)
+        zip_directory(output, DIST / f"koalashot-{browser}-{version}.zip")
     copy_tree(LANDING, DIST / "landing")
     print("Built dist/chrome/")
     print("Built dist/firefox/")
-    print(f"Built dist/koalashot-chrome-{VERSION}.zip")
-    print(f"Built dist/koalashot-firefox-{VERSION}.zip")
+    print(f"Built dist/koalashot-chrome-{version}.zip")
+    print(f"Built dist/koalashot-firefox-{version}.zip")
     print("Built dist/landing/")
 
 

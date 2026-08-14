@@ -31,7 +31,16 @@ def read_json(path: Path) -> dict:
     return value
 
 
+def project_version() -> str:
+    metadata = read_json(ROOT / "package.json")
+    version = metadata.get("version")
+    if not isinstance(version, str) or not version:
+        fail("package.json must define a non-empty string version")
+    return version
+
+
 def validate_manifests() -> None:
+    version = project_version()
     for browser in ("chrome", "firefox"):
         manifest = read_json(EXTENSION / "manifests" / f"{browser}.json")
         permissions = set(manifest.get("permissions", []))
@@ -44,13 +53,24 @@ def validate_manifests() -> None:
             fail(f"forbidden optional permissions in {browser}: {sorted(optional & FORBIDDEN_PERMISSIONS)}")
         if optional != {"clipboardWrite"}:
             fail(f"optional permissions in {browser} must contain only clipboardWrite")
-        if manifest.get("manifest_version") != 3 or manifest.get("version") != "0.3.0":
+        if manifest.get("manifest_version") != 3 or manifest.get("version") != version:
             fail(f"unexpected manifest version in {browser}")
         if browser == "firefox":
             gecko = manifest.get("browser_specific_settings", {}).get("gecko", {})
             collection = gecko.get("data_collection_permissions")
             if not isinstance(collection, dict) or collection.get("required") != ["none"]:
                 fail("Firefox must declare required data_collection_permissions as ['none']")
+
+
+def validate_version_consistency() -> None:
+    version = project_version()
+    lockfile = read_json(ROOT / "package-lock.json")
+    if lockfile.get("version") != version or lockfile.get("packages", {}).get("", {}).get("version") != version:
+        fail(f"package-lock.json must contain version {version}")
+    constants = (EXTENSION / "common" / "constants.js").read_text(encoding="utf-8")
+    match = re.search(r'export const VERSION = ["\']([^"\']+)["\']', constants)
+    if not match or match.group(1) != version:
+        fail(f"extension/common/constants.js must contain version {version}")
 
 
 def validate_required_files() -> None:
@@ -71,6 +91,7 @@ def validate_required_files() -> None:
         LANDING / "index.html",
         LANDING / "privacy" / "index.html",
         LANDING / "legal" / "index.html",
+        LANDING / "version.json",
     ]
     required += [EXTENSION / "icons" / f"icon-{size}.png" for size in (16, 32, 48, 96, 128)]
     missing = [str(path.relative_to(ROOT)) for path in required if not path.is_file()]
@@ -98,6 +119,13 @@ def validate_source_policy() -> None:
             fail(f"remote landing-page stylesheet asset found in {path.relative_to(ROOT)}")
 
 
+def validate_landing_version() -> None:
+    version = project_version()
+    metadata = read_json(LANDING / "version.json")
+    if metadata.get("version") != version:
+        fail(f"landing/version.json must contain version {version}")
+
+
 def validate_archives() -> None:
     if not DIST.exists():
         print("No dist/ directory found; source validation passed and archive validation was skipped.")
@@ -117,8 +145,10 @@ def validate_archives() -> None:
 
 def main() -> None:
     validate_manifests()
+    validate_version_consistency()
     validate_required_files()
     validate_source_policy()
+    validate_landing_version()
     validate_archives()
     print("Validation passed.")
 

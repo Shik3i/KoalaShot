@@ -3,32 +3,75 @@ name: Release KoalaShot
 on:
   push:
     tags:
-      - "v*"
+      - 'v*'
 
-permissions:
-  contents: write
-  id-token: write
-  attestations: write
+# A release run must never be interrupted. It updates main and publishes artifacts.
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
   release-extension:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: "22"
-          cache: npm
+          node-version: '24'
+          cache: 'npm'
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.x"
+          python-version: '3.x'
+
+      - name: Extract version from tag
+        id: version
+        shell: bash
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Inject version into source files
+        shell: bash
+        run: |
+          VERSION='${{ steps.version.outputs.VERSION }}'
+          DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          echo "Injecting version $VERSION from tag $GITHUB_REF_NAME..."
+
+          jq --arg v "$VERSION" '.version = $v' extension/manifests/chrome.json > tmp.json && mv tmp.json extension/manifests/chrome.json
+          echo "  ✓ extension/manifests/chrome.json -> $VERSION"
+          jq --arg v "$VERSION" '.version = $v' extension/manifests/firefox.json > tmp.json && mv tmp.json extension/manifests/firefox.json
+          echo "  ✓ extension/manifests/firefox.json -> $VERSION"
+          sed -E -i "s/export const VERSION = [\"'].*[\"']/export const VERSION = \"$VERSION\"/" extension/common/constants.js
+          echo "  ✓ extension/common/constants.js -> $VERSION"
+          npm version "$VERSION" --no-git-tag-version
+          echo "  ✓ package.json and package-lock.json -> $VERSION"
+          jq -n --arg v "$VERSION" --arg d "$DATE" '{version: $v, date: $d}' > landing/version.json
+          echo "  ✓ landing/version.json -> version $VERSION, date $DATE"
+          sed -E -i "s/Release-v[0-9]+\.[0-9]+\.[0-9]+-blue/Release-v$VERSION-blue/g" README.md
+          sed -E -i "s/Current release: v[0-9]+\.[0-9]+\.[0-9]+/Current release: v$VERSION/g" README.md
+          sed -E -i "s/koalashot-(chrome|firefox)-[0-9]+\.[0-9]+\.[0-9]+\.zip/koalashot-\1-$VERSION.zip/g" README.md
+          echo "  ✓ README.md -> v$VERSION"
+          echo "Version injection complete."
+
+      - name: Commit and push version updates back to main
+        shell: bash
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add extension/manifests/chrome.json extension/manifests/firefox.json extension/common/constants.js package.json package-lock.json landing/version.json README.md
+          git commit -m "chore(release): update versions to $GITHUB_REF_NAME [skip ci]" || echo "No changes to commit"
+          git push origin HEAD:main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install dependencies
         run: npm ci
@@ -37,11 +80,10 @@ jobs:
         run: npm test
 
       - name: Generate extension checksums
+        shell: bash
         run: |
-          sha256sum \
-            dist/koalashot-chrome-0.3.0.zip \
-            dist/koalashot-firefox-0.3.0.zip \
-            > dist/SHA256SUMS
+          VERSION='${{ steps.version.outputs.VERSION }}'
+          sha256sum "dist/koalashot-chrome-$VERSION.zip" "dist/koalashot-firefox-$VERSION.zip" > dist/SHA256SUMS
           cat dist/SHA256SUMS
 
       - name: Generate extension artifact attestation
@@ -50,7 +92,7 @@ jobs:
           subject-path: dist/koalashot-*.zip
 
       - name: Upload landing page artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: koalashot-landing-${{ github.ref_name }}
           path: dist/landing/
@@ -60,8 +102,8 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           files: |
-            dist/koalashot-chrome-0.3.0.zip
-            dist/koalashot-firefox-0.3.0.zip
+            dist/koalashot-chrome-${{ steps.version.outputs.VERSION }}.zip
+            dist/koalashot-firefox-${{ steps.version.outputs.VERSION }}.zip
             dist/SHA256SUMS
           name: Release ${{ github.ref_name }}
           generate_release_notes: true

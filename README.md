@@ -1,6 +1,10 @@
 # KoalaShot
 
+[![Release](https://img.shields.io/badge/Release-v0.3.0-blue)](https://github.com/Shik3i/KoalaShot/releases)
+
 KoalaShot – Full Page Screenshot is a privacy-first browser extension for capturing a complete vertical webpage as one PNG and annotating it locally. It is built from readable vanilla HTML, CSS, and JavaScript with no runtime dependencies.
+
+Current release: v0.3.0
 
 ## v0.3.0 scope
 

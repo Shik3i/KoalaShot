@@ -1,15 +1,21 @@
 import { spawn } from "node:child_process";
+import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, "package.json"), "utf8"));
+const version = packageJson.version;
+if (typeof version !== "string" || version.length === 0) {
+  throw new Error("package.json must define a non-empty string version");
+}
 const checks = [
   ["unit tests", "npm", ["run", "test:unit"]],
   ["lint", "npm", ["run", "lint"]],
   ["production dependency audit", "npm", ["audit", "--omit=dev"]],
   ["extension build", "npm", ["run", "build"]],
   ["source and archive validation", "npm", ["run", "validate"]],
-  ["AMO validation (Firefox)", "npx", ["--yes", "addons-linter@10.10.0", "--warnings-as-errors", "dist/koalashot-firefox-0.3.0.zip"]],
+  ["AMO validation (Firefox)", "npx", ["--yes", "addons-linter@10.10.0", "--warnings-as-errors", `dist/koalashot-firefox-${version}.zip`]],
 ];
 
 function runCheck([label, command, args]) {
