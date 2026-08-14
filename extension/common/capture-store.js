@@ -4,7 +4,7 @@ import {
   STORAGE_OBJECT_STORE,
   TEMP_CAPTURE_TTL_MS,
 } from "./constants.js";
-import { tryValidateAnnotations } from "../editor/annotation-model.js";
+import { tryValidateAnnotations, tryValidateCrop } from "../editor/annotation-model.js";
 
 function openDatabase() {
   return new Promise((resolve, reject) => {
@@ -75,6 +75,13 @@ export async function saveCapture(record) {
     }
     record = { ...record, annotations: validation.annotations };
   }
+  if (record.crop !== undefined) {
+    const validation = tryValidateCrop(record.crop);
+    if (!validation.valid) {
+      throw new Error("Invalid temporary crop selection.");
+    }
+    record = { ...record, crop: validation.crop };
+  }
   await runTransaction("readwrite", (store) => store.put(record));
 }
 
@@ -92,7 +99,12 @@ export async function getCapture(id) {
         return;
       }
       const validation = tryValidateAnnotations(record.annotations || []);
-      resolve({ ...record, annotations: validation.valid ? validation.annotations : [] });
+      const cropValidation = tryValidateCrop(record.crop || null);
+      resolve({
+        ...record,
+        annotations: validation.valid ? validation.annotations : [],
+        crop: cropValidation.valid ? cropValidation.crop : null,
+      });
     };
   }));
 }

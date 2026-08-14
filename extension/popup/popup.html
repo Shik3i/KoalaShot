@@ -23,6 +23,11 @@
           <button id="copy-button" class="button button-primary" type="button">Capture &amp; Copy</button>
           <button id="save-button" class="button button-secondary" type="button">Save PNG</button>
         </div>
+        <label class="field-label" for="capture-target">Capture area</label>
+        <select id="capture-target" class="select-control">
+          <option value="page">Full page</option>
+          <option value="internal">Scrollable area inside the page</option>
+        </select>
         <label class="checkbox-row" for="open-editor">
           <input id="open-editor" type="checkbox">
           <span>Open editor after capture</span>

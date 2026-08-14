@@ -4,8 +4,12 @@ export const ANNOTATION_TYPES = Object.freeze([
   "arrow",
   "line",
   "rectangle",
+  "ellipse",
   "text",
   "redact",
+  "pixelate",
+  "blur",
+  "marker",
 ]);
 
 export const MAX_ANNOTATIONS = 5000;
@@ -33,6 +37,39 @@ function assertColor(value, field = "color") {
 function assertStrokeWidth(value) {
   if (!Number.isFinite(value) || value < 1 || value > 200) {
     throw new Error("Invalid annotation stroke width.");
+  }
+}
+
+function assertPositiveDimension(value, field) {
+  assertFiniteNumber(value, field);
+  if (value <= 0) {
+    throw new Error(`Invalid annotation ${field}.`);
+  }
+}
+
+export function validateCrop(crop) {
+  if (crop === null || crop === undefined) {
+    return true;
+  }
+  if (!crop || typeof crop !== "object" || Array.isArray(crop)) {
+    throw new Error("Invalid crop selection.");
+  }
+  ["x", "y"].forEach((field) => {
+    assertFiniteNumber(crop[field], field);
+    if (crop[field] < 0) {
+      throw new Error("Invalid crop origin.");
+    }
+  });
+  ["width", "height"].forEach((field) => assertPositiveDimension(crop[field], field));
+  return true;
+}
+
+export function tryValidateCrop(crop) {
+  try {
+    validateCrop(crop);
+    return { valid: true, crop: crop ? { ...crop } : null, error: "" };
+  } catch (error) {
+    return { valid: false, crop: null, error: error instanceof Error ? error.message : "Invalid crop selection." };
   }
 }
 
@@ -77,15 +114,27 @@ export function validateAnnotation(annotation) {
     ["startX", "startY", "endX", "endY"].forEach((field) => assertFiniteNumber(annotation[field], field));
     assertColor(annotation.color);
     assertStrokeWidth(annotation.strokeWidth);
-  } else if (["rectangle", "redact"].includes(annotation.type)) {
+  } else if (["rectangle", "ellipse", "redact", "pixelate", "blur"].includes(annotation.type)) {
     ["x", "y", "width", "height"].forEach((field) => assertFiniteNumber(annotation[field], field));
     if (annotation.width <= 0 || annotation.height <= 0) {
       throw new Error("Invalid annotation bounds.");
     }
     assertColor(annotation.color);
-    if (annotation.type === "rectangle") {
+    if (["rectangle", "ellipse"].includes(annotation.type)) {
       assertStrokeWidth(annotation.strokeWidth);
     }
+  } else if (annotation.type === "marker") {
+    assertFiniteNumber(annotation.x, "x");
+    assertFiniteNumber(annotation.y, "y");
+    assertFiniteNumber(annotation.radius, "radius");
+    if (annotation.radius < 4 || annotation.radius > 300) {
+      throw new Error("Invalid marker radius.");
+    }
+    if (!Number.isInteger(annotation.number) || annotation.number < 1 || annotation.number > 9999) {
+      throw new Error("Invalid marker number.");
+    }
+    assertColor(annotation.color);
+    assertStrokeWidth(annotation.strokeWidth);
   } else if (annotation.type === "text") {
     assertFiniteNumber(annotation.x, "x");
     assertFiniteNumber(annotation.y, "y");

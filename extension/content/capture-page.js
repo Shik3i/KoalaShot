@@ -49,6 +49,9 @@
     if (!["start", "scroll", "restore", "ping"].includes(message.type)) {
       return false;
     }
+    if (message.type === "start") {
+      return message.target === undefined || message.target === "page" || message.target === "internal";
+    }
     if (message.type !== "scroll") {
       return true;
     }
@@ -93,11 +96,9 @@
   }
 
   function findInternalScrollArea(measurement) {
-    if (measurement.documentHeight > measurement.viewportHeight + 2) {
-      return null;
-    }
-
     const elements = document.querySelectorAll("body *");
+    let best = null;
+    let bestScore = 0;
     for (const element of elements) {
       if (!(element instanceof HTMLElement)) {
         continue;
@@ -110,10 +111,56 @@
       const sizeable = element.clientWidth >= measurement.viewportWidth * 0.5
         && element.clientHeight >= measurement.viewportHeight * 0.35;
       if (scrollable && sizeable) {
-        return element;
+        const score = element.clientWidth * element.scrollHeight;
+        if (score > bestScore) {
+          best = element;
+          bestScore = score;
+        }
       }
     }
-    return null;
+    return best;
+  }
+
+  function measureSession(session) {
+    const screenViewportWidth = window.innerWidth;
+    const screenViewportHeight = window.innerHeight;
+    if (session.captureTarget === "internal") {
+      const target = session.targetElement;
+      const rect = target.getBoundingClientRect();
+      const style = getComputedStyle(target);
+      const borderLeft = Number.parseFloat(style.borderLeftWidth) || 0;
+      const borderTop = Number.parseFloat(style.borderTopWidth) || 0;
+      const captureRect = {
+        left: rect.left + borderLeft,
+        top: rect.top + borderTop,
+        width: target.clientWidth,
+        height: target.clientHeight,
+      };
+      if (captureRect.left < 0 || captureRect.top < 0
+        || captureRect.left + captureRect.width > screenViewportWidth + 1
+        || captureRect.top + captureRect.height > screenViewportHeight + 1
+        || captureRect.width <= 0 || captureRect.height <= 0) {
+        throw new Error("The internal scroll area must be fully visible in the browser viewport.");
+      }
+      return {
+        documentHeight: target.scrollHeight,
+        documentWidth: target.scrollWidth,
+        viewportWidth: target.clientWidth,
+        viewportHeight: target.clientHeight,
+        screenViewportWidth,
+        screenViewportHeight,
+        captureRect,
+        scrollX: target.scrollLeft,
+        scrollY: target.scrollTop,
+      };
+    }
+    const page = measurePage();
+    return {
+      ...page,
+      screenViewportWidth,
+      screenViewportHeight,
+      captureRect: { left: 0, top: 0, width: screenViewportWidth, height: screenViewportHeight },
+    };
   }
 
   function recordStyle(element, property) {
@@ -190,6 +237,8 @@
     style.textContent = [
       "html.koalashot-capturing { scrollbar-width: none !important; }",
       "html.koalashot-capturing::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }",
+      "html.koalashot-capturing [data-koalashot-capture-target] { scrollbar-width: none !important; }",
+      "html.koalashot-capturing [data-koalashot-capture-target]::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }",
       "html.koalashot-capturing, html.koalashot-capturing * { scroll-behavior: auto !important; }",
       "html.koalashot-capturing *, html.koalashot-capturing *::before, html.koalashot-capturing *::after { animation-play-state: paused !important; transition: none !important; caret-color: transparent !important; }",
     ].join("\n");
@@ -205,6 +254,27 @@
     for (const item of session.positionedElements || []) {
       restoreStyle(item.visibility);
     }
+    if (session.targetElement) {
+      if (session.targetAttributeValue === null) {
+        session.targetElement.removeAttribute("data-koalashot-capture-target");
+      } else {
+        session.targetElement.setAttribute("data-koalashot-capture-target", session.targetAttributeValue);
+      }
+      restoreStyle(session.targetScrollBehavior);
+      restoreStyle(session.targetScrollbarWidth);
+      try {
+        session.targetElement.scrollTo({ left: session.scrollX, top: session.scrollY, behavior: "auto" });
+      } catch {
+        session.targetElement.scrollLeft = session.scrollX;
+        session.targetElement.scrollTop = session.scrollY;
+      }
+    } else {
+      try {
+        window.scrollTo(session.scrollX, session.scrollY);
+      } catch {
+        // Navigation may have made restoring the old position impossible.
+      }
+    }
     if (session.styleElement?.isConnected) {
       session.styleElement.remove();
     }
@@ -217,11 +287,6 @@
     if (document.body) {
       restoreStyle(session.bodyScrollBehavior);
       restoreStyle(session.bodyPaddingRight);
-    }
-    try {
-      window.scrollTo(session.scrollX, session.scrollY);
-    } catch {
-      // Navigation may have made restoring the old position impossible.
     }
   }
 
@@ -237,9 +302,14 @@
       clearActiveSession(activeSession);
     }
     const before = measurePage();
+    const captureTarget = message.target === "internal" ? "internal" : "page";
     const internalScrollArea = findInternalScrollArea(before);
-    if (internalScrollArea) {
-      send(port, { ok: false, sessionId: message.sessionId, error: "internal-scroll", message: "This page uses an internal scroll area, which is not supported yet." });
+    if (captureTarget === "page" && internalScrollArea && before.documentHeight <= before.viewportHeight + 2) {
+      send(port, { ok: false, sessionId: message.sessionId, error: "internal-scroll", message: "This page has a scrollable area inside the page. Select “Scrollable area inside the page” to capture it." });
+      return;
+    }
+    if (captureTarget === "internal" && !internalScrollArea) {
+      send(port, { ok: false, sessionId: message.sessionId, error: "internal-scroll", message: "No scrollable internal area was found on this page." });
       return;
     }
 
@@ -248,12 +318,17 @@
     const session = {
       sessionId: message.sessionId,
       port,
-      scrollX: before.scrollX,
-      scrollY: before.scrollY,
+      captureTarget,
+      targetElement: internalScrollArea,
+      scrollX: captureTarget === "internal" ? internalScrollArea.scrollLeft : before.scrollX,
+      scrollY: captureTarget === "internal" ? internalScrollArea.scrollTop : before.scrollY,
       captureClassWasPresent: root?.classList.contains("koalashot-capturing") || false,
       rootScrollBehavior: root ? recordStyle(root, "scroll-behavior") : null,
       bodyScrollBehavior: body ? recordStyle(body, "scroll-behavior") : null,
       bodyPaddingRight: body ? recordStyle(body, "padding-right") : null,
+      targetScrollBehavior: internalScrollArea ? recordStyle(internalScrollArea, "scroll-behavior") : null,
+      targetScrollbarWidth: internalScrollArea ? recordStyle(internalScrollArea, "scrollbar-width") : null,
+      targetAttributeValue: internalScrollArea?.getAttribute("data-koalashot-capture-target") ?? null,
       positionedElements: [],
       styleElement: null,
       cleaned: false,
@@ -266,17 +341,24 @@
         root.classList.add("koalashot-capturing");
         root.style.setProperty("scroll-behavior", "auto", "important");
       }
+      if (internalScrollArea) {
+        internalScrollArea.setAttribute("data-koalashot-capture-target", "true");
+        internalScrollArea.style.setProperty("scroll-behavior", "auto", "important");
+        internalScrollArea.style.setProperty("scrollbar-width", "none", "important");
+      }
       if (body) {
         body.style.setProperty("scroll-behavior", "auto", "important");
-        const gutter = Math.max(0, window.innerWidth - root.clientWidth);
-        if (gutter > 0) {
-          const currentPadding = Number.parseFloat(getComputedStyle(body).paddingRight) || 0;
-          body.style.setProperty("padding-right", `${currentPadding + gutter}px`, "important");
+        if (captureTarget === "page") {
+          const gutter = Math.max(0, window.innerWidth - root.clientWidth);
+          if (gutter > 0) {
+            const currentPadding = Number.parseFloat(getComputedStyle(body).paddingRight) || 0;
+            body.style.setProperty("padding-right", `${currentPadding + gutter}px`, "important");
+          }
         }
       }
       session.styleElement = createCaptureStyles();
       session.positionedElements = collectPositionedElements();
-      const after = measurePage();
+      const after = measureSession(session);
       send(port, {
         ok: true,
         sessionId: message.sessionId,
@@ -289,6 +371,10 @@
         viewportHeight: after.viewportHeight,
         scrollX: after.scrollX,
         scrollY: after.scrollY,
+        screenViewportWidth: after.screenViewportWidth,
+        screenViewportHeight: after.screenViewportHeight,
+        captureRect: after.captureRect,
+        captureTarget,
       });
     } catch (error) {
       restorePage(session);
@@ -305,11 +391,15 @@
     }
     session.lastMessageAt = Date.now();
     try {
-      window.scrollTo({ left: 0, top: message.requestedY, behavior: "auto" });
+      if (session.targetElement) {
+        session.targetElement.scrollTo({ left: 0, top: message.requestedY, behavior: "auto" });
+      } else {
+        window.scrollTo({ left: 0, top: message.requestedY, behavior: "auto" });
+      }
       await waitForPaint();
       applySectionVisibility(session, message.sectionIndex, message.isFinal);
       await waitForPaint();
-      const after = measurePage();
+      const after = measureSession(session);
       send(port, {
         ok: true,
         sessionId: message.sessionId,
@@ -320,6 +410,9 @@
         documentHeight: after.documentHeight,
         viewportWidth: after.viewportWidth,
         viewportHeight: after.viewportHeight,
+        screenViewportWidth: after.screenViewportWidth,
+        screenViewportHeight: after.screenViewportHeight,
+        captureRect: after.captureRect,
         pageUrl: location.href,
       });
     } catch (error) {

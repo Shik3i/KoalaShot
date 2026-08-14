@@ -45,8 +45,13 @@
           <button class="tool-button" data-tool="arrow" type="button" aria-pressed="false" title="Arrow (A)"><span class="tool-glyph">➜</span><span>Arrow</span></button>
           <button class="tool-button" data-tool="line" type="button" aria-pressed="false" title="Line (L)"><span class="tool-glyph">╱</span><span>Line</span></button>
           <button class="tool-button" data-tool="rectangle" type="button" aria-pressed="false" title="Rectangle (R)"><span class="tool-glyph">□</span><span>Rectangle</span></button>
+          <button class="tool-button" data-tool="ellipse" type="button" aria-pressed="false" title="Ellipse (E)"><span class="tool-glyph">◯</span><span>Ellipse</span></button>
           <button class="tool-button" data-tool="text" type="button" aria-pressed="false" title="Text (T)"><span class="tool-glyph">T</span><span>Text</span></button>
           <button class="tool-button" data-tool="redact" type="button" aria-pressed="false" title="Redact (X)"><span class="tool-glyph">▰</span><span>Redact</span></button>
+          <button class="tool-button" data-tool="pixelate" type="button" aria-pressed="false" title="Pixelate (I)"><span class="tool-glyph">▦</span><span>Pixelate</span></button>
+          <button class="tool-button" data-tool="blur" type="button" aria-pressed="false" title="Blur (B)"><span class="tool-glyph">◌</span><span>Blur</span></button>
+          <button class="tool-button" data-tool="marker" type="button" aria-pressed="false" title="Numbered marker (M)"><span class="tool-glyph">①</span><span>Marker</span></button>
+          <button class="tool-button" data-tool="crop" type="button" aria-pressed="false" title="Crop (C)"><span class="tool-glyph">⌗</span><span>Crop</span></button>
         </div>
         <div class="tool-group tool-group-bottom">
           <button id="delete-button" class="tool-button danger-tool" type="button" title="Delete selected annotation (Delete)" disabled><span class="tool-glyph">⌫</span><span>Delete</span></button>
@@ -62,6 +67,7 @@
             <label class="control-group compact-control" for="stroke-width"><span class="control-label">Width <output id="stroke-width-value">6</output></span><input id="stroke-width" type="range" min="1" max="40" step="1" value="6"></label>
             <label class="control-group compact-control" id="font-size-control" for="font-size"><span class="control-label">Text size <output id="font-size-value">32</output></span><input id="font-size" type="range" min="8" max="120" step="1" value="32"></label>
             <button id="edit-text-button" class="text-button" type="button" hidden>Edit text</button>
+            <div id="crop-controls" class="crop-controls" hidden><button id="apply-crop-button" class="text-button" type="button" disabled>Apply crop</button><button id="reset-crop-button" class="text-button" type="button" disabled>Reset crop</button></div>
           </div>
         </section>
 

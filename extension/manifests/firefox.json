@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "KoalaShot – Full Page Screenshot",
   "short_name": "KoalaShot",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Capture an entire webpage locally as one PNG.",
   "default_locale": "en",
   "permissions": [

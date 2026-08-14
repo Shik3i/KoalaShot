@@ -9,7 +9,7 @@ const checks = [
   ["production dependency audit", "npm", ["audit", "--omit=dev"]],
   ["extension build", "npm", ["run", "build"]],
   ["source and archive validation", "npm", ["run", "validate"]],
-  ["AMO validation (Firefox)", "npx", ["--yes", "addons-linter@10.10.0", "--warnings-as-errors", "dist/koalashot-firefox-0.2.0.zip"]],
+  ["AMO validation (Firefox)", "npx", ["--yes", "addons-linter@10.10.0", "--warnings-as-errors", "dist/koalashot-firefox-0.3.0.zip"]],
 ];
 
 function runCheck([label, command, args]) {

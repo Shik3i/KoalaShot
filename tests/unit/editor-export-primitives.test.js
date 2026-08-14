@@ -53,3 +53,34 @@ test("canonical export keeps redaction opaque", async () => {
     globalThis.createImageBitmap = originalCreateImageBitmap;
   }
 });
+
+test("canonical export crops the immutable image before applying annotations", async () => {
+  const originalDocument = globalThis.document;
+  const originalCreateImageBitmap = globalThis.createImageBitmap;
+  const draws = [];
+  const canvasSizes = [];
+  const image = { width: 100, height: 80, close() {} };
+  const context = {
+    save() {},
+    restore() {},
+    translate(...args) { draws.push({ type: "translate", args }); },
+    drawImage(...args) { draws.push({ type: "draw", args }); },
+  };
+  const fakeCanvas = {
+    width: 0,
+    height: 0,
+    getContext() { return context; },
+    toBlob(callback) { canvasSizes.push([this.width, this.height]); callback(new Blob(["edited"], { type: "image/png" })); },
+  };
+  globalThis.createImageBitmap = async () => image;
+  globalThis.document = { createElement() { return fakeCanvas; } };
+  try {
+    const blob = await renderEditorResultBlob({ blob: new Blob(["original"], { type: "image/png" }), width: 100, height: 80, crop: { x: 10, y: 12, width: 40, height: 30 } }, []);
+    assert.equal(blob.type, "image/png");
+    assert.deepEqual(canvasSizes, [[40, 30]]);
+    assert.deepEqual(draws, [{ type: "draw", args: [image, 10, 12, 40, 30, 0, 0, 40, 30] }, { type: "translate", args: [-10, -12] }]);
+  } finally {
+    globalThis.document = originalDocument;
+    globalThis.createImageBitmap = originalCreateImageBitmap;
+  }
+});

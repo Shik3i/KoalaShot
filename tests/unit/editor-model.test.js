@@ -4,6 +4,7 @@ import {
   createAnnotation,
   moveAnnotation,
   tryValidateAnnotations,
+  tryValidateCrop,
   validateAnnotation,
 } from "../../extension/editor/annotation-model.js";
 import {
@@ -16,7 +17,7 @@ import {
   reducePoints,
   textBounds,
 } from "../../extension/editor/geometry.js";
-import { AnnotationHistory } from "../../extension/editor/history.js";
+import { AnnotationHistory, DocumentHistory } from "../../extension/editor/history.js";
 
 function fixedId() {
   return "12345678-1234-4234-8234-123456789012";
@@ -27,6 +28,16 @@ test("validates explicit annotation schemas and rejects arbitrary objects", () =
   assert.equal(validateAnnotation(line), true);
   assert.throws(() => validateAnnotation({ ...line, type: "unknown" }));
   assert.equal(tryValidateAnnotations([line, { nope: true }]).valid, false);
+});
+
+test("validates v0.3 editor tools and crop state", () => {
+  const ellipse = createAnnotation("ellipse", { x: 1, y: 2, width: 30, height: 20 }, { color: "#287a4a", strokeWidth: 4 });
+  const pixelate = createAnnotation("pixelate", { x: 4, y: 5, width: 30, height: 20 }, { color: "#287a4a" });
+  const blur = createAnnotation("blur", { x: 8, y: 9, width: 30, height: 20 }, { color: "#287a4a" });
+  const marker = createAnnotation("marker", { x: 15, y: 16, radius: 18 }, { color: "#287a4a", strokeWidth: 3, number: 1 });
+  assert.equal(tryValidateAnnotations([ellipse, pixelate, blur, marker]).valid, true);
+  assert.equal(tryValidateCrop({ x: 10, y: 20, width: 100, height: 80 }).valid, true);
+  assert.equal(tryValidateCrop({ x: 10, y: 20, width: 0, height: 80 }).valid, false);
 });
 
 test("moves annotations without changing their logical coordinate system", () => {
@@ -69,5 +80,15 @@ test("history groups changes, bounds entries, and invalidates redo", () => {
   assert.equal(history.canRedo, true);
   history.apply("three", []);
   assert.equal(history.canRedo, false);
+});
+
+test("document history undoes annotations and crop as one state", () => {
+  const history = new DocumentHistory({ annotations: [], crop: null });
+  history.apply("crop", { annotations: [], crop: { x: 2, y: 3, width: 40, height: 50 } });
+  assert.deepEqual(history.getState().crop, { x: 2, y: 3, width: 40, height: 50 });
+  history.undo();
+  assert.equal(history.getState().crop, null);
+  history.redo();
+  assert.deepEqual(history.getState().crop, { x: 2, y: 3, width: 40, height: 50 });
 });
 

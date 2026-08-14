@@ -7,35 +7,36 @@
 - Popup-owned full-page vertical capture, content-script protocol, progress/cancel UI, cleanup/watchdog, measured-scale PNG stitching, bounded growth, and safety checks.
 - Chromium ClipboardItem and Firefox `setImageData` adapter paths.
 - Local Blob download and temporary IndexedDB editor handoff with 24-hour TTL cleanup and discard.
-- Functional Phase 2 non-destructive editor with all defined tools, viewport-sized overlay, shared full-resolution export, local draft restoration, and bounded history.
+- Functional v0.3.0 non-destructive editor with Crop, Ellipse, Pixelate, Blur, numbered Markers, all prior tools, viewport-sized overlay, shared full-resolution export, local draft restoration, and bounded document history.
+- Persistent popup Capture area selector for normal page capture or the largest fully visible internal vertical scroll area, with explicit page-mode rejection for internal-scroll pages.
 - Static landing, privacy, and legal pages. Legal identity details remain an explicit pre-deployment placeholder.
 - Dependency-free build, validation, icon generation, fixtures, and Node tests.
 
 ## Automated verification
 
-On 2026-08-12, the Phase 2 baseline `npm test` passed 13/13 tests. The current gate passes 23/23 unit tests, ESLint, production audit, extension build, archive validation, and AMO validation.
+On 2026-08-14, the v0.3.0 `npm test` gate passed 26/26 unit tests, ESLint, production audit, extension build, archive validation, and AMO validation.
 
-The Windows npm entry points `npm run icons`, `npm run build`, and `npm run validate` now select an available Python 3 interpreter. `npm ci --offline` and `npm audit --omit=dev` pass with the repository lockfile. The full `npm test` release gate now runs 23 unit tests, ESLint, the production audit, both extension builds, archive validation, and Firefox AMO validation with warnings treated as errors; the AMO result is 0 errors, 0 notices, and 0 warnings.
+The Windows npm entry points `npm run icons`, `npm run build`, and `npm run validate` now select an available Python 3 interpreter. `npm ci --offline` and `npm audit --omit=dev` pass with the repository lockfile. The full `npm test` release gate runs 26 unit tests, ESLint, the production audit, both extension builds, archive validation, and Firefox AMO validation with warnings treated as errors; the AMO result is 0 errors, 0 notices, and 0 warnings.
 
 `npm audit` reports 0 vulnerabilities. `addons-linter` is intentionally invoked isolated through `npx` for the AMO pretest, so its transitive toolchain does not enter the shipped dependency graph or lockfile.
 
 ## Browser verification
 
-- Chrome-for-Testing 149.0.7827.55 passed the full CDP flow against the built extension: long-page capture, PNG downloads, page cleanup, internal-scroll rejection, editor handoff, three annotations, IndexedDB draft persistence, reload, undo/redo, zoom, clear, discard, and capture-store cleanup. Final artifacts: `KoalaShot_127.0.0.1_2026-08-12_17-25-04.png`, `KoalaShot_127.0.0.1_2026-08-12_17-25-09.png`, and `KoalaShot_127.0.0.1_2026-08-12_17-25-09_edited.png`.
+- Chrome-for-Testing passed the full CDP flow against the v0.3.0 build on 2026-08-14: long-page capture, page-mode internal-scroll rejection, persistent mode toggle, real internal-scroll capture, page cleanup, editor handoff, rectangle/redaction/ellipse/pixelate/blur/marker/text/crop, IndexedDB draft persistence, reload, undo/redo, zoom, clear, discard, and PNG downloads. Clipboard failure under synthetic CDP evaluation was reported explicitly; PNG output remained successful.
 - The installed Google Chrome 151.0.7922.137 ignores `--load-extension`/`--disable-extensions-except`; the automated Chrome run therefore uses the installed Chrome-for-Testing binary when available. No extension ID is required by the user or by the harness.
 - The Chrome CDP smoke profile copies `dist/chrome/` to a temporary directory and adds only test-profile permissions needed to replace a trusted toolbar gesture (`<all_urls>` and `tabs`). The source/release manifest remains `activeTab`-only.
-- Firefox 152.0.6 passed the full WebDriver BiDi flow against a temporary test archive: long-page copy/save path, page cleanup, internal-scroll rejection, editor handoff, three annotations, IndexedDB draft persistence, reload, undo/redo, zoom, clear, discard, and PNG downloads. Final artifacts: `KoalaShot_127.0.0.1_2026-08-12_17-25-18.png` and `KoalaShot_127.0.0.1_2026-08-12_17-25-18_edited.png`. Clipboard permission denial is reported explicitly by Firefox and does not block PNG output. Firefox AMO validation is green.
+- Firefox 152.0.6 passed the full WebDriver BiDi flow against the v0.3.0 temporary test archive on 2026-08-14: long-page copy/save path, page-mode internal-scroll rejection, persistent mode toggle, real internal-scroll capture, page cleanup, editor handoff, rectangle/redaction/ellipse/pixelate/blur/marker/text/crop, IndexedDB draft persistence, reload, undo/redo, zoom, clear, discard, and PNG downloads. Clipboard permission denial is reported explicitly by Firefox and does not block PNG output. Firefox AMO validation is green.
 - The Firefox test archive adds temporary `<all_urls>` access and `tabs`; the shipped Firefox archive remains `activeTab`-only. BiDi pointer actions are used for editor input, so synthetic untrusted pointer events are not part of the runtime proof.
 
 ## Partially tested
 
-- Other Chromium browsers, non-default zoom, HiDPI, color schemes, cancellation, tab-switch/navigation abort, protected pages, and the remaining fixture matrix still require manual target-browser runs.
+- Other Chromium browsers, non-default zoom, HiDPI, color schemes, cancellation, tab-switch/navigation abort, protected pages, expiry, and the remaining fixture matrix still require manual target-browser runs.
 - The automated Chrome clipboard check records the expected CDP limitation: `ClipboardItem` requires a trusted user gesture. Firefox records the expected permission-denial message while retaining the save path.
 
 ## Planned
 
-- Phase 3 nested scroll-area capture and additional capture modes.
-- Phase 4 store publishing and localization.
+- Phase 3 nested scroll-area capture is implemented for one fully visible vertical root with an explicit popup toggle.
+- Phase 4 store publishing, localization, horizontal stitching, image insertion, and advanced editor handles remain.
 
 ## Known issues and limitations
 

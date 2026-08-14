@@ -2,7 +2,7 @@
 
 KoalaShot – Full Page Screenshot is a privacy-first browser extension for capturing a complete vertical webpage as one PNG and annotating it locally. It is built from readable vanilla HTML, CSS, and JavaScript with no runtime dependencies.
 
-## Phase 1 and Phase 2
+## v0.3.0 scope
 
 Implemented:
 
@@ -11,12 +11,13 @@ Implemented:
 - Measured CSS-to-bitmap scale detection, overlap-aware vertical stitching, conservative memory limits, and PNG output.
 - Copy original PNG, save original PNG, cancellation, progress, page-state restoration, and bounded dynamic-height handling.
 - Optional local editor handoff through temporary extension-local IndexedDB storage.
-- Non-destructive editor with Select, Pan, Pen, Highlighter, Arrow, Line, Rectangle, Text, secure opaque Redact, Undo, Redo, Delete, Clear all, zoom, fit-to-width, actual size, Copy edited, Save edited PNG, and discard.
+- Optional capture target: the normal page or the largest fully visible scrollable area inside the page. The selected mode is persistent and can be switched off in the popup.
+- Non-destructive editor with Select, Pan, Pen, Highlighter, Arrow, Line, Rectangle, Ellipse, Text, secure opaque Redact, Pixelate, Blur, numbered Markers, Crop, Undo, Redo, Delete, Clear all, zoom, fit-to-width, actual size, Copy edited, Save edited PNG, and discard.
 - Original-pixel annotation model, viewport-sized interaction canvas, shared geometry/render primitives, bounded history, and debounced local draft restoration.
 - Static local landing page at `landing/` with `/`, `/privacy/`, and `/legal/`.
 - Dependency-free Python build/validation scripts and Node built-in unit tests.
 
-Not implemented: crop, ellipse, pixelation, blur, numbered markers, resize handles, image insertion, cloud sharing, horizontal stitching, nested scroll-container capture, store publishing, localization beyond the English catalog, and deployment.
+Not implemented: resize handles, image insertion, cloud sharing, horizontal stitching, store publishing, localization beyond the English catalog, and deployment.
 
 ## Privacy principles
 
@@ -24,7 +25,7 @@ Capture begins only after explicit user action. Screenshots and page content rem
 
 ## Browser support
 
-The source targets Chrome and Chromium-based browsers such as Vivaldi, Edge, and Brave, plus Firefox. Browser-protected pages, built-in PDF viewers, extension stores, and normal-document pages whose main content is an internal scroll area are outside the Phase 1 guarantee.
+The source targets Chrome and Chromium-based browsers such as Vivaldi, Edge, and Brave, plus Firefox. Browser-protected pages, built-in PDF viewers, extension stores, and internal areas that are not fully visible or cannot be identified are outside the guarantee.
 
 ## Local development
 
@@ -57,8 +58,8 @@ Build output:
 ```text
 dist/chrome/
 dist/firefox/
-dist/koalashot-chrome-0.2.0.zip
-dist/koalashot-firefox-0.2.0.zip
+dist/koalashot-chrome-0.3.0.zip
+dist/koalashot-firefox-0.3.0.zip
 dist/landing/
 ```
 
@@ -85,17 +86,18 @@ The manual fixtures are in `tests/fixtures/` and are intended to be served by a 
 
 Annotations are plain validated objects in original screenshot pixels. Zoom and device-pixel ratio change only the display transform. The original PNG remains immutable; Copy edited and Save edited PNG call the same full-resolution export function. Redact paints an opaque rectangle into the exported PNG and does not retroactively alter the temporary original capture.
 
-Keyboard shortcuts include `V` Select, `Space` temporary Pan, `P` Pen, `H` Highlighter, `A` Arrow, `L` Line, `R` Rectangle, `T` Text, `X` Redact, `Delete`, `Escape`, `Ctrl/Cmd+Z`, `Ctrl+Y`, `Cmd+Shift+Z`, `Ctrl/Cmd++`, `Ctrl/Cmd+-`, and `Ctrl/Cmd+0`.
+Keyboard shortcuts include `V` Select, `Space` temporary Pan, `P` Pen, `H` Highlighter, `A` Arrow, `L` Line, `R` Rectangle, `E` Ellipse, `T` Text, `X` Redact, `I` Pixelate, `B` Blur, `M` Marker, `C` Crop, `Delete`, `Escape`, `Ctrl/Cmd+Z`, `Ctrl+Y`, `Cmd+Shift+Z`, `Ctrl/Cmd++`, `Ctrl/Cmd+-`, and `Ctrl/Cmd+0`.
 
 ## Known limitations
 
-- Phase 1 captures normal document scrolling only; dominant internal scroll roots are detected and rejected.
+- Page mode captures normal document scrolling. Internal mode captures the largest fully visible scrollable area and is available through the popup's Capture area selector.
+- Internal mode intentionally captures one vertical scroll root at a time; horizontal stitching, nested scroll roots inside the selected root, and partially off-screen roots remain unsupported.
 - Fixed and sticky suppression is best-effort and cannot inspect closed Shadow DOM or cross-origin frames.
 - Highly dynamic pages may exceed the 25% bounded growth allowance.
 - Canvas allocation is conservatively capped; KoalaShot never silently downscales or crops an over-limit page.
 - The landing legal page contains a clearly marked canonical-details placeholder because the empty repository had no verified legal identity material.
 
-The direct future editor work is crop, ellipse, pixelation, numbered markers, resize handles, configurable arrowheads, text outlines, and image insertion. The current Phase 2 contract is documented in [docs/EDITOR_SPEC.md](docs/EDITOR_SPEC.md).
+The direct future editor work is resize handles, configurable arrowheads, text outlines, image insertion, horizontal stitching, store publishing, and localization. The current editor contract is documented in [docs/EDITOR_SPEC.md](docs/EDITOR_SPEC.md).
 
 ## License
 

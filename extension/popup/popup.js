@@ -13,6 +13,7 @@ const copyButton = document.querySelector("#copy-button");
 const saveButton = document.querySelector("#save-button");
 const cancelButton = document.querySelector("#cancel-button");
 const openEditor = document.querySelector("#open-editor");
+const captureTarget = document.querySelector("#capture-target");
 const status = document.querySelector("#status");
 const progressBar = document.querySelector("#progress-bar");
 let activeController = null;
@@ -31,6 +32,7 @@ function setBusy(value) {
   copyButton.disabled = value;
   saveButton.disabled = value;
   openEditor.disabled = value;
+  captureTarget.disabled = value;
   cancelButton.hidden = !value;
   if (!value) {
     progressBar.style.width = "0";
@@ -59,6 +61,7 @@ async function runCapture(mode) {
 
     const result = await captureScreenshot({
       signal: activeController.signal,
+      target: captureTarget.value,
       onProgress: ({ message, current, total, phase }) => {
         if (phase === "capturing" && total) {
           setStatus(message, (current / total) * 82);
@@ -110,8 +113,18 @@ async function runCapture(mode) {
 copyButton.addEventListener("click", () => void runCapture("copy"));
 saveButton.addEventListener("click", () => void runCapture("save"));
 cancelButton.addEventListener("click", () => activeController?.abort());
+async function persistSettings() {
+  await saveSettings({
+    openEditorAfterCapture: openEditor.checked,
+    captureTarget: captureTarget.value,
+  });
+}
+
 openEditor.addEventListener("change", () => {
-  void saveSettings({ openEditorAfterCapture: openEditor.checked });
+  void persistSettings();
+});
+captureTarget.addEventListener("change", () => {
+  void persistSettings();
 });
 
 void (async () => {
@@ -119,6 +132,7 @@ void (async () => {
   try {
     const settings = await loadSettings();
     openEditor.checked = settings.openEditorAfterCapture;
+    captureTarget.value = settings.captureTarget;
   } catch {
     openEditor.checked = false;
   }
