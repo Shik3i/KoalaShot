@@ -1,0 +1,71 @@
+name: Release KoalaShot
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  release-extension:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run full release verification
+        run: npm test
+
+      - name: Generate extension checksums
+        run: |
+          sha256sum \
+            dist/koalashot-chrome-0.3.0.zip \
+            dist/koalashot-firefox-0.3.0.zip \
+            > dist/SHA256SUMS
+          cat dist/SHA256SUMS
+
+      - name: Generate extension artifact attestation
+        uses: actions/attest@v4
+        with:
+          subject-path: dist/koalashot-*.zip
+
+      - name: Upload landing page artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: koalashot-landing-${{ github.ref_name }}
+          path: dist/landing/
+          if-no-files-found: error
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: |
+            dist/koalashot-chrome-0.3.0.zip
+            dist/koalashot-firefox-0.3.0.zip
+            dist/SHA256SUMS
+          name: Release ${{ github.ref_name }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
