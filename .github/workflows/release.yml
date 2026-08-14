@@ -52,7 +52,8 @@ jobs:
           echo "  ✓ extension/manifests/firefox.json -> $VERSION"
           sed -E -i "s/export const VERSION = [\"'].*[\"']/export const VERSION = \"$VERSION\"/" extension/common/constants.js
           echo "  ✓ extension/common/constants.js -> $VERSION"
-          npm version "$VERSION" --no-git-tag-version
+          jq --arg v "$VERSION" '.version = $v' package.json > tmp.json && mv tmp.json package.json
+          jq --arg v "$VERSION" '.version = $v | .packages[""].version = $v' package-lock.json > tmp.json && mv tmp.json package-lock.json
           echo "  ✓ package.json and package-lock.json -> $VERSION"
           jq -n --arg v "$VERSION" --arg d "$DATE" '{version: $v, date: $d}' > landing/version.json
           echo "  ✓ landing/version.json -> version $VERSION, date $DATE"
