@@ -44,7 +44,7 @@ def validate_manifests() -> None:
             fail(f"forbidden optional permissions in {browser}: {sorted(optional & FORBIDDEN_PERMISSIONS)}")
         if optional != {"clipboardWrite"}:
             fail(f"optional permissions in {browser} must contain only clipboardWrite")
-        if manifest.get("manifest_version") != 3 or manifest.get("version") != "0.2.0":
+        if manifest.get("manifest_version") != 3 or manifest.get("version") != "0.3.0":
             fail(f"unexpected manifest version in {browser}")
         if browser == "firefox":
             gecko = manifest.get("browser_specific_settings", {}).get("gecko", {})

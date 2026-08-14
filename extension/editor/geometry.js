@@ -97,7 +97,10 @@ export function annotationBounds(annotation) {
   if (annotation.type === "text") {
     return textBounds(annotation);
   }
-  const padding = annotation.type === "rectangle" ? annotation.strokeWidth / 2 : 0;
+  if (annotation.type === "marker") {
+    return { x: annotation.x - annotation.radius, y: annotation.y - annotation.radius, width: annotation.radius * 2, height: annotation.radius * 2 };
+  }
+  const padding = ["rectangle", "ellipse"].includes(annotation.type) ? annotation.strokeWidth / 2 : 0;
   return { x: annotation.x - padding, y: annotation.y - padding, width: annotation.width + padding * 2, height: annotation.height + padding * 2 };
 }
 
@@ -117,6 +120,9 @@ export function hitTestAnnotation(annotation, point, tolerance = 8) {
   }
   if (annotation.type === "line" || annotation.type === "arrow") {
     return distanceToSegment(point, { x: annotation.startX, y: annotation.startY }, { x: annotation.endX, y: annotation.endY }) <= tolerance + annotation.strokeWidth / 2;
+  }
+  if (annotation.type === "marker") {
+    return distanceSquared(point, { x: annotation.x, y: annotation.y }) <= (annotation.radius + tolerance) ** 2;
   }
   return pointInBounds(point, annotationBounds(annotation), tolerance);
 }
@@ -187,6 +193,16 @@ export function drawAnnotation(context, annotation) {
     context.restore();
     return;
   }
+  if (annotation.type === "ellipse") {
+    context.save();
+    context.strokeStyle = annotation.color;
+    context.lineWidth = annotation.strokeWidth;
+    context.beginPath();
+    context.ellipse(annotation.x + annotation.width / 2, annotation.y + annotation.height / 2, annotation.width / 2, annotation.height / 2, 0, 0, Math.PI * 2);
+    context.stroke();
+    context.restore();
+    return;
+  }
   if (annotation.type === "rectangle") {
     context.save();
     context.strokeStyle = annotation.color;
@@ -200,6 +216,31 @@ export function drawAnnotation(context, annotation) {
     context.globalAlpha = 1;
     context.fillStyle = annotation.color;
     context.fillRect(annotation.x, annotation.y, annotation.width, annotation.height);
+    context.restore();
+    return;
+  }
+  if (annotation.type === "pixelate" || annotation.type === "blur") {
+    context.save();
+    context.fillStyle = annotation.type === "pixelate" ? "rgb(40 122 74 / 18%)" : "rgb(21 101 192 / 18%)";
+    context.strokeStyle = annotation.color;
+    context.lineWidth = Math.max(2, annotation.strokeWidth || 2);
+    context.setLineDash?.([8, 5]);
+    context.fillRect(annotation.x, annotation.y, annotation.width, annotation.height);
+    context.strokeRect(annotation.x, annotation.y, annotation.width, annotation.height);
+    context.restore();
+    return;
+  }
+  if (annotation.type === "marker") {
+    context.save();
+    context.fillStyle = annotation.color;
+    context.beginPath();
+    context.arc(annotation.x, annotation.y, annotation.radius, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = "#ffffff";
+    context.font = `700 ${Math.max(12, annotation.radius)}px ${FONT_FAMILY}`;
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText(String(annotation.number), annotation.x, annotation.y);
     context.restore();
     return;
   }

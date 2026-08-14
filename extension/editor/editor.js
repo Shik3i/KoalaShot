@@ -20,7 +20,7 @@ import {
   normalizeRectangle,
   reducePoints,
 } from "./geometry.js";
-import { AnnotationHistory } from "./history.js";
+import { DocumentHistory } from "./history.js";
 import { renderEditorResultBlob } from "./editor-export.js";
 
 const MIN_ZOOM = 0.1;
@@ -34,10 +34,15 @@ const TOOL_LABELS = Object.freeze({
   arrow: ["Arrow", "Drag to draw an arrow."],
   line: ["Line", "Drag to draw a straight line."],
   rectangle: ["Rectangle", "Drag to outline a rectangle."],
+  ellipse: ["Ellipse", "Drag to outline an ellipse."],
   text: ["Text", "Click the image to add multiline text."],
   redact: ["Redact", "Drag an opaque rectangle over sensitive pixels."],
+  pixelate: ["Pixelate", "Drag over pixels that should be visibly pixelated."],
+  blur: ["Blur", "Drag over pixels that should receive a cosmetic blur."],
+  marker: ["Marker", "Click to place the next numbered marker."],
+  crop: ["Crop", "Drag a crop area, then apply it to exports."],
 });
-const SHORTCUTS = Object.freeze({ v: "select", p: "pen", h: "highlighter", a: "arrow", l: "line", r: "rectangle", t: "text", x: "redact" });
+const SHORTCUTS = Object.freeze({ v: "select", p: "pen", h: "highlighter", a: "arrow", l: "line", r: "rectangle", e: "ellipse", t: "text", x: "redact", i: "pixelate", b: "blur", m: "marker", c: "crop" });
 
 const loadingState = document.querySelector("#loading-state");
 const errorState = document.querySelector("#error-state");
@@ -61,6 +66,9 @@ const strokeValue = document.querySelector("#stroke-width-value");
 const fontControl = document.querySelector("#font-size");
 const fontValue = document.querySelector("#font-size-value");
 const editTextButton = document.querySelector("#edit-text-button");
+const cropControls = document.querySelector("#crop-controls");
+const applyCropButton = document.querySelector("#apply-crop-button");
+const resetCropButton = document.querySelector("#reset-crop-button");
 const undoButton = document.querySelector("#undo-button");
 const redoButton = document.querySelector("#redo-button");
 const copyButton = document.querySelector("#copy-button");
@@ -76,6 +84,8 @@ let zoom = 1;
 let activeTool = "select";
 let selectedId = "";
 let transientAnnotation = null;
+let transientCrop = null;
+let cropSelection = null;
 let pointerOperation = null;
 let temporaryPan = false;
 let textOperation = null;
@@ -109,12 +119,22 @@ function hostnameFromUrl(sourceUrl) {
   }
 }
 
-function formatMetadata(record) {
-  return `${record.width} × ${record.height}px`;
+function formatMetadata(record, crop = null) {
+  const width = crop ? Math.round(crop.width) : record.width;
+  const height = crop ? Math.round(crop.height) : record.height;
+  return `${width} × ${height}px${crop ? " · crop active" : ""}`;
 }
 
 function currentAnnotations() {
-  return history.getState();
+  return history.getState().annotations;
+}
+
+function currentCrop() {
+  return history.getState().crop;
+}
+
+function documentState(annotations = currentAnnotations(), crop = currentCrop()) {
+  return { annotations, crop };
 }
 
 function scheduleDraftSave() {
@@ -134,7 +154,7 @@ async function persistDraft() {
   }
   try {
     validateAnnotations(currentAnnotations());
-    await saveCapture({ ...capture, annotations: currentAnnotations() });
+    await saveCapture({ ...capture, annotations: currentAnnotations(), crop: currentCrop() });
   } catch {
     setStatus("Draft could not be saved locally; your current editor state remains available.");
   }
@@ -144,10 +164,13 @@ function historyChanged() {
   updateHistoryButtons();
   updateContextControls();
   drawOverlay();
+  if (capture) {
+    captureMeta.textContent = formatMetadata(capture, currentCrop());
+  }
   scheduleDraftSave();
 }
 
-const history = new AnnotationHistory([], { limit: 100, onChange: historyChanged });
+const history = new DocumentHistory({ annotations: [], crop: null }, { limit: 100, onChange: historyChanged });
 
 function updateHistoryButtons() {
   undoButton.disabled = !history.canUndo;
@@ -163,10 +186,10 @@ function selectedAnnotation() {
 
 function updateContextControls() {
   const selected = selectedAnnotation();
-  const toolHasColor = ["pen", "highlighter", "arrow", "line", "rectangle", "text", "redact"].includes(activeTool);
+  const toolHasColor = ["pen", "highlighter", "arrow", "line", "rectangle", "ellipse", "text", "redact", "pixelate", "blur", "marker"].includes(activeTool);
   colorControls.hidden = !toolHasColor && !selected;
   const styleTarget = selected || { type: activeTool };
-  const hasStroke = ["pen", "highlighter", "arrow", "line", "rectangle"].includes(styleTarget.type);
+  const hasStroke = ["pen", "highlighter", "arrow", "line", "rectangle", "ellipse", "pixelate", "blur", "marker"].includes(styleTarget.type);
   const hasFont = styleTarget.type === "text";
   strokeControl.parentElement.hidden = !hasStroke;
   fontControl.parentElement.hidden = !hasFont;
@@ -188,6 +211,10 @@ function updateContextControls() {
   strokeValue.textContent = String(strokeWidth);
   fontControl.value = String(fontSize);
   fontValue.textContent = String(fontSize);
+  cropControls.hidden = activeTool !== "crop";
+  const selectedCrop = cropSelection || currentCrop();
+  applyCropButton.disabled = !selectedCrop || JSON.stringify(selectedCrop) === JSON.stringify(currentCrop());
+  resetCropButton.disabled = !selectedCrop;
 }
 
 function selectTool(tool) {
@@ -267,6 +294,17 @@ function drawOverlay() {
   if (transientAnnotation) {
     drawAnnotation(context, transientAnnotation);
   }
+  const visibleCrop = transientCrop || cropSelection || currentCrop();
+  if (visibleCrop) {
+    context.save();
+    context.fillStyle = "rgb(16 26 20 / 12%)";
+    context.strokeStyle = "#287a4a";
+    context.lineWidth = 3 / zoom;
+    context.setLineDash?.([10 / zoom, 6 / zoom]);
+    context.fillRect(visibleCrop.x, visibleCrop.y, visibleCrop.width, visibleCrop.height);
+    context.strokeRect(visibleCrop.x, visibleCrop.y, visibleCrop.width, visibleCrop.height);
+    context.restore();
+  }
   context.setTransform(1, 0, 0, 1, 0, 0);
 }
 
@@ -322,7 +360,7 @@ function createCurrentAnnotation(start, end) {
       endY: end.y,
     }, { color: annotationColor, strokeWidth });
   }
-  if (activeTool === "rectangle" || activeTool === "redact") {
+  if (["rectangle", "ellipse", "redact", "pixelate", "blur"].includes(activeTool)) {
     const rectangle = normalizeRectangle(start, end);
     if (rectangle.width < 2 || rectangle.height < 2) {
       return null;
@@ -330,6 +368,32 @@ function createCurrentAnnotation(start, end) {
     return createAnnotation(activeTool, rectangle, { color: activeTool === "redact" ? "#111111" : annotationColor, strokeWidth });
   }
   return null;
+}
+
+function clampCropToImage(rectangle) {
+  if (!capture) {
+    return null;
+  }
+  const left = Math.max(0, Math.min(capture.width - 1, rectangle.x));
+  const top = Math.max(0, Math.min(capture.height - 1, rectangle.y));
+  const right = Math.min(capture.width, Math.max(left + 1, rectangle.x + rectangle.width));
+  const bottom = Math.min(capture.height, Math.max(top + 1, rectangle.y + rectangle.height));
+  return { x: left, y: top, width: right - left, height: bottom - top };
+}
+
+function nextMarkerNumber() {
+  return currentAnnotations().filter((annotation) => annotation.type === "marker")
+    .reduce((maximum, annotation) => Math.max(maximum, annotation.number), 0) + 1;
+}
+
+function createMarker(point) {
+  const marker = createAnnotation("marker", { x: point.x, y: point.y, radius: 18 }, {
+    color: annotationColor,
+    strokeWidth: Math.max(2, Math.min(12, strokeWidth)),
+    number: nextMarkerNumber(),
+  });
+  history.apply("Create marker", documentState([...currentAnnotations(), marker]));
+  selectedId = marker.id;
 }
 
 function startPan(event) {
@@ -346,8 +410,18 @@ function startPan(event) {
 
 function startDrawing(event) {
   const start = getImagePoint(event);
+  if (activeTool === "marker") {
+    createMarker(start);
+    return;
+  }
   if (activeTool === "text") {
     openTextEditor(start, null, event);
+    return;
+  }
+  if (activeTool === "crop") {
+    pointerOperation = { kind: "crop", pointerId: event.pointerId, start };
+    transientCrop = null;
+    overlay.setPointerCapture?.(event.pointerId);
     return;
   }
   pointerOperation = { kind: "draw", pointerId: event.pointerId, start, points: [start], before: null };
@@ -400,6 +474,8 @@ function pointerMove(event) {
   const point = getImagePoint(event);
   if (pointerOperation.kind === "move") {
     transientAnnotation = moveAnnotation(pointerOperation.before, point.x - pointerOperation.start.x, point.y - pointerOperation.start.y);
+  } else if (pointerOperation.kind === "crop") {
+    transientCrop = clampCropToImage(normalizeRectangle(pointerOperation.start, point));
   } else if (pointerOperation.kind === "draw") {
     if (activeTool === "pen" || activeTool === "highlighter") {
       pointerOperation.points.push(point);
@@ -421,17 +497,23 @@ function pointerUp(event) {
   }
   overlay.releasePointerCapture?.(event.pointerId);
   if (pointerOperation.kind === "move" && transientAnnotation) {
-    history.apply("Move annotation", currentAnnotations().map((annotation) => annotation.id === selectedId ? transientAnnotation : annotation));
+    history.apply("Move annotation", documentState(currentAnnotations().map((annotation) => annotation.id === selectedId ? transientAnnotation : annotation)));
   } else if (pointerOperation.kind === "draw" && transientAnnotation) {
     if ((activeTool === "pen" || activeTool === "highlighter") && transientAnnotation.points.length < 2) {
       // A click is not a stroke.
     } else {
-      history.apply(`Create ${activeTool}`, [...currentAnnotations(), transientAnnotation]);
+      history.apply(`Create ${activeTool}`, documentState([...currentAnnotations(), transientAnnotation]));
       selectedId = transientAnnotation.id;
     }
+  } else if (pointerOperation.kind === "crop") {
+    if (transientCrop && transientCrop.width >= 4 && transientCrop.height >= 4) {
+      cropSelection = transientCrop;
+    }
+    transientCrop = null;
   }
   pointerOperation = null;
   transientAnnotation = null;
+  transientCrop = null;
   updateHistoryButtons();
   updateContextControls();
   drawOverlay();
@@ -444,6 +526,7 @@ function pointerCancel(event) {
   overlay.releasePointerCapture?.(event.pointerId);
   pointerOperation = null;
   transientAnnotation = null;
+  transientCrop = null;
   drawOverlay();
 }
 
@@ -453,7 +536,7 @@ function deleteSelected() {
   }
   const next = currentAnnotations().filter((annotation) => annotation.id !== selectedId);
   if (next.length !== currentAnnotations().length) {
-    history.apply("Delete annotation", next);
+    history.apply("Delete annotation", documentState(next));
     selectedId = "";
   }
 }
@@ -462,7 +545,7 @@ function clearAnnotations() {
   if (currentAnnotations().length === 0) {
     return;
   }
-  history.apply("Clear annotations", []);
+  history.apply("Clear annotations", documentState([]));
   selectedId = "";
 }
 
@@ -472,7 +555,26 @@ function applySelectedStyle(changes) {
     return;
   }
   const updated = updateAnnotationStyle(selected, changes);
-  history.apply("Change annotation style", currentAnnotations().map((annotation) => annotation.id === selected.id ? updated : annotation));
+  history.apply("Change annotation style", documentState(currentAnnotations().map((annotation) => annotation.id === selected.id ? updated : annotation)));
+}
+
+function applyCrop() {
+  if (!cropSelection) {
+    return;
+  }
+  history.apply("Apply crop", documentState(currentAnnotations(), cropSelection));
+  cropSelection = null;
+  captureMeta.textContent = formatMetadata(capture, currentCrop());
+  setStatus("Crop applied to edited PNG exports.");
+}
+
+function resetCrop() {
+  cropSelection = null;
+  history.apply("Reset crop", documentState(currentAnnotations(), null));
+  if (capture) {
+    captureMeta.textContent = formatMetadata(capture);
+  }
+  setStatus("Crop reset; exports use the full screenshot.");
 }
 
 function openTextEditor(point, existing, event = null) {
@@ -500,7 +602,7 @@ function commitText() {
     const updated = { ...textOperation.existing, text };
     const next = currentAnnotations().map((annotation) => annotation.id === updated.id ? updated : annotation);
     try {
-      history.apply("Edit text", next);
+      history.apply("Edit text", documentState(next));
       selectedId = updated.id;
     } catch {
       setStatus("That text annotation could not be saved.");
@@ -508,7 +610,7 @@ function commitText() {
   } else {
     try {
       const annotation = createAnnotation("text", { x: textOperation.point.x, y: textOperation.point.y }, { text, color: annotationColor, fontSize });
-      history.apply("Create text", [...currentAnnotations(), annotation]);
+      history.apply("Create text", documentState([...currentAnnotations(), annotation]));
       selectedId = annotation.id;
     } catch {
       setStatus("That text annotation could not be created.");
@@ -547,7 +649,7 @@ async function copyEdited() {
       throw new Error("Clipboard permission was not granted.");
     }
     setStatus("Rendering edited PNG for clipboard…");
-    const blob = await renderEditorResultBlob(capture, currentAnnotations());
+    const blob = await renderEditorResultBlob({ ...capture, crop: currentCrop() }, currentAnnotations());
     await copyPngBlob(blob, getApi());
     setStatus("Edited screenshot copied.");
   } catch (error) {
@@ -558,7 +660,7 @@ async function copyEdited() {
 async function saveEdited() {
   try {
     setStatus("Rendering edited PNG for saving…");
-    const blob = await renderEditorResultBlob(capture, currentAnnotations());
+    const blob = await renderEditorResultBlob({ ...capture, crop: currentCrop() }, currentAnnotations());
     downloadBlob(blob, makeEditedFilename(capture.filename));
     setStatus("Edited PNG save started.");
   } catch (error) {
@@ -695,6 +797,8 @@ document.querySelector("#actual-size-button").addEventListener("click", () => se
 copyButton.addEventListener("click", () => void copyEdited());
 saveButton.addEventListener("click", () => void saveEdited());
 discardButton.addEventListener("click", () => void discardCapture());
+applyCropButton.addEventListener("click", applyCrop);
+resetCropButton.addEventListener("click", resetCrop);
 document.querySelector("#apply-text-button").addEventListener("click", commitText);
 document.querySelector("#cancel-text-button").addEventListener("click", cancelText);
 textInput.addEventListener("keydown", (event) => {
@@ -760,12 +864,13 @@ void (async () => {
       return;
     }
     const draft = tryValidateAnnotations(capture.annotations || []);
-    history.setCurrent(draft.valid ? draft.annotations : [], { notify: false });
+    history.setCurrent({ annotations: draft.valid ? draft.annotations : [], crop: capture.crop || null }, { notify: false });
+    cropSelection = null;
     imageUrl = URL.createObjectURL(capture.blob);
     image.src = imageUrl;
     image.alt = capture.sourceTitle ? `Original full-page screenshot of ${capture.sourceTitle}` : "Original full-page screenshot";
     sourceHostname.textContent = hostnameFromUrl(capture.sourceUrl);
-    captureMeta.textContent = formatMetadata(capture);
+    captureMeta.textContent = formatMetadata(capture, currentCrop());
     loadingState.hidden = true;
     errorState.hidden = true;
     stageWrap.hidden = false;

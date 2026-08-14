@@ -39,7 +39,7 @@ button:disabled { cursor: not-allowed; opacity: 0.48; }
 button:focus-visible, input:focus-visible, textarea:focus-visible, [tabindex]:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 48%, transparent); outline-offset: 2px; }
 
 .editor-header { display: flex; min-height: 66px; gap: 22px; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--surface); }
-.identity-block, .brand, .top-actions, .context-controls, .palette, .text-editor-actions { display: flex; align-items: center; }
+.identity-block, .brand, .top-actions, .context-controls, .palette, .text-editor-actions, .crop-controls { display: flex; align-items: center; }
 .identity-block { min-width: 260px; gap: 15px; }
 .brand { gap: 9px; color: var(--text); font-weight: 820; text-decoration: none; white-space: nowrap; }
 .brand img { border-radius: 8px; }
@@ -88,6 +88,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [tabindex]:fo
 .swatch.is-selected { border-color: var(--text); box-shadow: 0 0 0 2px var(--surface-raised); }
 #custom-color { width: 25px; height: 25px; padding: 1px; border: 1px solid var(--border); border-radius: 50%; background: transparent; }
 .compact-control { min-width: 110px; }
+.crop-controls { gap: 5px; }
 input[type="range"] { width: 110px; accent-color: var(--accent); }
 
 .stage-panel { position: relative; min-height: 0; overflow: hidden; background: #cbd6ce; }

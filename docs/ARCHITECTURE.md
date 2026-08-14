@@ -2,7 +2,7 @@
 
 ## Capture ownership
 
-The popup owns the Phase 1 capture session. It obtains the active tab, optionally requests `clipboardWrite` before capture, injects `content/capture-page.js` with `scripting.executeScript`, and opens a long-lived runtime Port named with a cryptographically secure session ID. There is deliberately no background service worker.
+The popup owns the capture session. It obtains the active tab, optionally requests `clipboardWrite` before capture, injects `content/capture-page.js` with `scripting.executeScript`, and opens a long-lived runtime Port named with a cryptographically secure session ID. There is deliberately no background service worker. The popup persists a `page` or `internal` target setting; `page` is the default.
 
 ## Content-script protocol
 
@@ -10,7 +10,7 @@ The content script validates the session ID, Port name, message type, and scroll
 
 ## Stitching
 
-The popup calls `captureVisibleTab` only after verifying the same window, tab, URL, and viewport are still active. The first decoded PNG establishes `scaleX` and `scaleY` from actual bitmap dimensions divided by CSS viewport dimensions. Capture positions end at the measured maximum scroll position. Each section is drawn at the actual returned scroll position; overlap is cropped using centralized CSS-pixel-to-bitmap rounding. The target height may grow by at most 25% from the initial measurement. Canvas allocation is checked against raw-memory, pixel, and dimension limits.
+The popup calls `captureVisibleTab` only after verifying the same window, tab, URL, and screen viewport are still active. The first decoded PNG establishes scale from actual bitmap dimensions divided by the screen viewport. In internal mode, the content script returns a stable, fully visible capture rectangle and the stitcher crops that rectangle from every full viewport bitmap before placing it at the selected root's actual scroll position. The target height may grow by at most 25% from the initial measurement. Canvas allocation is checked against raw-memory, pixel, and dimension limits.
 
 ## Clipboard and save
 
@@ -22,7 +22,7 @@ The one PNG Blob is stored in extension-local IndexedDB with source metadata, di
 
 ## Phase 2 editor
 
-`editor/annotation-model.js` owns explicit schemas, secure IDs, validation, cloning, moving, and style updates. `editor/geometry.js` owns original-pixel coordinate transforms, rectangle normalization, point reduction, hit testing, arrowheads, text bounds, and both viewport and export drawing. `editor/history.js` stores bounded before/after annotation arrays rather than screenshot snapshots. The page displays the immutable PNG as an `<img>` and uses one viewport-sized overlay canvas for interaction; it does not allocate a permanent full-resolution display canvas.
+`editor/annotation-model.js` owns explicit schemas, secure IDs, validation, cloning, moving, crop validation, and style updates. `editor/geometry.js` owns original-pixel coordinate transforms, rectangle normalization, point reduction, hit testing, arrowheads, text bounds, effect previews, markers, and both viewport and export drawing. `editor/history.js` stores bounded before/after document states containing annotations and crop rather than screenshot snapshots. The page displays the immutable PNG as an `<img>` and uses one viewport-sized overlay canvas for interaction; it does not allocate a permanent full-resolution display canvas.
 
 ## Compatibility boundary
 

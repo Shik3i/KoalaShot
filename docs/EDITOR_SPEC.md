@@ -1,10 +1,10 @@
 # Phase 2 editor specification and implementation contract
 
-Phase 2 is implemented in the local editor page. This document is the durable contract for its non-destructive model and the boundary for future editor work. The popup capture flow remains unchanged: the original is copied or saved before optional editor handoff.
+The v0.3.0 editor is implemented in the local editor page. This document is the durable contract for its non-destructive model and the boundary for future editor work. The popup capture flow optionally hands the original PNG to the editor through local IndexedDB.
 
-Implemented tools: Select, Pan, Freehand Pen, Highlighter, Arrow, Line, Rectangle, Text, secure opaque Redact, Undo, Redo, Delete selected annotation, Clear all annotations, Zoom in/out, Fit to width, Actual size, Copy edited, Save edited PNG, and Close and discard.
+Implemented tools: Select, Pan, Freehand Pen, Highlighter, Arrow, Line, Rectangle, Ellipse, Text, secure opaque Redact, cosmetic Pixelate, cosmetic Blur, numbered Markers, Crop, Undo, Redo, Delete selected annotation, Clear all annotations, Zoom in/out, Fit to width, Actual size, Copy edited, Save edited PNG, and Close and discard.
 
-Future tools outside this phase: Crop, Ellipse, Pixelation, Blur, numbered markers, resize handles, configurable arrowheads, text outlines, and image insertion.
+Future tools outside this phase: resize handles, configurable arrowheads, text outlines, and image insertion.
 
 ## Model
 
@@ -33,7 +33,7 @@ The original PNG remains immutable. Annotation geometry is stored in original-im
 
 ## Tools and actions
 
-The Phase 2 toolbar implements Select, Freehand pen, Highlighter, Arrow, Line, Rectangle, Text, secure redaction, Undo, Redo, Zoom, Pan, Delete selected annotation, Clear all, Copy edited PNG, Save edited PNG, and keyboard shortcuts. These controls are functional; the UI does not expose placeholder future tools.
+The toolbar implements Select, Freehand pen, Highlighter, Arrow, Line, Rectangle, Ellipse, Text, secure redaction, Pixelate, Blur, numbered Marker, Crop, Undo, Redo, Zoom, Pan, Delete selected annotation, Clear all, Copy edited PNG, Save edited PNG, and keyboard shortcuts. Crop is applied as document state and affects both export paths; pixelation and blur are cosmetic and distinct from opaque redaction.
 
 ## Rendering
 
@@ -53,7 +53,7 @@ Opaque redaction is security-sensitive and distinct from cosmetic blur or pixela
 
 ## Draft state
 
-The existing temporary IndexedDB capture record contains a validated `annotations` array. Editor changes are debounced into the same record; no screenshot Base64 or browser sync storage is introduced. Reload restores the draft, while expiry and Close and discard remove the image and annotations together.
+The existing temporary IndexedDB capture record contains validated `annotations` and optional `crop` state. Editor changes are debounced into the same record; no screenshot Base64 or browser sync storage is introduced. Reload restores the draft, while expiry and Close and discard remove the image and annotations together.
 
 ## Memory and export
 

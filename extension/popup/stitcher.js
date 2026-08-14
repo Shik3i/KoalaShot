@@ -121,11 +121,17 @@ export class PngStitcher {
     initialDocumentHeight,
     viewportWidth,
     viewportHeight,
+    screenViewportWidth = viewportWidth,
+    screenViewportHeight = viewportHeight,
+    captureRect = { left: 0, top: 0, width: screenViewportWidth, height: screenViewportHeight },
     growthRatio = 0.25,
   }) {
     this.initialDocumentHeight = initialDocumentHeight;
     this.viewportWidth = viewportWidth;
     this.viewportHeight = viewportHeight;
+    this.screenViewportWidth = screenViewportWidth;
+    this.screenViewportHeight = screenViewportHeight;
+    this.captureRect = { ...captureRect };
     this.growthRatio = growthRatio;
     this.maxDocumentHeight = Math.max(viewportHeight, initialDocumentHeight * (1 + growthRatio));
     this.targetDocumentHeight = Math.max(viewportHeight, initialDocumentHeight);
@@ -135,6 +141,10 @@ export class PngStitcher {
     this.scaleY = null;
     this.previousBottom = 0;
     this.lastBitmapWidth = null;
+    this.lastBitmapHeight = null;
+    this.sourceX = null;
+    this.sourceWidth = null;
+    this.sourceHeight = null;
     this.outputWidth = null;
     this.outputHeight = null;
   }
@@ -149,9 +159,16 @@ export class PngStitcher {
     if (this.canvas) {
       return;
     }
-    this.scaleX = bitmap.width / this.viewportWidth;
-    this.scaleY = bitmap.height / this.viewportHeight;
-    const width = bitmap.width;
+    this.scaleX = bitmap.width / this.screenViewportWidth;
+    this.scaleY = bitmap.height / this.screenViewportHeight;
+    const sourceX = cssToBitmapPixel(this.captureRect.left, this.scaleX);
+    const sourceY = cssToBitmapPixel(this.captureRect.top, this.scaleY);
+    const width = cssToBitmapPixel(this.captureRect.width, this.scaleX);
+    const height = cssToBitmapPixel(this.captureRect.height, this.scaleY);
+    if (sourceX < 0 || sourceY < 0 || width <= 0 || height <= 0
+      || sourceX + width > bitmap.width || sourceY + height > bitmap.height) {
+      throw new StitchingError("The browser capture did not contain the selected area.", "capture-region-failed");
+    }
     const maximumHeight = cssToBitmapPixel(this.maxDocumentHeight, this.scaleY);
     const bytes = estimateRawMemory(width, maximumHeight);
     if (width > MAX_CANVAS_WIDTH || maximumHeight > MAX_CANVAS_HEIGHT
@@ -184,18 +201,22 @@ export class PngStitcher {
     this.canvas = canvas;
     this.context = context;
     this.lastBitmapWidth = bitmap.width;
+    this.lastBitmapHeight = bitmap.height;
+    this.sourceX = sourceX;
+    this.sourceWidth = width;
+    this.sourceHeight = height;
   }
 
   async add(dataUrl, scrollY) {
     const bitmap = await decodePngDataUrl(dataUrl);
     try {
       this.ensureCanvas(bitmap);
-      if (bitmap.width !== this.lastBitmapWidth) {
+      if (bitmap.width !== this.lastBitmapWidth || bitmap.height !== this.lastBitmapHeight) {
         throw new StitchingError("The browser viewport changed during capture.", "viewport-changed");
       }
       const placement = calculateSectionPlacement({
         scrollY,
-        bitmapHeight: bitmap.height,
+        bitmapHeight: this.sourceHeight,
         scaleY: this.scaleY,
         previousBottom: this.previousBottom,
         outputHeight: this.canvas.height,
@@ -203,9 +224,9 @@ export class PngStitcher {
       if (placement.availableHeight > 0) {
         this.context.drawImage(
           bitmap,
-          0,
-          placement.sourceStart,
-          bitmap.width,
+          this.sourceX,
+          cssToBitmapPixel(this.captureRect.top, this.scaleY) + placement.sourceStart,
+          this.sourceWidth,
           placement.availableHeight,
           0,
           placement.destinationStart,

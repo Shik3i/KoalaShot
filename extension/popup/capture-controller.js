@@ -146,7 +146,18 @@ function normalizeCaptureError(error) {
   return new CaptureError(error instanceof Error ? error.message : "The page could not be captured.");
 }
 
-async function captureFullPage(tab, { signal, onProgress }) {
+function isSameCaptureRect(expected, actual) {
+  if (!expected || !actual) {
+    return false;
+  }
+  return ["left", "top", "width", "height"].every((key) => (
+    Number.isFinite(expected[key])
+      && Number.isFinite(actual[key])
+      && Math.abs(expected[key] - actual[key]) < 1
+  ));
+}
+
+async function captureFullPage(tab, { signal, onProgress, target = "page" }) {
   const sessionId = makeCaptureId();
   let channel = null;
   let stitcher = null;
@@ -157,11 +168,23 @@ async function captureFullPage(tab, { signal, onProgress }) {
     onProgress?.({ phase: "preparing", message: "Preparing page…" });
     await injectCaptureScript(tab.id);
     channel = createPortChannel(connectCapture(tab.id, sessionId), sessionId, signal);
-    const ready = await channel.request({ type: "start" });
+    const captureTarget = target === "internal" ? "internal" : "page";
+    const ready = await channel.request({ type: "start", target: captureTarget });
     const initialHeight = ready.documentHeight;
     const viewportHeight = ready.viewportHeight;
     const viewportWidth = ready.viewportWidth;
-    if (!Number.isFinite(initialHeight) || !Number.isFinite(viewportHeight) || viewportHeight <= 0) {
+    const screenViewportWidth = ready.screenViewportWidth ?? viewportWidth;
+    const screenViewportHeight = ready.screenViewportHeight ?? viewportHeight;
+    const captureRect = ready.captureRect || {
+      left: 0,
+      top: 0,
+      width: screenViewportWidth,
+      height: screenViewportHeight,
+    };
+    if (!Number.isFinite(initialHeight) || !Number.isFinite(viewportHeight) || viewportHeight <= 0
+      || !Number.isFinite(viewportWidth) || viewportWidth <= 0
+      || !Number.isFinite(screenViewportWidth) || screenViewportWidth <= 0
+      || !Number.isFinite(screenViewportHeight) || screenViewportHeight <= 0) {
       throw new CaptureError("KoalaShot could not measure the page.", "measurement-failed");
     }
 
@@ -169,6 +192,9 @@ async function captureFullPage(tab, { signal, onProgress }) {
       initialDocumentHeight: initialHeight,
       viewportWidth,
       viewportHeight,
+      screenViewportWidth,
+      screenViewportHeight,
+      captureRect,
       growthRatio: MAX_DYNAMIC_GROWTH_RATIO,
     });
     let targetHeight = Math.max(viewportHeight, initialHeight);
@@ -198,7 +224,10 @@ async function captureFullPage(tab, { signal, onProgress }) {
       if (scrolled.pageUrl && initialTab.url && scrolled.pageUrl !== initialTab.url) {
         throw new CaptureError("Capture stopped because the page navigated.", "navigation");
       }
-      if (scrolled.viewportWidth !== viewportWidth || scrolled.viewportHeight !== viewportHeight) {
+      if (scrolled.viewportWidth !== viewportWidth || scrolled.viewportHeight !== viewportHeight
+        || (scrolled.screenViewportWidth ?? screenViewportWidth) !== screenViewportWidth
+        || (scrolled.screenViewportHeight ?? screenViewportHeight) !== screenViewportHeight
+        || !isSameCaptureRect(captureRect, scrolled.captureRect || captureRect)) {
         throw new CaptureError(`Capture stopped because the browser viewport changed (${viewportWidth}x${viewportHeight} → ${scrolled.viewportWidth}x${scrolled.viewportHeight}).`, "viewport-changed");
       }
 
@@ -328,5 +357,8 @@ export async function loadSettings() {
 }
 
 export async function saveSettings(settings) {
-  await storageSet({ openEditorAfterCapture: Boolean(settings.openEditorAfterCapture) });
+  await storageSet({
+    openEditorAfterCapture: Boolean(settings.openEditorAfterCapture),
+    captureTarget: settings.captureTarget === "internal" ? "internal" : "page",
+  });
 }

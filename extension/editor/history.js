@@ -74,3 +74,84 @@ export class AnnotationHistory {
     return this.future.length > 0;
   }
 }
+
+function cloneCrop(crop) {
+  return crop ? { ...crop } : null;
+}
+
+function cloneDocumentState(state) {
+  return {
+    annotations: cloneAnnotations(state?.annotations || []),
+    crop: cloneCrop(state?.crop),
+  };
+}
+
+function sameDocumentState(first, second) {
+  return JSON.stringify(first) === JSON.stringify(second);
+}
+
+export class DocumentHistory {
+  constructor(initialState = {}, { limit = 100, onChange = () => {} } = {}) {
+    this.limit = limit;
+    this.onChange = onChange;
+    this.current = cloneDocumentState(initialState);
+    this.past = [];
+    this.future = [];
+  }
+
+  getState() {
+    return cloneDocumentState(this.current);
+  }
+
+  setCurrent(nextState, { notify = true } = {}) {
+    this.current = cloneDocumentState(nextState);
+    if (notify) {
+      this.onChange(this.getState());
+    }
+  }
+
+  apply(label, nextState) {
+    const next = cloneDocumentState(nextState);
+    if (sameDocumentState(this.current, next)) {
+      return false;
+    }
+    this.past.push({ label, before: this.getState(), after: next });
+    if (this.past.length > this.limit) {
+      this.past.shift();
+    }
+    this.current = next;
+    this.future = [];
+    this.onChange(this.getState());
+    return true;
+  }
+
+  undo() {
+    const action = this.past.pop();
+    if (!action) {
+      return false;
+    }
+    this.future.push(action);
+    this.current = cloneDocumentState(action.before);
+    this.onChange(this.getState());
+    return true;
+  }
+
+  redo() {
+    const action = this.future.pop();
+    if (!action) {
+      return false;
+    }
+    this.past.push(action);
+    this.current = cloneDocumentState(action.after);
+    this.onChange(this.getState());
+    return true;
+  }
+
+  get canUndo() {
+    return this.past.length > 0;
+  }
+
+  get canRedo() {
+    return this.future.length > 0;
+  }
+}

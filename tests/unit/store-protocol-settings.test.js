@@ -12,9 +12,9 @@ test("expires temporary records at the documented TTL", () => {
 });
 
 test("uses a conservative settings default", () => {
-  assert.deepEqual(DEFAULT_SETTINGS, { openEditorAfterCapture: false });
-  assert.deepEqual(normalizeSettings({ openEditorAfterCapture: 1 }), { openEditorAfterCapture: true });
-  assert.deepEqual(normalizeSettings(), { openEditorAfterCapture: false });
+  assert.deepEqual(DEFAULT_SETTINGS, { openEditorAfterCapture: false, captureTarget: "page" });
+  assert.deepEqual(normalizeSettings({ openEditorAfterCapture: 1, captureTarget: "internal" }), { openEditorAfterCapture: true, captureTarget: "internal" });
+  assert.deepEqual(normalizeSettings(), { openEditorAfterCapture: false, captureTarget: "page" });
 });
 
 test("validates capture sessions and rejects stale or malformed messages", () => {
