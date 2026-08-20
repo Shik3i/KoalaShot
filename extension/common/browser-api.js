@@ -114,10 +114,21 @@ export async function requestPermission(permission) {
 }
 
 export async function ensureClipboardPermission() {
-  if (await containsPermission("clipboardWrite")) {
+  const requiredPermissions = browserNamespace.runtime?.getManifest?.().permissions;
+  if (Array.isArray(requiredPermissions) && requiredPermissions.includes("clipboardWrite")) {
     return true;
   }
-  return requestPermission("clipboardWrite");
+  // permissions.request() must be invoked synchronously from the user-action
+  // handler. Firefox can return false when the permission is already required,
+  // so verify the effective permission only after the direct request finishes.
+  try {
+    if (await requestPermission("clipboardWrite")) {
+      return true;
+    }
+  } catch {
+    // A required permission is not requestable as an optional permission.
+  }
+  return containsPermission("clipboardWrite");
 }
 
 export function getExtensionUrl(path) {

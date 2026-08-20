@@ -1,6 +1,6 @@
 import { getApi, ensureClipboardPermission } from "../common/browser-api.js";
 import { copyPngBlob } from "../common/clipboard.js";
-import { deleteCapture, getCapture, pruneExpiredCaptures, saveCapture } from "../common/capture-store.js";
+import { deleteCapture, getCapture, pruneExpiredCaptures, saveCaptureDraft } from "../common/capture-store.js";
 import { downloadBlob } from "../popup/capture-controller.js";
 import { makeEditedFilename } from "../common/filename.js";
 import {
@@ -10,6 +10,7 @@ import {
   updateAnnotationStyle,
   validateAnnotations,
   tryValidateAnnotations,
+  tryValidateCrop,
 } from "./annotation-model.js";
 import {
   annotationBounds,
@@ -91,7 +92,11 @@ let temporaryPan = false;
 let textOperation = null;
 let draftTimer = null;
 let draftSaveChain = Promise.resolve();
+let pendingDraft = null;
+let draftSaveRunning = false;
 let discardInProgress = false;
+let exportInProgress = false;
+let lastRenderedExport = null;
 let devicePixelRatioValue = globalThis.devicePixelRatio || 1;
 let annotationColor = "#287a4a";
 let strokeWidth = 6;
@@ -109,6 +114,13 @@ function showError(message) {
   copyButton.disabled = true;
   saveButton.disabled = true;
   discardButton.disabled = !capture;
+}
+
+function setExportBusy(value) {
+  exportInProgress = value;
+  copyButton.disabled = value || !capture;
+  saveButton.disabled = value || !capture;
+  discardButton.disabled = value || !capture;
 }
 
 function hostnameFromUrl(sourceUrl) {
@@ -137,30 +149,80 @@ function documentState(annotations = currentAnnotations(), crop = currentCrop())
   return { annotations, crop };
 }
 
-function scheduleDraftSave() {
-  if (discardInProgress) {
-    return;
+function draftJournalKey() {
+  return `koalashot-editor-draft:${captureId || "unknown"}`;
+}
+
+function writeDraftJournal(state) {
+  const serialized = JSON.stringify(state);
+  try {
+    globalThis.sessionStorage.setItem(draftJournalKey(), serialized);
+  } catch {
+    setStatus("The tab-local draft journal is full; save or copy the edited PNG now.");
   }
+  return serialized;
+}
+
+function queueDraftWrite() {
   window.clearTimeout(draftTimer);
   draftTimer = window.setTimeout(() => {
     draftTimer = null;
-    draftSaveChain = draftSaveChain.then(() => persistDraft()).catch(() => {});
-  }, 500);
+    startDraftSave();
+  }, 250);
 }
 
-async function persistDraft() {
-  if (!capture) {
+function scheduleDraftSave() {
+  if (!capture || discardInProgress) {
+    return;
+  }
+  const state = { annotations: currentAnnotations(), crop: currentCrop() };
+  pendingDraft = { record: { ...capture, ...state }, journal: writeDraftJournal(state) };
+  queueDraftWrite();
+}
+
+function startDraftSave() {
+  if (draftSaveRunning || !pendingDraft || discardInProgress) {
+    return;
+  }
+  const draft = pendingDraft;
+  pendingDraft = null;
+  draftSaveRunning = true;
+  draftSaveChain = persistDraft(draft).finally(() => {
+    draftSaveRunning = false;
+    if (pendingDraft && !discardInProgress) {
+      queueDraftWrite();
+    }
+  });
+}
+
+function flushDraftSave() {
+  if (!capture || discardInProgress) {
+    return draftSaveChain;
+  }
+  window.clearTimeout(draftTimer);
+  draftTimer = null;
+  startDraftSave();
+  return draftSaveChain;
+}
+
+async function persistDraft(draft) {
+  if (!draft) {
     return;
   }
   try {
-    validateAnnotations(currentAnnotations());
-    await saveCapture({ ...capture, annotations: currentAnnotations(), crop: currentCrop() });
-  } catch {
-    setStatus("Draft could not be saved locally; your current editor state remains available.");
+    validateAnnotations(draft.record.annotations);
+    await saveCaptureDraft(draft.record.id, draft.record.annotations, draft.record.crop);
+    if (globalThis.sessionStorage.getItem(draftJournalKey()) === draft.journal) {
+      globalThis.sessionStorage.removeItem(draftJournalKey());
+    }
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : "Local storage failed.";
+    setStatus(`Draft could not be saved locally: ${detail} Your current editor state remains available.`);
   }
 }
 
 function historyChanged() {
+  lastRenderedExport = null;
   updateHistoryButtons();
   updateContextControls();
   drawOverlay();
@@ -644,27 +706,51 @@ function handleDoubleClick(event) {
 }
 
 async function copyEdited() {
+  if (!capture || exportInProgress) {
+    return;
+  }
+  const permissionRequest = ensureClipboardPermission();
+  const exportCapture = { ...capture, crop: currentCrop() };
+  const exportAnnotations = currentAnnotations();
+  setExportBusy(true);
   try {
-    if (!(await ensureClipboardPermission())) {
+    if (!(await permissionRequest)) {
       throw new Error("Clipboard permission was not granted.");
     }
     setStatus("Rendering edited PNG for clipboard…");
-    const blob = await renderEditorResultBlob({ ...capture, crop: currentCrop() }, currentAnnotations());
+    const blob = await renderEditorResultBlob(exportCapture, exportAnnotations);
+    lastRenderedExport = { blob, filename: makeEditedFilename(capture.filename) };
     await copyPngBlob(blob, getApi());
     setStatus("Edited screenshot copied.");
   } catch (error) {
-    setStatus(`Copy failed: ${error instanceof Error ? error.message : "The clipboard could not be updated."}`);
+    const fallback = lastRenderedExport ? " The rendered PNG is ready; use Save edited PNG." : "";
+    setStatus(`Copy failed: ${error instanceof Error ? error.message : "The clipboard could not be updated."}${fallback}`);
+  } finally {
+    setExportBusy(false);
   }
 }
 
 async function saveEdited() {
+  if (!capture || exportInProgress) {
+    return;
+  }
+  const exportCapture = { ...capture, crop: currentCrop() };
+  const exportAnnotations = currentAnnotations();
+  setExportBusy(true);
   try {
-    setStatus("Rendering edited PNG for saving…");
-    const blob = await renderEditorResultBlob({ ...capture, crop: currentCrop() }, currentAnnotations());
-    downloadBlob(blob, makeEditedFilename(capture.filename));
+    let result = lastRenderedExport;
+    if (!result) {
+      setStatus("Rendering edited PNG for saving…");
+      const blob = await renderEditorResultBlob(exportCapture, exportAnnotations);
+      result = { blob, filename: makeEditedFilename(capture.filename) };
+      lastRenderedExport = result;
+    }
+    downloadBlob(result.blob, result.filename);
     setStatus("Edited PNG save started.");
   } catch (error) {
     setStatus(`Save failed: ${error instanceof Error ? error.message : "The edited PNG could not be saved."}`);
+  } finally {
+    setExportBusy(false);
   }
 }
 
@@ -675,9 +761,12 @@ async function discardCapture() {
   discardInProgress = true;
   discardButton.disabled = true;
   window.clearTimeout(draftTimer);
+  draftTimer = null;
+  pendingDraft = null;
   try {
     await draftSaveChain;
     await deleteCapture(capture.id);
+    globalThis.sessionStorage.removeItem(draftJournalKey());
   } catch {
     discardInProgress = false;
     discardButton.disabled = false;
@@ -840,9 +929,14 @@ window.addEventListener("keyup", (event) => {
 });
 window.addEventListener("resize", resizeOverlay);
 window.addEventListener("pagehide", () => {
-  window.clearTimeout(draftTimer);
+  void flushDraftSave();
   if (imageUrl) {
     URL.revokeObjectURL(imageUrl);
+  }
+});
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") {
+    void flushDraftSave();
   }
 });
 
@@ -860,11 +954,29 @@ void (async () => {
     }
     capture = await getCapture(captureId);
     if (!capture) {
+      globalThis.sessionStorage.removeItem(draftJournalKey());
       showError("This temporary capture was not found or has expired.");
       return;
     }
-    const draft = tryValidateAnnotations(capture.annotations || []);
-    history.setCurrent({ annotations: draft.valid ? draft.annotations : [], crop: capture.crop || null }, { notify: false });
+    const storedAnnotations = tryValidateAnnotations(capture.annotations || []);
+    const storedCrop = tryValidateCrop(capture.crop || null);
+    let state = {
+      annotations: storedAnnotations.valid ? storedAnnotations.annotations : [],
+      crop: storedCrop.valid ? storedCrop.crop : null,
+    };
+    try {
+      const journal = JSON.parse(globalThis.sessionStorage.getItem(draftJournalKey()) || "null");
+      const journalAnnotations = tryValidateAnnotations(journal?.annotations);
+      const journalCrop = tryValidateCrop(journal?.crop);
+      if (journalAnnotations.valid && journalCrop.valid) {
+        state = { annotations: journalAnnotations.annotations, crop: journalCrop.crop };
+      } else if (journal) {
+        globalThis.sessionStorage.removeItem(draftJournalKey());
+      }
+    } catch {
+      globalThis.sessionStorage.removeItem(draftJournalKey());
+    }
+    history.setCurrent(state, { notify: false });
     cropSelection = null;
     imageUrl = URL.createObjectURL(capture.blob);
     image.src = imageUrl;

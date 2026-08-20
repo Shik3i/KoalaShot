@@ -4,23 +4,35 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="KoalaShot privacy information.">
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#101a14">
+    <link rel="canonical" href="https://shot.koalastuff.net/privacy/">
     <meta property="og:title" content="KoalaShot Privacy">
     <meta property="og:description" content="How KoalaShot processes screenshots locally.">
+    <meta property="og:url" content="https://shot.koalastuff.net/privacy/">
     <meta property="og:image" content="https://shot.koalastuff.net/assets/og-card.svg">
+    <meta property="og:image:type" content="image/svg+xml">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Privacy · KoalaShot">
+    <meta name="twitter:description" content="How KoalaShot processes screenshots locally.">
+    <meta name="twitter:image" content="https://shot.koalastuff.net/assets/og-card.svg">
     <title>Privacy · KoalaShot</title>
     <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="../styles.css?v=0.3.0">
   </head>
   <body>
-    <header class="site-shell site-header"><a class="brand" href="../"><img src="../assets/favicon.svg" alt="" width="34" height="34"><span>KoalaShot</span></a><nav class="site-nav" aria-label="Primary navigation"><a href="../">Home</a><a href="../legal/">Legal</a></nav></header>
-    <main class="site-shell legal-content"><p class="eyebrow">Privacy</p><h1>Local by default.</h1><p class="lede">KoalaShot is designed so the screenshot does not leave the browser profile.</p>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <header class="site-shell site-header"><a class="brand" href="../"><img src="../assets/favicon.svg" alt="" width="34" height="34"><span>KoalaShot</span></a><nav class="site-nav" aria-label="Primary navigation"><a href="../">Home</a><a href="https://koalastuff.net/legal">Legal</a></nav></header>
+    <main id="main-content" class="site-shell legal-content"><p class="eyebrow">Privacy</p><h1>Local by default.</h1><p class="lede">KoalaShot is designed so the screenshot does not leave the browser profile.</p>
       <h2>What happens when you capture</h2><p>KoalaShot captures only after you explicitly start Capture &amp; Copy or Save PNG. The extension scrolls the active page, captures viewport sections, and stitches them into one PNG in local browser memory.</p>
       <h2>What we do not collect</h2><ul><li>Screenshots and page content are not uploaded.</li><li>There is no account, browsing-history collection, tracking, telemetry, analytics, or error-reporting service.</li><li>KoalaShot does not use cookies, remote configuration, advertising, or remote code.</li></ul>
       <h2>Clipboard and downloads</h2><p>Copying to the clipboard and saving a file are user-initiated actions. KoalaShot requests the optional clipboard permission only when Capture &amp; Copy is selected, before capture begins. It does not read the clipboard and does not request the downloads permission.</p>
-      <h2>Temporary editor captures</h2><p>If you enable Open editor after capture, the original PNG is stored in extension-local IndexedDB so the packaged editor page can load it. Annotation drafts are saved alongside the same temporary record with debounced local writes. Temporary records expire after no more than 24 hours and can be discarded immediately in the editor. There is no screenshot history interface and records are not synchronized.</p>
+      <h2>Temporary editor captures</h2><p>If you enable Open editor after capture, the original PNG is stored in extension-local IndexedDB so the packaged editor page can load it. Validated annotations and crop state use a separate lightweight local draft store; a tab-scoped journal protects the latest edit during an immediate reload. Temporary records expire after no more than 24 hours and can be discarded immediately in the editor. There is no screenshot history interface and records are not synchronized.</p>
       <h2>Access limitations</h2><p>Browser-protected pages, extension stores, built-in PDF viewers, and other privileged pages may block extension access. KoalaShot does not work around those browser boundaries. No browsing history is collected as a result.</p>
     </main>
-    <footer class="site-shell site-footer"><span>© <span data-current-year>2026</span> Shik3i · KoalaShot · <span data-app-version data-version-url="../version.json">development build</span></span><span class="footer-links"><a href="../">Home</a><a href="../legal/">Legal</a><a href="https://github.com/Shik3i/KoalaShot">GitHub</a></span></footer>
-    <script src="../main.js"></script>
+    <footer class="site-shell site-footer"><span>© <span data-current-year>2026</span> Shik3i · KoalaShot · MIT · <span data-app-version data-version-url="../version.json">development build</span></span><span class="footer-links"><a href="../">Home</a><a href="https://koalastuff.net/legal">Legal</a><a href="https://github.com/Shik3i/KoalaShot" rel="noopener">GitHub</a><a href="https://support.koalastuff.net" rel="noopener">Support</a></span></footer>
+    <script src="../main.js?v=0.3.0"></script>
   </body>
 </html>

@@ -31,7 +31,7 @@
 }
 
 * { box-sizing: border-box; }
-html, body { min-width: 980px; min-height: 100%; }
+html, body { min-width: 320px; min-height: 100%; }
 body { margin: 0; overflow: hidden; background: var(--bg); color: var(--text); }
 button, input, textarea { font: inherit; }
 button { cursor: pointer; }
@@ -117,6 +117,37 @@ kbd { padding: 1px 4px; border: 1px solid var(--border); border-radius: 4px; bac
   .context-controls { gap: 10px; }
   .top-actions { gap: 4px; }
   .button { padding-inline: 8px; }
+}
+
+@media (max-width: 900px) {
+  body { min-height: 100vh; overflow: auto; }
+  .editor-header { position: relative; z-index: 8; min-height: 0; align-items: stretch; flex-direction: column; gap: 9px; padding: 9px 11px; }
+  .identity-block { min-width: 0; }
+  .source-summary { display: grid; }
+  .top-actions { width: 100%; flex-wrap: nowrap; justify-content: start; overflow-x: auto; padding: 2px 2px 5px; scrollbar-width: thin; }
+  .top-actions > * { flex: 0 0 auto; }
+  .editor-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(620px, 1fr); width: 100%; height: auto; min-height: calc(100vh - 120px); }
+  .tool-sidebar { flex-direction: row; justify-content: start; overflow-x: auto; padding: 7px; border-right: 0; border-bottom: 1px solid var(--border); scrollbar-width: thin; }
+  .tool-group { display: flex; flex: 0 0 auto; gap: 3px; }
+  .tool-group-bottom { margin-left: 9px; padding-left: 9px; border-left: 1px solid var(--border); }
+  .tool-label { display: none; }
+  .tool-button { min-width: 62px; min-height: 47px; }
+  .workspace { min-height: 620px; grid-template-rows: auto minmax(420px, 1fr) auto auto; }
+  .context-bar { align-items: stretch; flex-direction: column; gap: 8px; padding: 9px 11px; }
+  .context-copy { min-width: 0; }
+  .context-controls { width: 100%; flex-wrap: nowrap; justify-content: start; overflow-x: auto; padding: 2px 2px 5px; scrollbar-width: thin; }
+  .context-controls > * { flex: 0 0 auto; }
+  .stage-panel { min-height: 420px; }
+  .stage-scroll { padding: 14px; }
+  .status-line { padding-inline: 11px; }
+  .editor-hint { padding-inline: 11px; overflow-x: auto; white-space: nowrap; }
+}
+
+@media (max-width: 520px) {
+  .source-summary { font-size: 0.7rem; }
+  .action-divider { display: none; }
+  .button { padding-inline: 9px; }
+  .text-editor { width: min(290px, calc(100vw - 24px)); }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -13,5 +13,5 @@
 - The editor stores temporary captures and validated annotation/crop drafts only in extension-local IndexedDB, with bounded expiry and explicit discard.
 - Runtime code is vanilla HTML, CSS, JavaScript, WebExtension APIs, and Web Platform APIs.
 - Distributed files remain readable: no runtime dependencies, bundling, minification, obfuscation, or source maps.
-- The landing page is a static local site at `shot.koalastuff.net` with `/`, `/privacy/`, and `/legal/`.
+- The landing page is a static local site at `shot.koalastuff.net` with `/` and project-specific `/privacy/`; Legal always links to `https://koalastuff.net/legal` and is not duplicated locally.
 - The editor is non-destructive: immutable original PNG plus vector annotation objects produces the final PNG.

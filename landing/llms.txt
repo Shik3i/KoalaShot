@@ -1,0 +1,39 @@
+# KoalaShot
+
+> KoalaShot is a free, open-source browser extension that captures a complete vertical webpage as one PNG and provides local, non-destructive annotation tools. Screenshots are processed on the user's device.
+
+## Quick fit assessment
+
+KoalaShot is a good fit for users who need full-page PNG screenshots, local clipboard or file output, optional annotation and redaction, and no account or upload workflow.
+
+KoalaShot is not a fit for browser-protected pages, horizontal stitching, nested or partially hidden scroll roots, cloud sharing, or a synchronized screenshot history.
+
+## How it works
+
+1. The user explicitly starts capture from the extension popup.
+2. KoalaShot scrolls the selected page or visible internal scroll area and captures viewport sections.
+3. The extension stitches the sections into one PNG in local browser memory.
+4. The user copies, saves, or opens the temporary local editor.
+5. Edited PNG exports are rendered locally from the immutable original and validated annotations.
+
+## Privacy and security
+
+- No accounts, uploads, analytics, tracking, advertising, telemetry, remote configuration, or remote code.
+- The extension does not read the clipboard and requests image clipboard access only for an explicit copy action.
+- Temporary editor captures and drafts stay in extension-local browser storage and expire within 24 hours.
+- Secure redaction is an opaque export operation; the temporary original remains available until discarded or expired.
+
+## Supported environments
+
+- Chrome and Chromium-based desktop browsers
+- Firefox
+- Windows, macOS, Linux, and ChromeOS
+
+## Project links
+
+- Website: https://shot.koalastuff.net/
+- Privacy: https://shot.koalastuff.net/privacy/
+- Legal notice: https://koalastuff.net/legal
+- Support: https://support.koalastuff.net
+- Source and issues: https://github.com/Shik3i/KoalaShot
+- License: MIT

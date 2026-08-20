@@ -10,6 +10,9 @@
     "test:unit": "node --test tests/unit/*.test.js",
     "test": "npm run verify",
     "test:browser": "node tests/browser/extension-flow.test.mjs",
+    "test:browser:chrome": "node scripts/run-browser-matrix.mjs chrome",
+    "test:browser:firefox": "node scripts/run-browser-matrix.mjs firefox",
+    "test:browser:matrix": "node scripts/run-browser-matrix.mjs",
     "build": "node scripts/run-python.cjs scripts/build.py",
     "validate": "node scripts/run-python.cjs scripts/validate.py",
     "verify": "node scripts/verify.mjs"

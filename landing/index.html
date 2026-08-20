@@ -4,28 +4,44 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="KoalaShot captures an entire webpage to your clipboard or as a PNG, entirely on your device.">
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#101a14">
+    <link rel="canonical" href="https://shot.koalastuff.net/">
+    <link rel="alternate" type="text/markdown" href="https://shot.koalastuff.net/llms.txt" title="KoalaShot information for AI assistants">
     <meta property="og:title" content="KoalaShot – Full Page Screenshot">
     <meta property="og:description" content="Capture the whole page. Copy or save it locally as a PNG.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://shot.koalastuff.net/">
     <meta property="og:image" content="https://shot.koalastuff.net/assets/og-card.svg">
+    <meta property="og:image:type" content="image/svg+xml">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:site_name" content="KoalaShot">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="KoalaShot – Full Page Screenshot">
+    <meta name="twitter:description" content="Capture the whole page. Copy or save it locally as a PNG.">
+    <meta name="twitter:image" content="https://shot.koalastuff.net/assets/og-card.svg">
     <title>KoalaShot – Full Page Screenshot</title>
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=0.3.0">
+    <script type="application/ld+json">
+      {"@context":"https://schema.org","@type":"SoftwareApplication","name":"KoalaShot","url":"https://shot.koalastuff.net/","applicationCategory":"UtilitiesApplication","operatingSystem":"Windows, macOS, Linux, ChromeOS","browserRequirements":"Chrome, Chromium-based browsers, or Firefox","description":"Privacy-first full-page screenshot browser extension with local PNG editing.","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"},"license":"https://opensource.org/licenses/MIT","codeRepository":"https://github.com/Shik3i/KoalaShot"}
+    </script>
   </head>
   <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-shell site-header">
       <a class="brand" href="./"><img src="assets/favicon.svg" alt="" width="34" height="34"><span>KoalaShot</span></a>
       <nav class="site-nav" aria-label="Primary navigation"><a href="#workflow">Workflow</a><a href="#privacy">Privacy</a><a href="privacy/">Privacy page</a></nav>
     </header>
 
-    <main>
+    <main id="main-content">
       <section class="site-shell hero">
         <div>
           <p class="eyebrow">Full-page screenshot for your browser</p>
           <h1>Capture the whole page.</h1>
           <p class="lede">Copy an entire webpage to your clipboard or save it as a PNG. Free, open source, and processed entirely on your device.</p>
-          <div class="hero-actions"><a class="button button-primary" href="#workflow">See how it works</a><a class="button button-secondary" href="https://github.com/Shik3i/KoalaShot">View source on GitHub</a></div>
+          <div class="hero-actions"><a class="button button-primary" href="#workflow">See how it works</a><a class="button button-secondary" href="https://github.com/Shik3i/KoalaShot" rel="noopener">View source on GitHub</a></div>
         </div>
         <div class="hero-visual" aria-label="Illustration of a webpage being captured as a PNG">
           <div class="browser-frame"><div class="browser-bar"><i></i><i></i><i></i></div><div class="page-lines"><span></span><span></span><span></span><span></span><span></span></div></div>
@@ -57,7 +73,7 @@
         <div class="site-shell grid-3">
           <article class="card"><h3>Chrome and Chromium</h3><p>Designed for Chrome and Chromium-based browsers such as Vivaldi, Edge, and Brave. Install the current local Manifest V3 build unpacked for testing.</p></article>
           <article class="card"><h3>Firefox</h3><p>A separate Manifest V3 build supports temporary installation for local testing.</p></article>
-          <article class="card"><h3>Open source</h3><p>Readable vanilla HTML, CSS, JavaScript, and Python build tooling live in the <a href="https://github.com/Shik3i/KoalaShot">public repository</a>.</p></article>
+          <article class="card"><h3>Open source</h3><p>Readable vanilla HTML, CSS, JavaScript, and Python build tooling live in the <a href="https://github.com/Shik3i/KoalaShot" rel="noopener">public repository</a>.</p></article>
         </div>
         <div class="card store-placeholder"><h3>Store links are coming later</h3><p>Chrome Web Store: link pending. Firefox Add-ons: link pending. The current build is for local unpacked and temporary installation; this page intentionally shows no inactive store buttons.</p></div>
       </section>
@@ -72,7 +88,7 @@
       </section>
     </main>
 
-    <footer class="site-shell site-footer"><span>© <span data-current-year>2026</span> Shik3i · KoalaShot · <span data-app-version data-version-url="version.json">development build</span></span><span class="footer-links"><a href="privacy/">Privacy</a><a href="legal/">Legal</a><a href="https://github.com/Shik3i/KoalaShot">GitHub</a></span></footer>
-    <script src="main.js"></script>
+    <footer class="site-shell site-footer"><span>© <span data-current-year>2026</span> Shik3i · KoalaShot · MIT · <span data-app-version data-version-url="version.json">development build</span></span><span class="footer-links"><a href="https://koalastuff.net/legal">Legal</a><a href="privacy/">Privacy</a><a href="https://github.com/Shik3i/KoalaShot" rel="noopener">GitHub</a><a href="https://support.koalastuff.net" rel="noopener">Support</a><a href="https://mastodon.social/@koalastuff" rel="me noopener">Mastodon</a></span></footer>
+    <script src="main.js?v=0.3.0"></script>
   </body>
 </html>

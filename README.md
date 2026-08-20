@@ -13,12 +13,12 @@ Implemented:
 - Chromium and Firefox Manifest V3 source manifests.
 - Popup-owned full-page capture using an injected content script and a long-lived runtime Port.
 - Measured CSS-to-bitmap scale detection, overlap-aware vertical stitching, conservative memory limits, and PNG output.
-- Copy original PNG, save original PNG, cancellation, progress, page-state restoration, and bounded dynamic-height handling.
+- Copy original PNG, save original PNG, exact-PNG save fallback after clipboard denial/failure, cancellation, progress, page-state restoration, and bounded dynamic-height handling.
 - Optional local editor handoff through temporary extension-local IndexedDB storage.
 - Optional capture target: the normal page or the largest fully visible scrollable area inside the page. The selected mode is persistent and can be switched off in the popup.
 - Non-destructive editor with Select, Pan, Pen, Highlighter, Arrow, Line, Rectangle, Ellipse, Text, secure opaque Redact, Pixelate, Blur, numbered Markers, Crop, Undo, Redo, Delete, Clear all, zoom, fit-to-width, actual size, Copy edited, Save edited PNG, and discard.
-- Original-pixel annotation model, viewport-sized interaction canvas, shared geometry/render primitives, bounded history, and debounced local draft restoration.
-- Static local landing page at `landing/` with `/`, `/privacy/`, and `/legal/`.
+- Original-pixel annotation model, viewport-sized interaction canvas, shared geometry/render primitives, bounded history, responsive editor layout, synchronous tab-local draft journaling, and coalesced IndexedDB draft restoration.
+- Static landing page at `landing/` with `/`, project-specific `/privacy/`, shared KoalaStuff legal notice, canonical/social metadata, sitemap, robots policy, and `llms.txt`.
 - Dependency-free Python build/validation scripts and Node built-in unit tests.
 
 Not implemented: resize handles, image insertion, cloud sharing, horizontal stitching, store publishing, localization beyond the English catalog, and deployment.
@@ -43,6 +43,12 @@ Run tests:
 
 ```sh
 npm test
+```
+
+Run real Chrome and Firefox success plus clipboard-denial flows:
+
+```sh
+npm run test:browser:matrix
 ```
 
 Build unpacked directories, ZIP archives, and the landing output:
@@ -99,7 +105,7 @@ Keyboard shortcuts include `V` Select, `Space` temporary Pan, `P` Pen, `H` Highl
 - Fixed and sticky suppression is best-effort and cannot inspect closed Shadow DOM or cross-origin frames.
 - Highly dynamic pages may exceed the 25% bounded growth allowance.
 - Canvas allocation is conservatively capped; KoalaShot never silently downscales or crops an over-limit page.
-- The landing legal page contains a clearly marked canonical-details placeholder because the empty repository had no verified legal identity material.
+- Legal links point directly to the shared canonical notice at `https://koalastuff.net/legal`; KoalaShot does not duplicate legal identity content.
 
 The direct future editor work is resize handles, configurable arrowheads, text outlines, image insertion, horizontal stitching, store publishing, and localization. The current editor contract is documented in [docs/EDITOR_SPEC.md](docs/EDITOR_SPEC.md).
 

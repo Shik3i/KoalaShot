@@ -90,6 +90,7 @@ h2 { margin-bottom: 7px; font-size: 0.93rem; }
 .button-primary:hover:not(:disabled) { background: var(--accent-strong); }
 .button-secondary { border-color: var(--border); background: transparent; color: var(--text); }
 .button-secondary:hover:not(:disabled) { background: var(--surface-muted); }
+.result-action { width: 100%; margin-top: 11px; }
 .button-cancel { width: 100%; margin-top: 11px; border-color: color-mix(in srgb, var(--danger) 50%, var(--border)); background: transparent; color: var(--danger); }
 
 .checkbox-row { display: flex; gap: 9px; align-items: center; margin-top: 14px; color: var(--text); font-size: 0.85rem; cursor: pointer; }
