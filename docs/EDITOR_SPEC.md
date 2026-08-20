@@ -1,6 +1,6 @@
 # Phase 2 editor specification and implementation contract
 
-The v0.3.0 editor is implemented in the local editor page. This document is the durable contract for its non-destructive model and the boundary for future editor work. The popup capture flow optionally hands the original PNG to the editor through local IndexedDB.
+The v0.3.1 editor is implemented in the local editor page. This document is the durable contract for its non-destructive model and the boundary for future editor work. The popup capture flow optionally hands the original PNG to the editor through local IndexedDB.
 
 Implemented tools: Select, Pan, Freehand Pen, Highlighter, Arrow, Line, Rectangle, Ellipse, Text, secure opaque Redact, cosmetic Pixelate, cosmetic Blur, numbered Markers, Crop, Undo, Redo, Delete selected annotation, Clear all annotations, Zoom in/out, Fit to width, Actual size, Copy edited, Save edited PNG, and Close and discard.
 

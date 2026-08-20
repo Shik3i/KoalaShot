@@ -14,7 +14,7 @@ npm run test:browser:matrix
 
 The 30 unit tests cover filename sanitization and local date formatting, deterministic capture positions, final overlap placement, CSS-to-bitmap rounding, raw-memory estimation, bounded dynamic height, synchronous optional-permission requests, browser clipboard selection, temporary-record expiry, settings defaults, and runtime message validation.
 
-The v0.3.0 editor unit tests additionally cover annotation schema validation for ellipse/effects/markers, crop validation and document-state history, invalid draft rejection, original-pixel coordinate conversion, zoom-independent movement, rectangle normalization, freehand point reduction, line and arrow hit testing, text bounds, shared arrowhead geometry, bounded undo/redo with redo invalidation, edited filenames, crop export, and opaque redaction drawing.
+The v0.3.1 editor unit tests additionally cover annotation schema validation for ellipse/effects/markers, crop validation and document-state history, invalid draft rejection, original-pixel coordinate conversion, zoom-independent movement, rectangle normalization, freehand point reduction, line and arrow hit testing, text bounds, shared arrowhead geometry, bounded undo/redo with redo invalidation, edited filenames, crop export, and opaque redaction drawing.
 
 The build checks required source files and produces readable unpacked directories and ZIP archives. Validation checks both manifests, permission policy, remote-code patterns, dynamic-code patterns, landing-page asset policy, archive contents, required files, exact GitHub Action commit pins, and the immutable release-workflow policy.
 
@@ -35,7 +35,7 @@ Open fixtures from `http://127.0.0.1:8000/tests/fixtures/`. Do not use a remote 
 | Scenario | Chrome | Vivaldi / Edge / Brave | Firefox |
 | --- | --- | --- | --- |
 | Load unpacked/temporary build | Run manually | Run manually | Run manually |
-| Basic long page | Chrome-for-Testing v0.3.0 full flow passed | Pending manual run | Firefox BiDi v0.3.0 full flow passed |
+| Basic long page | Chrome-for-Testing v0.3.1 full flow passed | Pending manual run | Firefox BiDi v0.3.1 full flow passed |
 | 100% and non-default zoom | Pending manual run | Pending manual run | Pending manual run |
 | HiDPI | Pending manual run where available | Pending manual run where available | Pending manual run where available |
 | Light and dark system mode | Pending manual run | Pending manual run | Pending manual run |
@@ -43,9 +43,9 @@ Open fixtures from `http://127.0.0.1:8000/tests/fixtures/`. Do not use a remote 
 | Tab switch/navigation abort | Pending manual run | Pending manual run | Pending manual run |
 | Permission denial / clipboard failure | Automated denial plus exact-PNG save fallback passed | Pending manual run | Automated denial plus exact-PNG save fallback passed |
 | Editor handoff, draft reload, expiry, discard | Handoff/draft/crop/reload/discard passed; expiry pending | Pending manual run | Handoff/draft/crop/reload/discard passed; expiry pending |
-| Pen, highlighter, arrow, line, rectangle, ellipse, pixelate, blur, marker, text, crop, redaction | v0.3.0 full flow passed | Pending manual run | v0.3.0 full flow passed |
+| Pen, highlighter, arrow, line, rectangle, ellipse, pixelate, blur, marker, text, crop, redaction | v0.3.1 full flow passed | Pending manual run | v0.3.1 full flow passed |
 | Select, move, delete, undo/redo, zoom, pan, keyboard-only | Pending manual run | Pending manual run | Pending manual run |
-| Protected page, page-mode rejection, and internal scroll toggle/capture | v0.3.0 full flow passed | Pending manual run | v0.3.0 full flow passed |
+| Protected page, page-mode rejection, and internal scroll toggle/capture | v0.3.1 full flow passed | Pending manual run | v0.3.1 full flow passed |
 | Page restoration and scrollbar fixture | Pending manual run | Pending manual run | Pending manual run |
 | Responsive editor at 390×844 | No horizontal overflow; tool strip and stage passed | Pending manual run | No horizontal overflow; tool strip and stage passed |
 
