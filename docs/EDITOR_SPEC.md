@@ -1,6 +1,6 @@
 # Phase 2 editor specification and implementation contract
 
-The v0.3.1 editor is implemented in the local editor page. This document is the durable contract for its non-destructive model and the boundary for future editor work. The popup capture flow optionally hands the original PNG to the editor through local IndexedDB.
+The v0.3.2 editor is implemented in the local editor page. This document is the durable contract for its non-destructive model and the boundary for future editor work. The popup capture flow optionally hands the original PNG to the editor through local IndexedDB.
 
 Implemented tools: Select, Pan, Freehand Pen, Highlighter, Arrow, Line, Rectangle, Ellipse, Text, secure opaque Redact, cosmetic Pixelate, cosmetic Blur, numbered Markers, Crop, Undo, Redo, Delete selected annotation, Clear all annotations, Zoom in/out, Fit to width, Actual size, Copy edited, Save edited PNG, and Close and discard.
 
@@ -53,7 +53,7 @@ Opaque redaction is security-sensitive and distinct from cosmetic blur or pixela
 
 ## Draft state
 
-The existing temporary IndexedDB capture record contains validated `annotations` and optional `crop` state. Editor changes are debounced into the same record; no screenshot Base64 or browser sync storage is introduced. Reload restores the draft, while expiry and Close and discard remove the image and annotations together.
+The immutable PNG Blob and source metadata live in the temporary IndexedDB `captures` store. Validated `annotations` and optional `crop` state live in the separate lightweight `drafts` store, so ordinary edits never rewrite the large screenshot Blob. A tab-scoped `sessionStorage` journal synchronously protects the latest valid state across an immediate reload until the coalesced IndexedDB draft write succeeds. No screenshot Base64 or browser sync storage is introduced. Expiry and Close and discard remove the capture, draft, and journal together.
 
 ## Memory and export
 

@@ -1,12 +1,14 @@
 # KoalaShot
 
-[![Release](https://img.shields.io/badge/Release-v0.3.1-blue)](https://github.com/Shik3i/KoalaShot/releases)
+[![Source version](https://img.shields.io/badge/Source-v0.3.2-blue)](https://github.com/Shik3i/KoalaShot)
+[![CI](https://github.com/Shik3i/KoalaShot/actions/workflows/ci.yml/badge.svg)](https://github.com/Shik3i/KoalaShot/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/Shik3i/KoalaShot/actions/workflows/codeql.yml/badge.svg)](https://github.com/Shik3i/KoalaShot/actions/workflows/codeql.yml)
 
 KoalaShot – Full Page Screenshot is a privacy-first browser extension for capturing a complete vertical webpage as one PNG and annotating it locally. It is built from readable vanilla HTML, CSS, and JavaScript with no runtime dependencies.
 
-Current release: v0.3.1
+Current source version: v0.3.2. The latest published GitHub release remains available on the [Releases page](https://github.com/Shik3i/KoalaShot/releases).
 
-## v0.3.1 scope
+## v0.3.2 scope
 
 Implemented:
 
@@ -21,7 +23,7 @@ Implemented:
 - Static landing page at `landing/` with `/`, project-specific `/privacy/`, shared KoalaStuff legal notice, canonical/social metadata, sitemap, robots policy, and `llms.txt`.
 - Dependency-free Python build/validation scripts and Node built-in unit tests.
 
-Not implemented: resize handles, image insertion, cloud sharing, horizontal stitching, store publishing, localization beyond the English catalog, and deployment.
+Deliberately outside this release: resize handles, image insertion, cloud sharing, horizontal stitching, store submission, and localization beyond the English catalog. These are tracked as later milestones rather than presented as incomplete v0.3.2 behavior.
 
 ## Privacy principles
 
@@ -68,8 +70,8 @@ Build output:
 ```text
 dist/chrome/
 dist/firefox/
-dist/koalashot-chrome-0.3.1.zip
-dist/koalashot-firefox-0.3.1.zip
+dist/koalashot-chrome-0.3.2.zip
+dist/koalashot-firefox-0.3.2.zip
 dist/landing/
 ```
 
@@ -107,7 +109,11 @@ Keyboard shortcuts include `V` Select, `Space` temporary Pan, `P` Pen, `H` Highl
 - Canvas allocation is conservatively capped; KoalaShot never silently downscales or crops an over-limit page.
 - Legal links point directly to the shared canonical notice at `https://koalastuff.net/legal`; KoalaShot does not duplicate legal identity content.
 
-The direct future editor work is resize handles, configurable arrowheads, text outlines, image insertion, horizontal stitching, store publishing, and localization. The current editor contract is documented in [docs/EDITOR_SPEC.md](docs/EDITOR_SPEC.md).
+Post-v0.3.2 work is tracked in [docs/ROADMAP.md](docs/ROADMAP.md). The current editor contract is documented in [docs/EDITOR_SPEC.md](docs/EDITOR_SPEC.md), release evidence in [docs/STATUS.md](docs/STATUS.md), and submission preparation in [docs/STORE_LISTING.md](docs/STORE_LISTING.md).
+
+## Security and contributing
+
+Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md). Development and verification expectations are documented in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

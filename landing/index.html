@@ -22,8 +22,8 @@
     <meta name="twitter:description" content="Capture the whole page. Copy or save it locally as a PNG.">
     <meta name="twitter:image" content="https://shot.koalastuff.net/assets/og-card.svg">
     <title>KoalaShot – Full Page Screenshot</title>
-    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="styles.css?v=0.3.1">
+    <link rel="icon" href="assets/favicon.png?v=0.3.2-family" type="image/png">
+    <link rel="stylesheet" href="styles.css?v=0.3.2">
     <script type="application/ld+json">
       {"@context":"https://schema.org","@type":"SoftwareApplication","name":"KoalaShot","url":"https://shot.koalastuff.net/","applicationCategory":"UtilitiesApplication","operatingSystem":"Windows, macOS, Linux, ChromeOS","browserRequirements":"Chrome, Chromium-based browsers, or Firefox","description":"Privacy-first full-page screenshot browser extension with local PNG editing.","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"},"license":"https://opensource.org/licenses/MIT","codeRepository":"https://github.com/Shik3i/KoalaShot"}
     </script>
@@ -31,7 +31,7 @@
   <body>
     <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-shell site-header">
-      <a class="brand" href="./"><img src="assets/favicon.svg" alt="" width="34" height="34"><span>KoalaShot</span></a>
+      <a class="brand" href="./"><img src="assets/favicon.png?v=0.3.2-family" alt="" width="34" height="34"><span>KoalaShot</span></a>
       <nav class="site-nav" aria-label="Primary navigation"><a href="#workflow">Workflow</a><a href="#privacy">Privacy</a><a href="privacy/">Privacy page</a></nav>
     </header>
 
@@ -43,9 +43,52 @@
           <p class="lede">Copy an entire webpage to your clipboard or save it as a PNG. Free, open source, and processed entirely on your device.</p>
           <div class="hero-actions"><a class="button button-primary" href="#workflow">See how it works</a><a class="button button-secondary" href="https://github.com/Shik3i/KoalaShot" rel="noopener">View source on GitHub</a></div>
         </div>
-        <div class="hero-visual" aria-label="Illustration of a webpage being captured as a PNG">
-          <div class="browser-frame"><div class="browser-bar"><i></i><i></i><i></i></div><div class="page-lines"><span></span><span></span><span></span><span></span><span></span></div></div>
-          <div class="capture-frame"></div>
+        <div class="hero-visual" role="img" aria-label="KoalaShot extension capturing a full webpage and preparing it for local editing">
+          <div class="mock-browser" aria-hidden="true">
+            <div class="mock-browser-bar">
+              <span class="mock-window-dots"><i></i><i></i><i></i></span>
+              <span class="mock-address">example.com/field-notes</span>
+              <span class="mock-extension-icon"><img src="assets/favicon.png?v=0.3.2-family" alt="" width="18" height="18"></span>
+            </div>
+            <div class="mock-page">
+              <span class="mock-page-kicker">FIELD NOTES · 07</span>
+              <span class="mock-page-title">A whole story,<br>captured in one shot.</span>
+              <span class="mock-page-copy"></span>
+              <span class="mock-page-copy mock-page-copy-short"></span>
+              <span class="mock-photo"><i></i><i></i><i></i></span>
+              <span class="mock-highlight"></span>
+              <span class="mock-redaction"></span>
+              <span class="mock-arrow">↗</span>
+              <span class="mock-capture-line"><b>72%</b></span>
+            </div>
+          </div>
+
+          <img class="mock-mascot" src="assets/koalashot-mascot-2d.webp" alt="" width="720" height="749" aria-hidden="true">
+
+          <div class="mock-popup" aria-hidden="true">
+            <div class="mock-popup-head">
+              <img src="assets/favicon.png?v=0.3.2-family" alt="" width="30" height="30">
+              <span><b>KOALASHOT</b><strong>Full-page screenshot</strong></span>
+              <em>v0.3.2</em>
+            </div>
+            <div class="mock-popup-card">
+              <strong>Capture this page</strong>
+              <small>Everything visible from top to bottom.</small>
+              <span class="mock-capture-button">Capture &amp; Copy <b>⌘⇧S</b></span>
+              <span class="mock-select"><small>CAPTURE AREA</small><b>Full page</b><i>⌄</i></span>
+              <span class="mock-check"><i>✓</i> Open editor after capture</span>
+            </div>
+            <div class="mock-status">
+              <span><b>Capturing page</b><em>72%</em></span>
+              <i><b></b></i>
+            </div>
+            <div class="mock-local-note"><i></i> Processed only on your device</div>
+          </div>
+
+          <div class="mock-tool-strip" aria-hidden="true">
+            <span class="is-active">↖</span><span>✎</span><span>➜</span><span>□</span><span>T</span><span>▰</span>
+          </div>
+          <div class="mock-ready-pill" aria-hidden="true"><i>✓</i><span><b>PNG ready</b><small>Copied locally</small></span></div>
         </div>
       </section>
 
@@ -89,6 +132,6 @@
     </main>
 
     <footer class="site-shell site-footer"><span>© <span data-current-year>2026</span> Shik3i · KoalaShot · MIT · <span data-app-version data-version-url="version.json">development build</span></span><span class="footer-links"><a href="https://koalastuff.net/legal">Legal</a><a href="privacy/">Privacy</a><a href="https://github.com/Shik3i/KoalaShot" rel="noopener">GitHub</a><a href="https://support.koalastuff.net" rel="noopener">Support</a><a href="https://mastodon.social/@koalastuff" rel="me noopener">Mastodon</a></span></footer>
-    <script src="main.js?v=0.3.1"></script>
+    <script src="main.js?v=0.3.2"></script>
   </body>
 </html>

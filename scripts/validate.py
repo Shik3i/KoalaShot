@@ -108,17 +108,32 @@ def validate_required_files() -> None:
         EXTENSION / "common" / "capture-store.js",
         EXTENSION / "common" / "filename.js",
         EXTENSION / "_locales" / "en" / "messages.json",
+        EXTENSION / "icons" / "icon-master.png",
         LANDING / "index.html",
         LANDING / "privacy" / "index.html",
+        LANDING / "assets" / "favicon.png",
+        LANDING / "assets" / "koalashot-mascot-2d.webp",
         LANDING / "robots.txt",
         LANDING / "sitemap.xml",
         LANDING / "llms.txt",
         LANDING / "version.json",
+        ROOT / "SECURITY.md",
+        ROOT / "CHANGELOG.md",
+        ROOT / "CONTRIBUTING.md",
+        ROOT / "docs" / "STORE_LISTING.md",
+        ROOT / "docs" / "RELEASE_CHECKLIST.md",
     ]
     required += [EXTENSION / "icons" / f"icon-{size}.png" for size in (16, 32, 48, 96, 128)]
     missing = [str(path.relative_to(ROOT)) for path in required if not path.is_file()]
     if missing:
         fail(f"required files missing: {', '.join(missing)}")
+
+
+def validate_icon_consistency() -> None:
+    extension_master = EXTENSION / "icons" / "icon-master.png"
+    landing_favicon = LANDING / "assets" / "favicon.png"
+    if extension_master.read_bytes() != landing_favicon.read_bytes():
+        fail("landing favicon must be byte-identical to extension/icons/icon-master.png")
 
 
 def validate_source_policy() -> None:
@@ -201,6 +216,7 @@ def main() -> None:
     validate_manifests()
     validate_version_consistency()
     validate_required_files()
+    validate_icon_consistency()
     validate_source_policy()
     validate_workflows()
     validate_landing_version()
