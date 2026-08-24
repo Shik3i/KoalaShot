@@ -9,11 +9,20 @@ All notable user-visible changes are documented here. KoalaShot uses semantic ve
 - Original KoalaShot mascot artwork and a product-focused responsive landing-page hero.
 - Matching flat 2D favicon and regenerated Chrome/Firefox extension icons at every packaged size.
 - Security policy, contribution guide, store-listing packet, release checklist, Dependabot configuration, and CodeQL workflow.
+- Keyboard-operable annotation creation, selection, movement, and deletion with an accessible annotation list.
+- Chrome and Firefox CI browser jobs covering full success and clipboard-denial flows.
 
 ### Changed
 
 - Release documentation now distinguishes source readiness, store submission, publication, and deployment.
 - Editor storage documentation now matches the split immutable capture store, lightweight draft store, and tab-scoped reload journal.
+- Dark-mode primary button colors now meet WCAG AA contrast with white text.
+- Temporary editor records are rejected and removed on expired reads, pruned at startup, and deleted at the 24-hour deadline while an editor remains open.
+- Release automation now runs the real Chrome and Firefox browser matrix before publishing artifacts.
+
+### Fixed
+
+- Cancelling while a content-script request is pending now rejects immediately instead of waiting for the request timeout.
 
 ## [0.3.1] - 2026-08-20
 

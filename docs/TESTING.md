@@ -12,7 +12,7 @@ npm run test:browser:matrix
 
 `npm test` runs the full local release gate: unit tests, ESLint, production dependency audit, extension build, archive validation, and Firefox AMO validation with warnings treated as errors. Use `npm run test:unit` for only the unit suite.
 
-The 30 unit tests cover filename sanitization and local date formatting, deterministic capture positions, final overlap placement, CSS-to-bitmap rounding, raw-memory estimation, bounded dynamic height, synchronous optional-permission requests, browser clipboard selection, temporary-record expiry, settings defaults, and runtime message validation.
+The 32 unit tests cover filename sanitization and local date formatting, deterministic capture positions, final overlap placement, CSS-to-bitmap rounding, raw-memory estimation, bounded dynamic height, synchronous optional-permission requests, browser clipboard selection, temporary-record expiry, settings defaults, runtime message validation, dark-primary WCAG contrast, and the editor's keyboard accessibility contract.
 
 The v0.3.2 editor unit tests additionally cover annotation schema validation for ellipse/effects/markers, crop validation and document-state history, invalid draft rejection, original-pixel coordinate conversion, zoom-independent movement, rectangle normalization, freehand point reduction, line and arrow hit testing, text bounds, shared arrowhead geometry, bounded undo/redo with redo invalidation, edited filenames, crop export, and opaque redaction drawing.
 
@@ -37,14 +37,14 @@ Open fixtures from `http://127.0.0.1:8000/tests/fixtures/`. Do not use a remote 
 | Load unpacked/temporary build | Run manually | Run manually | Run manually |
 | Basic long page | Chrome-for-Testing v0.3.2 full flow passed | Pending manual run | Firefox BiDi v0.3.2 full flow passed |
 | 100% and non-default zoom | Pending manual run | Pending manual run | Pending manual run |
-| HiDPI | Pending manual run where available | Pending manual run where available | Pending manual run where available |
+| HiDPI | Automated 2× capture and editor-overlay geometry passed | Pending manual run where available | Automated 2× capture and editor-overlay geometry passed |
 | Light and dark system mode | Landing passed locally; extension pending manual run | Pending manual run | Landing passed locally; extension pending manual run |
-| Cancellation and popup close | Pending manual run | Pending manual run | Pending manual run |
-| Tab switch/navigation abort | Pending manual run | Pending manual run | Pending manual run |
+| Cancellation and popup close | Automated cancel/cleanup passed; popup close pending | Pending manual run | Automated cancel/cleanup passed; popup close pending |
+| Tab switch/navigation abort | Automated navigation abort passed; tab switch pending | Pending manual run | Automated navigation abort passed; tab switch pending |
 | Permission denial / clipboard failure | Automated denial plus exact-PNG save fallback passed | Pending manual run | Automated denial plus exact-PNG save fallback passed |
-| Editor handoff, draft reload, expiry, discard | Handoff/draft/crop/reload/discard passed; expiry pending | Pending manual run | Handoff/draft/crop/reload/discard passed; expiry pending |
+| Editor handoff, draft reload, expiry, discard | Handoff/draft/crop/reload/pruning/discard passed; 24-hour wait pending | Pending manual run | Handoff/draft/crop/reload/pruning/discard passed; 24-hour wait pending |
 | Pen, highlighter, arrow, line, rectangle, ellipse, pixelate, blur, marker, text, crop, redaction | v0.3.2 full flow passed | Pending manual run | v0.3.2 full flow passed |
-| Select, move, delete, undo/redo, zoom, pan, keyboard-only | Pending manual run | Pending manual run | Pending manual run |
+| Select, move, delete, undo/redo, zoom, pan, keyboard-only | Automated keyboard create/select/move/delete passed; full manual keyboard/screen-reader review pending | Pending manual run | Automated keyboard create/select/move/delete passed; full manual keyboard/screen-reader review pending |
 | Protected page, page-mode rejection, and internal scroll toggle/capture | v0.3.2 full flow passed | Pending manual run | v0.3.2 full flow passed |
 | Page restoration and scrollbar fixture | Pending manual run | Pending manual run | Pending manual run |
 | Responsive editor at 390×844 | No horizontal overflow; tool strip and stage passed | Pending manual run | No horizontal overflow; tool strip and stage passed |

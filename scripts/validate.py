@@ -174,6 +174,18 @@ def validate_workflows() -> None:
     for forbidden in ("git commit", "git push"):
         if forbidden in release:
             fail(f"release workflow must not mutate source branches: found {forbidden!r}")
+    if "npm run test:browser:matrix" not in release:
+        fail("release workflow must run the Chrome and Firefox browser matrix")
+
+    ci = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
+    for required in ("browser-matrix:", "browser: [chrome, firefox]", "npm run test:browser:${{ matrix.browser }}"):
+        if required not in ci:
+            fail(f"CI workflow is missing browser coverage: {required}")
+
+    codeql = (WORKFLOWS / "codeql.yml").read_text(encoding="utf-8")
+    push_block = codeql.split("pull_request:", 1)[0]
+    if re.search(r"push:\s*\n\s+branches:", push_block):
+        fail("CodeQL push analysis must not be limited to selected branches")
 
 
 def validate_landing_version() -> None:

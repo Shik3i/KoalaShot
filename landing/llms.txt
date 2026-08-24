@@ -20,7 +20,7 @@ KoalaShot is not a fit for browser-protected pages, horizontal stitching, nested
 
 - No accounts, uploads, analytics, tracking, advertising, telemetry, remote configuration, or remote code.
 - The extension does not read the clipboard and requests image clipboard access only for an explicit copy action.
-- Temporary editor captures and drafts stay in extension-local browser storage and expire within 24 hours.
+- Temporary editor captures and drafts stay in extension-local browser storage, become unavailable after 24 hours, and are deleted at that deadline by an open editor or on the next popup/editor start.
 - Secure redaction is an opaque export operation; the temporary original remains available until discarded or expired.
 
 ## Supported environments

@@ -12,6 +12,7 @@ const ROOT = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const DIST = join(ROOT, "dist");
 const FIXTURE = "/tests/fixtures/basic-long-page.html";
 const INTERNAL_FIXTURE = "/tests/fixtures/internal-scroll-container.html";
+const VERY_TALL_FIXTURE = "/tests/fixtures/very-tall-page.html";
 const browserName = (process.env.KOALASHOT_BROWSER || "").toLowerCase();
 const clipboardDenialMode = process.env.KOALASHOT_CLIPBOARD_DENIAL === "1";
 
@@ -279,11 +280,11 @@ class ChromeBrowser {
     }, page.sessionId);
   }
 
-  async setViewport(page, width, height) {
+  async setViewport(page, width, height, deviceScaleFactor = 1) {
     await (page.socket || this.socket).request("Emulation.setDeviceMetricsOverride", {
       width,
       height,
-      deviceScaleFactor: 1,
+      deviceScaleFactor,
       mobile: false,
       screenWidth: width,
       screenHeight: height,
@@ -456,11 +457,11 @@ class FirefoxBrowser {
     await this.socket.request("browsingContext.activate", { context: page.context }, this.sessionId);
   }
 
-  async setViewport(page, width, height) {
+  async setViewport(page, width, height, devicePixelRatio = 1) {
     await this.socket.request("browsingContext.setViewport", {
       context: page.context,
       viewport: { width, height },
-      devicePixelRatio: 1,
+      devicePixelRatio,
     }, this.sessionId);
   }
 
@@ -542,7 +543,8 @@ async function runFlow() {
   try {
     await browser.start();
     fixture = await browser.open(`${baseUrl}${FIXTURE}`, false);
-    if (browserName === "chrome") await browser.lockViewport(fixture);
+    await browser.setViewport(fixture, 1262, 804, 2);
+    assert.equal(await browser.evaluate(fixture, "devicePixelRatio"), 2);
     await browser.activate(fixture);
     popup = browserName === "chrome" ? await browser.open(`chrome-extension://${browser.extensionId}/popup/popup.html`, false) : await browser.open(`${browser.extensionUrl}/popup/popup.html`);
     await waitFor("extension popup page", () => browser.evaluate(popup, "({ href: location.href, readyState: document.readyState, body: document.body?.innerText || '', ready: document.documentElement.dataset.koalashotReady === 'true' })"), (state) => state?.body.includes("Capture this page") && state.ready);
@@ -573,8 +575,23 @@ async function runFlow() {
     }
     await waitFor("page cleanup after popup capture", () => browser.evaluate(fixture, "({ scrollY, className: document.documentElement.className, style: Boolean(document.querySelector('#koalashot-capture-styles')) })"), (state) => state?.scrollY === 0 && !state.className.includes("koalashot-capturing") && !state.style);
 
+    await browser.navigate(fixture, `${baseUrl}${VERY_TALL_FIXTURE}`);
+    await browser.setViewport(fixture, 1262, 804, 1);
+    await browser.activate(fixture);
+    await browser.evaluate(popup, "document.querySelector('#capture-target').value = 'page'; document.querySelector('#save-button').click()");
+    await waitFor("cancellable capture progress", () => browser.evaluate(popup, "document.querySelector('#status').textContent"), (value) => /Capturing section/i.test(value));
+    await browser.evaluate(popup, "document.querySelector('#cancel-button').click()");
+    assert.match(await waitFor("cancelled capture status", () => browser.evaluate(popup, "document.querySelector('#status').textContent"), (value) => /Capture cancelled/i.test(value)), /Capture cancelled/i);
+    await waitFor("page cleanup after cancellation", () => browser.evaluate(fixture, "({ scrollY, className: document.documentElement.className, style: Boolean(document.querySelector('#koalashot-capture-styles')) })"), (state) => state?.scrollY === 0 && !state.className.includes("koalashot-capturing") && !state.style);
+
+    await browser.evaluate(popup, "document.querySelector('#save-button').click()");
+    await waitFor("navigation-abort capture progress", () => browser.evaluate(popup, "document.querySelector('#status').textContent"), (value) => /Capturing section/i.test(value));
+    await browser.navigate(fixture, `${baseUrl}${FIXTURE}`);
+    assert.match(await waitFor("navigation-abort status", () => browser.evaluate(popup, "document.querySelector('#status').textContent"), (value) => /navigated|connection closed|could not be captured|failed/i.test(value)), /navigated|connection closed|could not be captured|failed/i);
+    assert.equal(await browser.evaluate(fixture, "!document.documentElement.className.includes('koalashot-capturing') && !document.querySelector('#koalashot-capture-styles')"), true);
+
     await browser.navigate(fixture, `${baseUrl}${INTERNAL_FIXTURE}`);
-    if (browserName === "chrome") await browser.lockViewport(fixture);
+    await browser.setViewport(fixture, 1262, 804, 1);
     await browser.activate(fixture);
     await browser.evaluate(popup, "document.querySelector('#capture-target').value = 'page'; document.querySelector('#capture-target').dispatchEvent(new Event('change', { bubbles: true })); document.querySelector('#save-button').click()");
     const internalStatus = await waitFor("internal-scroll rejection", () => browser.evaluate(popup, "document.querySelector('#status').textContent"), (value) => /scrollable area inside|internal scroll area|not supported/i.test(value));
@@ -586,7 +603,7 @@ async function runFlow() {
     await waitFor("internal area cleanup after capture", () => browser.evaluate(fixture, "({ scrollTop: document.querySelector('.scroll-root').scrollTop, className: document.documentElement.className, style: Boolean(document.querySelector('#koalashot-capture-styles')) })"), (state) => state?.scrollTop === 0 && !state.className.includes("koalashot-capturing") && !state.style);
 
     await browser.navigate(fixture, `${baseUrl}${FIXTURE}`);
-    if (browserName === "chrome") await browser.lockViewport(fixture);
+    await browser.setViewport(fixture, 1262, 804, 1);
     await browser.activate(fixture);
     await browser.evaluate(popup, "document.querySelector('#capture-target').value = 'page'; document.querySelector('#capture-target').dispatchEvent(new Event('change', { bubbles: true })); document.querySelector('#open-editor').checked = true; document.querySelector('#open-editor').dispatchEvent(new Event('change', { bubbles: true })); document.querySelector('#save-button').click()");
     const editorTriggerStatus = await waitFor("editor trigger", () => browser.evaluate(popup, "document.querySelector('#status').textContent"), (value) => /Editor opened|save failed|could not|failed/i.test(value));
@@ -636,6 +653,30 @@ async function runFlow() {
     assert.equal(annotationCount.count, 7);
     assert.ok(annotationCount.crop.width > 0);
 
+    const keyboardAccessibility = await browser.evaluate(editor, `(() => {
+      document.querySelector('[data-tool="rectangle"]').click();
+      const canvas = document.querySelector('#interaction-canvas');
+      canvas.focus();
+      canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      const afterCreate = document.querySelector('#annotation-list').options.length;
+      canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+      const selected = document.querySelector('#annotation-list').value;
+      const label = canvas.getAttribute('aria-label');
+      canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
+      return {
+        afterCreate,
+        selected,
+        label,
+        afterDelete: document.querySelector('#annotation-list').options.length,
+        focused: document.activeElement === canvas,
+      };
+    })()`);
+    assert.equal(keyboardAccessibility.afterCreate, 9);
+    assertNotEmpty(keyboardAccessibility.selected, "Keyboard-created annotation was not selected.");
+    assert.match(keyboardAccessibility.label, /8 annotations/i);
+    assert.equal(keyboardAccessibility.afterDelete, 8);
+    assert.equal(keyboardAccessibility.focused, true);
+
     await browser.evaluate(editor, "document.querySelector('#save-button').click()");
     const editorSaveStatus = await waitFor("edited PNG save", () => browser.evaluate(editor, "document.querySelector('#status').textContent"), (value) => /save started/i.test(value));
     assert.match(editorSaveStatus, /save started/i);
@@ -682,7 +723,38 @@ async function runFlow() {
     assert.equal(narrowLayout.scrollWidth <= narrowLayout.width, true);
     assert.match(narrowLayout.sidebarOverflow, /auto|scroll/);
 
+    await browser.setViewport(editor, 900, 700, 2);
+    const hidpiOverlay = await waitFor("HiDPI editor overlay", () => browser.evaluate(editor, `(() => {
+      const canvas = document.querySelector('#interaction-canvas');
+      const rect = canvas.getBoundingClientRect();
+      return { ratio: devicePixelRatio, bitmapWidth: canvas.width, cssWidth: rect.width, bitmapHeight: canvas.height, cssHeight: rect.height };
+    })()`), (state) => state?.ratio === 2 && Math.abs(state.bitmapWidth - state.cssWidth * 2) <= 2 && Math.abs(state.bitmapHeight - state.cssHeight * 2) <= 2);
+    assert.equal(hidpiOverlay.ratio, 2);
+
     assert.equal(await readCaptureCount(editor), 1);
+
+    await browser.evaluate(editor, `new Promise((resolve, reject) => {
+      const request = indexedDB.open('koalashot-captures', 2);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const database = request.result;
+        const transaction = database.transaction(['captures', 'drafts'], 'readwrite');
+        const captures = transaction.objectStore('captures');
+        const drafts = transaction.objectStore('drafts');
+        const getAll = captures.getAll();
+        getAll.onerror = () => reject(getAll.error);
+        getAll.onsuccess = () => {
+          const source = getAll.result[0];
+          captures.put({ ...source, id: 'expired-capture-0001', createdAt: Date.now() - 86_400_001 });
+          drafts.put({ id: 'expired-capture-0001', annotations: [], crop: null, updatedAt: Date.now() - 86_400_001 });
+        };
+        transaction.oncomplete = () => { database.close(); resolve(); };
+        transaction.onerror = () => reject(transaction.error);
+      };
+    })`);
+    const popupUrl = await browser.evaluate(popup, "location.href");
+    await browser.navigate(popup, popupUrl);
+    await waitFor("popup expiry prune", () => readCaptureCount(popup), (count) => count === 1);
 
     await browser.evaluate(editor, "document.querySelector('#clear-button').click()");
     await delay(800);

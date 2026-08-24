@@ -27,7 +27,7 @@ Deliberately outside this release: resize handles, image insertion, cloud sharin
 
 ## Privacy principles
 
-Capture begins only after explicit user action. Screenshots and page content remain on the device. KoalaShot has no accounts, uploads, history interface, cookies, tracking, analytics, telemetry, remote configuration, or remote code. Temporary editor records are local and expire within 24 hours.
+Capture begins only after explicit user action. Screenshots and page content remain on the device. KoalaShot has no accounts, uploads, history interface, cookies, tracking, analytics, telemetry, remote configuration, or remote code. Temporary editor records become unavailable after 24 hours, are deleted at that deadline while the editor remains open, and are otherwise deleted the next time the popup or editor starts. They can be discarded immediately at any time.
 
 ## Browser support
 
@@ -98,7 +98,7 @@ The manual fixtures are in `tests/fixtures/` and are intended to be served by a 
 
 Annotations are plain validated objects in original screenshot pixels. Zoom and device-pixel ratio change only the display transform. The original PNG remains immutable; Copy edited and Save edited PNG call the same full-resolution export function. Redact paints an opaque rectangle into the exported PNG and does not retroactively alter the temporary original capture.
 
-Keyboard shortcuts include `V` Select, `Space` temporary Pan, `P` Pen, `H` Highlighter, `A` Arrow, `L` Line, `R` Rectangle, `E` Ellipse, `T` Text, `X` Redact, `I` Pixelate, `B` Blur, `M` Marker, `C` Crop, `Delete`, `Escape`, `Ctrl/Cmd+Z`, `Ctrl+Y`, `Cmd+Shift+Z`, `Ctrl/Cmd++`, `Ctrl/Cmd+-`, and `Ctrl/Cmd+0`.
+Keyboard shortcuts include `V` Select, `Space` temporary Pan, `P` Pen, `H` Highlighter, `A` Arrow, `L` Line, `R` Rectangle, `E` Ellipse, `T` Text, `X` Redact, `I` Pixelate, `B` Blur, `M` Marker, `C` Crop, `Delete`, `Escape`, `Ctrl/Cmd+Z`, `Ctrl+Y`, `Cmd+Shift+Z`, `Ctrl/Cmd++`, `Ctrl/Cmd+-`, and `Ctrl/Cmd+0`. Focus the canvas and press Enter to create the active tool at the visible center; in Select mode Enter advances through annotations. Arrow keys move the selected annotation by one pixel, or ten with Shift. The context panel's annotation list provides direct keyboard selection.
 
 ## Known limitations
 

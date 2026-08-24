@@ -16,7 +16,7 @@ KoalaShot captures the full vertical length of the page you choose, stitches it 
 
 The local editor includes pen, highlighter, arrows, lines, rectangles, ellipses, multiline text, opaque redaction, cosmetic pixelation and blur, numbered markers, crop, selection, movement, undo/redo, zoom, and pan. The original capture stays immutable while edited exports are rendered at full resolution.
 
-Privacy is a product constraint: no account, uploads, analytics, telemetry, tracking, remote code, remote configuration, or screenshot-history service. Temporary editor data stays in extension-local storage, expires within 24 hours, and can be discarded immediately.
+Privacy is a product constraint: no account, uploads, analytics, telemetry, tracking, remote code, remote configuration, or screenshot-history service. Temporary editor data stays in extension-local storage, becomes unavailable after 24 hours, and is deleted at that deadline by an open editor or on the next popup/editor start. It can be discarded immediately.
 
 Some browser-protected pages, built-in viewers, closed Shadow DOM, cross-origin frame interfaces, and pages beyond safe canvas limits cannot be captured. Internal capture supports one fully visible vertical scroll area at a time.
 

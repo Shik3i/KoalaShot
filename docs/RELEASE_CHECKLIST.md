@@ -12,6 +12,7 @@
 - [ ] Run `npm ci` from the committed lockfile.
 - [ ] Run `npm test`.
 - [ ] Run `npm run test:browser:matrix`.
+- [ ] Confirm CI `verify`, CI `browser-matrix (chrome)`, CI `browser-matrix (firefox)`, and CodeQL are successful for the release commit.
 - [ ] Inspect the landing page at desktop and 390×844 in light and dark color schemes.
 - [ ] Verify `dist/koalashot-chrome-X.Y.Z.zip` and `dist/koalashot-firefox-X.Y.Z.zip` install from a clean profile.
 - [ ] Complete any remaining manual browser/platform rows in `docs/TESTING.md` or record them accurately as not run.
@@ -25,5 +26,6 @@
 - [ ] Review real store screenshots and listing copy before account submission.
 - [ ] Deploy `dist/landing/` separately and verify HTTPS, `/`, `/privacy/`, `/version.json`, cache headers, and canonical links.
 - [ ] Replace store placeholders only after live store URLs exist.
+- [ ] Enable Dependabot alerts and protect `main` with pull requests plus the successful CI and CodeQL checks after those checks exist on the default branch.
 
 A GitHub Release, browser-store publication, and website deployment are three separate states. Do not mark one complete based on another.

@@ -89,6 +89,12 @@ function createPortChannel(port, sessionId, signal) {
   port.onDisconnect.addListener(onDisconnect);
 
   const abort = () => {
+    if (pending) {
+      const current = pending;
+      pending = null;
+      clearTimeout(current.timer);
+      current.reject(new CaptureError("Capture cancelled.", "cancelled"));
+    }
     if (!closed) {
       try {
         port.disconnect();

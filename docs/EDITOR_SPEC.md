@@ -47,13 +47,17 @@ Use command- or object-based undo/redo. Each command records the minimum before/
 
 Hit-test in original-image coordinates after inverting the display transform. Use geometry-specific tolerances scaled by zoom: distance to line segments for pen/line/arrow, bounds for rectangles/text, and stroke path proximity for freehand. A selected object gets a non-exported overlay with handles. Moving updates only the object coordinates; Delete removes the selected object through a history command.
 
+## Keyboard operation
+
+The interaction canvas is focusable and exposes the annotation count and selection through its accessible name. Enter creates the active tool at the center of the visible image; in Select mode it advances through annotations. The context panel's annotation list selects any existing object without pointer input. Arrow keys move the selected object by one original-image pixel and Shift+Arrow by ten; Delete or Backspace removes it. Text creation opens the existing text dialog, Crop prepares a visible centered crop, and every keyboard edit uses the same validated history model as pointer input.
+
 ## Redaction security
 
 Opaque redaction is security-sensitive and distinct from cosmetic blur or pixelation. A redaction object must paint an opaque solid region into the final export, cover every pixel of its bounds, and never preserve the original pixels in the exported PNG. The UI must not call blur or pixelation “secure redaction.” Export tests must reopen the PNG and verify that redacted regions contain only the opaque redaction color within the chosen tolerance.
 
 ## Draft state
 
-The immutable PNG Blob and source metadata live in the temporary IndexedDB `captures` store. Validated `annotations` and optional `crop` state live in the separate lightweight `drafts` store, so ordinary edits never rewrite the large screenshot Blob. A tab-scoped `sessionStorage` journal synchronously protects the latest valid state across an immediate reload until the coalesced IndexedDB draft write succeeds. No screenshot Base64 or browser sync storage is introduced. Expiry and Close and discard remove the capture, draft, and journal together.
+The immutable PNG Blob and source metadata live in the temporary IndexedDB `captures` store. Validated `annotations` and optional `crop` state live in the separate lightweight `drafts` store, so ordinary edits never rewrite the large screenshot Blob. A tab-scoped `sessionStorage` journal synchronously protects the latest valid state across an immediate reload until the coalesced IndexedDB draft write succeeds. No screenshot Base64 or browser sync storage is introduced. An open editor schedules deletion at the exact 24-hour deadline; otherwise popup/editor startup removes expired records. Close and discard removes the capture, draft, and journal immediately.
 
 ## Memory and export
 

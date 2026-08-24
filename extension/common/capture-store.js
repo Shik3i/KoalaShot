@@ -126,6 +126,10 @@ export async function getCapture(id) {
   if (!record) {
     return null;
   }
+  if (isCaptureExpired(record)) {
+    await deleteCapture(id);
+    return null;
+  }
   const draft = await runTransaction("readonly", (store) => new Promise((resolve, reject) => {
     const request = store.get(id);
     request.onerror = () => reject(request.error || new Error("Could not read temporary editor draft."));

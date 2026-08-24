@@ -3,6 +3,7 @@ import { copyPngBlob } from "../common/clipboard.js";
 import { deleteCapture, getCapture, pruneExpiredCaptures, saveCaptureDraft } from "../common/capture-store.js";
 import { downloadBlob } from "../popup/capture-controller.js";
 import { makeEditedFilename } from "../common/filename.js";
+import { TEMP_CAPTURE_TTL_MS } from "../common/constants.js";
 import {
   createAnnotation,
   cloneAnnotation,
@@ -66,6 +67,7 @@ const strokeControl = document.querySelector("#stroke-width");
 const strokeValue = document.querySelector("#stroke-width-value");
 const fontControl = document.querySelector("#font-size");
 const fontValue = document.querySelector("#font-size-value");
+const annotationList = document.querySelector("#annotation-list");
 const editTextButton = document.querySelector("#edit-text-button");
 const cropControls = document.querySelector("#crop-controls");
 const applyCropButton = document.querySelector("#apply-crop-button");
@@ -91,6 +93,7 @@ let pointerOperation = null;
 let temporaryPan = false;
 let textOperation = null;
 let draftTimer = null;
+let expiryTimer = null;
 let draftSaveChain = Promise.resolve();
 let pendingDraft = null;
 let draftSaveRunning = false;
@@ -234,7 +237,40 @@ function historyChanged() {
 
 const history = new DocumentHistory({ annotations: [], crop: null }, { limit: 100, onChange: historyChanged });
 
+function annotationOptionLabel(annotation, index) {
+  const name = annotation.type.charAt(0).toUpperCase() + annotation.type.slice(1);
+  if (annotation.type === "text") {
+    const text = annotation.text.replace(/\s+/g, " ").trim().slice(0, 32);
+    return `${index + 1}. ${name}: ${text}`;
+  }
+  if (annotation.type === "marker") {
+    return `${index + 1}. ${name} ${annotation.number}`;
+  }
+  return `${index + 1}. ${name}`;
+}
+
+function updateAnnotationList() {
+  const annotations = currentAnnotations();
+  if (selectedId && !annotations.some((annotation) => annotation.id === selectedId)) {
+    selectedId = "";
+  }
+  annotationList.replaceChildren();
+  const emptyOption = document.createElement("option");
+  emptyOption.value = "";
+  emptyOption.textContent = annotations.length ? "None selected" : "No annotations";
+  annotationList.appendChild(emptyOption);
+  annotations.forEach((annotation, index) => {
+    const option = document.createElement("option");
+    option.value = annotation.id;
+    option.textContent = annotationOptionLabel(annotation, index);
+    annotationList.appendChild(option);
+  });
+  annotationList.value = selectedId;
+  overlay.setAttribute("aria-label", `Annotation overlay. ${annotations.length} annotation${annotations.length === 1 ? "" : "s"}.${selectedId ? ` ${annotationOptionLabel(selectedAnnotation(), annotations.findIndex((annotation) => annotation.id === selectedId))} selected.` : ""}`);
+}
+
 function updateHistoryButtons() {
+  updateAnnotationList();
   undoButton.disabled = !history.canUndo;
   redoButton.disabled = !history.canRedo;
   const hasAnnotations = currentAnnotations().length > 0;
@@ -456,6 +492,8 @@ function createMarker(point) {
   });
   history.apply("Create marker", documentState([...currentAnnotations(), marker]));
   selectedId = marker.id;
+  updateHistoryButtons();
+  drawOverlay();
 }
 
 function startPan(event) {
@@ -513,7 +551,7 @@ function pointerDown(event) {
   if (event.button !== 0 && event.pointerType === "mouse") {
     return;
   }
-  stageScroll.focus({ preventScroll: true });
+  overlay.focus({ preventScroll: true });
   if (temporaryPan || activeTool === "pan") {
     startPan(event);
   } else if (activeTool === "select") {
@@ -600,6 +638,8 @@ function deleteSelected() {
   if (next.length !== currentAnnotations().length) {
     history.apply("Delete annotation", documentState(next));
     selectedId = "";
+    updateHistoryButtons();
+    drawOverlay();
   }
 }
 
@@ -609,6 +649,8 @@ function clearAnnotations() {
   }
   history.apply("Clear annotations", documentState([]));
   selectedId = "";
+  updateHistoryButtons();
+  drawOverlay();
 }
 
 function applySelectedStyle(changes) {
@@ -680,6 +722,8 @@ function commitText() {
   }
   textOperation = null;
   textEditor.hidden = true;
+  updateHistoryButtons();
+  drawOverlay();
 }
 
 function cancelText() {
@@ -759,6 +803,8 @@ async function discardCapture() {
     return;
   }
   discardInProgress = true;
+  window.clearTimeout(expiryTimer);
+  expiryTimer = null;
   discardButton.disabled = true;
   window.clearTimeout(draftTimer);
   draftTimer = null;
@@ -787,6 +833,141 @@ async function discardCapture() {
   window.setTimeout(() => window.close(), 0);
 }
 
+async function expireOpenCapture() {
+  if (!capture || discardInProgress) {
+    return;
+  }
+  discardInProgress = true;
+  window.clearTimeout(draftTimer);
+  draftTimer = null;
+  pendingDraft = null;
+  try {
+    await draftSaveChain;
+    await deleteCapture(capture.id);
+    globalThis.sessionStorage.removeItem(draftJournalKey());
+  } catch {
+    discardInProgress = false;
+    setStatus("Expired screenshot cleanup failed; reopen KoalaShot to retry local cleanup.");
+    return;
+  }
+  capture = null;
+  if (imageUrl) {
+    URL.revokeObjectURL(imageUrl);
+    imageUrl = null;
+  }
+  showError("This temporary screenshot reached its 24-hour retention limit and was deleted locally.");
+  setStatus("Temporary screenshot expired and was deleted.");
+}
+
+function scheduleOpenCaptureExpiry() {
+  window.clearTimeout(expiryTimer);
+  const remaining = Math.max(0, capture.createdAt + TEMP_CAPTURE_TTL_MS - Date.now());
+  expiryTimer = window.setTimeout(() => void expireOpenCapture(), remaining);
+}
+
+function visibleImageCenter() {
+  const viewport = getViewportImageBounds();
+  return {
+    x: Math.max(0, Math.min(capture.width, viewport.x + viewport.width / 2)),
+    y: Math.max(0, Math.min(capture.height, viewport.y + viewport.height / 2)),
+  };
+}
+
+function selectNextAnnotation() {
+  const annotations = currentAnnotations();
+  if (annotations.length === 0) {
+    setStatus("There are no annotations to select.");
+    return;
+  }
+  const index = annotations.findIndex((annotation) => annotation.id === selectedId);
+  const next = annotations[(index + 1) % annotations.length];
+  selectedId = next.id;
+  updateHistoryButtons();
+  updateContextControls();
+  drawOverlay();
+  setStatus(`${annotationOptionLabel(next, (index + 1) % annotations.length)} selected.`);
+}
+
+function createKeyboardAnnotation() {
+  if (!capture || ["select", "pan"].includes(activeTool)) {
+    if (activeTool === "select") {
+      selectNextAnnotation();
+    } else {
+      setStatus("Pan the screenshot with the arrow keys or choose an annotation tool.");
+    }
+    return;
+  }
+  const center = visibleImageCenter();
+  if (activeTool === "text") {
+    openTextEditor(center, null);
+    return;
+  }
+  if (activeTool === "crop") {
+    const viewport = getViewportImageBounds();
+    cropSelection = clampCropToImage({
+      x: viewport.x + viewport.width * 0.1,
+      y: viewport.y + viewport.height * 0.1,
+      width: viewport.width * 0.8,
+      height: viewport.height * 0.8,
+    });
+    updateContextControls();
+    drawOverlay();
+    setStatus("Keyboard crop prepared. Use Apply crop to confirm it.");
+    return;
+  }
+  if (activeTool === "marker") {
+    createMarker(center);
+    setStatus("Marker added at the visible center.");
+    return;
+  }
+
+  const halfWidth = Math.max(12, Math.min(80, capture.width / 8));
+  const halfHeight = Math.max(12, Math.min(50, capture.height / 12));
+  let annotation;
+  if (activeTool === "pen" || activeTool === "highlighter") {
+    annotation = createAnnotation(activeTool, { points: [
+      { x: Math.max(0, center.x - halfWidth), y: center.y },
+      { x: Math.min(capture.width, center.x + halfWidth), y: center.y },
+    ] }, { color: annotationColor, strokeWidth, opacity: 0.38 });
+  } else {
+    annotation = createCurrentAnnotation(
+      { x: Math.max(0, center.x - halfWidth), y: Math.max(0, center.y - halfHeight) },
+      { x: Math.min(capture.width, center.x + halfWidth), y: Math.min(capture.height, center.y + halfHeight) },
+    );
+  }
+  if (!annotation) {
+    setStatus("The annotation could not be created at the visible center.");
+    return;
+  }
+  history.apply(`Create ${activeTool} with keyboard`, documentState([...currentAnnotations(), annotation]));
+  selectedId = annotation.id;
+  updateHistoryButtons();
+  updateContextControls();
+  drawOverlay();
+  setStatus(`${annotationOptionLabel(annotation, currentAnnotations().length - 1)} added at the visible center.`);
+}
+
+function moveSelectedWithKeyboard(key, largeStep) {
+  const selected = selectedAnnotation();
+  if (!selected) {
+    return false;
+  }
+  const step = largeStep ? 10 : 1;
+  const delta = {
+    ArrowLeft: [-step, 0],
+    ArrowRight: [step, 0],
+    ArrowUp: [0, -step],
+    ArrowDown: [0, step],
+  }[key];
+  if (!delta) {
+    return false;
+  }
+  const moved = moveAnnotation(selected, delta[0], delta[1]);
+  history.apply("Move annotation with keyboard", documentState(currentAnnotations().map((annotation) => annotation.id === selected.id ? moved : annotation)));
+  setStatus(`Selected annotation moved ${step} pixel${step === 1 ? "" : "s"}.`);
+  return true;
+}
+
 function handleKeyboard(event) {
   const target = event.target;
   const typing = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target?.isContentEditable;
@@ -805,6 +986,15 @@ function handleKeyboard(event) {
     return;
   }
   if (typing) {
+    return;
+  }
+  if (event.target === overlay && event.key === "Enter") {
+    event.preventDefault();
+    createKeyboardAnnotation();
+    return;
+  }
+  if (event.target === overlay && moveSelectedWithKeyboard(event.key, event.shiftKey)) {
+    event.preventDefault();
     return;
   }
   if (event.code === "Space") {
@@ -863,6 +1053,16 @@ document.querySelector("#custom-color").addEventListener("input", (event) => {
   annotationColor = event.target.value;
   document.querySelectorAll(".swatch").forEach((swatch) => swatch.classList.remove("is-selected"));
   applySelectedStyle({ color: annotationColor });
+});
+annotationList.addEventListener("change", () => {
+  selectedId = annotationList.value;
+  selectTool("select");
+  updateHistoryButtons();
+  updateContextControls();
+  drawOverlay();
+  const selected = selectedAnnotation();
+  setStatus(selected ? `${annotationOptionLabel(selected, currentAnnotations().findIndex((annotation) => annotation.id === selected.id))} selected.` : "Annotation selection cleared.");
+  overlay.focus({ preventScroll: true });
 });
 strokeControl.addEventListener("input", (event) => {
   strokeWidth = Number(event.target.value);
@@ -929,6 +1129,7 @@ window.addEventListener("keyup", (event) => {
 });
 window.addEventListener("resize", resizeOverlay);
 window.addEventListener("pagehide", () => {
+  window.clearTimeout(expiryTimer);
   void flushDraftSave();
   if (imageUrl) {
     URL.revokeObjectURL(imageUrl);
@@ -958,6 +1159,7 @@ void (async () => {
       showError("This temporary capture was not found or has expired.");
       return;
     }
+    scheduleOpenCaptureExpiry();
     const storedAnnotations = tryValidateAnnotations(capture.annotations || []);
     const storedCrop = tryValidateCrop(capture.crop || null);
     let state = {
