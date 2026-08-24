@@ -178,9 +178,18 @@ def validate_workflows() -> None:
         fail("release workflow must run the Chrome and Firefox browser matrix")
 
     ci = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
-    for required in ("browser-matrix:", "browser: [chrome, firefox]", "npm run test:browser:${{ matrix.browser }}"):
+    for required in (
+        "browser-matrix:",
+        "browser: [chrome, firefox]",
+        "chrome-version: 151.0.7922.34",
+        "firefox-version: 152.0.3",
+        "npm run test:browser:${{ matrix.browser }}",
+    ):
         if required not in ci:
             fail(f"CI workflow is missing browser coverage: {required}")
+    for required in ("chrome-version: 151.0.7922.34", "firefox-version: 152.0.3"):
+        if required not in release:
+            fail(f"release workflow is missing a qualified browser pin: {required}")
 
     codeql = (WORKFLOWS / "codeql.yml").read_text(encoding="utf-8")
     push_block = codeql.split("pull_request:", 1)[0]
