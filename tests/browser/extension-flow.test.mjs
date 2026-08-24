@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { delimiter, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { spawn } from "node:child_process";
 import { homedir, tmpdir } from "node:os";
 import { setTimeout as delay } from "node:timers/promises";
@@ -57,7 +57,16 @@ function runProcess(command, args) {
 }
 
 function firstExisting(override, candidates) {
-  return override || candidates.find((candidate) => existsSync(candidate)) || candidates[0];
+  if (override) {
+    return override;
+  }
+  const pathDirectories = (process.env.PATH || "").split(delimiter).filter(Boolean);
+  return candidates.find((candidate) => {
+    if (isAbsolute(candidate) || candidate.includes(sep)) {
+      return existsSync(candidate);
+    }
+    return pathDirectories.some((directory) => existsSync(join(directory, candidate)));
+  }) || candidates[0];
 }
 
 function playwrightChromiumCandidates() {
@@ -128,7 +137,7 @@ function chromeExecutable() {
   }
   return firstExisting(process.env.KOALASHOT_CHROME, process.platform === "darwin"
     ? [...playwrightChromiumCandidates(), "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"]
-    : [...playwrightChromiumCandidates(), "google-chrome", "chromium", "chromium-browser"]);
+    : [...playwrightChromiumCandidates(), "chrome", "google-chrome", "chromium", "chromium-browser"]);
 }
 
 function firefoxExecutable() {

@@ -73,9 +73,7 @@ jobs:
         run: npm test
 
       - name: Run target-browser success and denial flows
-        run: xvfb-run -a npm run test:browser:matrix
-        env:
-          KOALASHOT_CHROME_HEADLESS: "0"
+        run: npm run test:browser:matrix
 
       - name: Generate extension checksums
         shell: bash

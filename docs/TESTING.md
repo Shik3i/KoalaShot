@@ -59,7 +59,7 @@ npm run test:browser:firefox
 npm run test:browser:matrix
 ```
 
-The matrix command runs success and permission-denial flows for both browsers. CI and tagged releases pin the currently qualified Chrome-for-Testing `151.0.7922.34` and Firefox `152.0.3`; browser-version updates require a successful matrix run before changing those pins. GitHub's Linux runner starts Chrome headed under Xvfb because native headless mode blocks direct extension-page navigation; the browser still uses an isolated disposable profile. On macOS and Linux the Chrome harness discovers Playwright Chrome-for-Testing caches as well as installed browsers; environment overrides remain available.
+The matrix command runs success and permission-denial flows for both browsers. CI and tagged releases pin the currently qualified Chrome-for-Testing `151.0.7922.34` and Firefox `152.0.3`; browser-version updates require a successful matrix run before changing those pins. On macOS and Linux the Chrome harness resolves Playwright Chrome-for-Testing caches and PATH-installed Chrome-for-Testing before branded or system Chromium browsers; environment overrides remain available.
 
 Loading `dist/chrome/` with Chrome's Load unpacked action does not require an extension ID. The normal manual flow is to click KoalaShot in the toolbar.
 
