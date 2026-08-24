@@ -183,11 +183,15 @@ def validate_workflows() -> None:
         "browser: [chrome, firefox]",
         "chrome-version: 151.0.7922.34",
         "firefox-version: 152.0.3",
-        "npm run test:browser:${{ matrix.browser }}",
+        "xvfb-run -a npm run test:browser:${{ matrix.browser }}",
     ):
         if required not in ci:
             fail(f"CI workflow is missing browser coverage: {required}")
-    for required in ("chrome-version: 151.0.7922.34", "firefox-version: 152.0.3"):
+    for required in (
+        "chrome-version: 151.0.7922.34",
+        "firefox-version: 152.0.3",
+        "xvfb-run -a npm run test:browser:matrix",
+    ):
         if required not in release:
             fail(f"release workflow is missing a qualified browser pin: {required}")
 

@@ -64,4 +64,6 @@ jobs:
       - name: Build release archives
         run: npm run build
       - name: Run target-browser success and denial flows
-        run: npm run test:browser:${{ matrix.browser }}
+        run: xvfb-run -a npm run test:browser:${{ matrix.browser }}
+        env:
+          KOALASHOT_CHROME_HEADLESS: "0"
