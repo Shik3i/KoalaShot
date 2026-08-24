@@ -46,7 +46,9 @@ def required_files() -> list[Path]:
         EXTENSION / "_locales" / "en" / "messages.json",
         LANDING / "index.html",
         LANDING / "privacy" / "index.html",
-        LANDING / "legal" / "index.html",
+        LANDING / "robots.txt",
+        LANDING / "sitemap.xml",
+        LANDING / "llms.txt",
     ]
 
 

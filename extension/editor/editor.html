@@ -66,6 +66,7 @@
             <div class="control-group" id="color-controls"><span class="control-label">Color</span><div class="palette" role="group" aria-label="Annotation color"><button class="swatch is-selected" data-color="#287a4a" type="button" aria-label="Koala green" title="Koala green"></button><button class="swatch" data-color="#e53935" type="button" aria-label="Red" title="Red"></button><button class="swatch" data-color="#1565c0" type="button" aria-label="Blue" title="Blue"></button><button class="swatch" data-color="#f9a825" type="button" aria-label="Yellow" title="Yellow"></button><button class="swatch" data-color="#111111" type="button" aria-label="Black" title="Black"></button><input id="custom-color" type="color" value="#287a4a" aria-label="Custom annotation color"></div></div>
             <label class="control-group compact-control" for="stroke-width"><span class="control-label">Width <output id="stroke-width-value">6</output></span><input id="stroke-width" type="range" min="1" max="40" step="1" value="6"></label>
             <label class="control-group compact-control" id="font-size-control" for="font-size"><span class="control-label">Text size <output id="font-size-value">32</output></span><input id="font-size" type="range" min="8" max="120" step="1" value="32"></label>
+            <label class="control-group" for="annotation-list"><span class="control-label">Annotations</span><select id="annotation-list" class="annotation-select"><option value="">None selected</option></select></label>
             <button id="edit-text-button" class="text-button" type="button" hidden>Edit text</button>
             <div id="crop-controls" class="crop-controls" hidden><button id="apply-crop-button" class="text-button" type="button" disabled>Apply crop</button><button id="reset-crop-button" class="text-button" type="button" disabled>Reset crop</button></div>
           </div>
@@ -78,12 +79,12 @@
             <div id="stage-scroll" class="stage-scroll" tabindex="0" aria-label="Scrollable screenshot canvas">
               <div id="stage" class="stage"><img id="capture-image" alt="Original screenshot"><div id="image-spacer" aria-hidden="true"></div></div>
             </div>
-            <canvas id="interaction-canvas" aria-label="Annotation overlay"></canvas>
+            <canvas id="interaction-canvas" tabindex="0" role="application" aria-label="Annotation overlay" aria-describedby="editor-keyboard-help"></canvas>
             <div id="text-editor" class="text-editor" hidden><label for="text-input">Annotation text</label><textarea id="text-input" rows="4" maxlength="10000"></textarea><div class="text-editor-actions"><button id="cancel-text-button" class="text-button" type="button">Cancel</button><button id="apply-text-button" class="button button-primary" type="button">Apply text</button></div></div>
           </div>
         </section>
         <p id="status" class="status-line" role="status" aria-live="polite">Loading local screenshot…</p>
-        <p class="editor-hint">Shortcuts: <kbd>V</kbd> select · <kbd>Space</kbd> temporary pan · <kbd>Ctrl/Cmd+Z</kbd> undo · <kbd>Delete</kbd> remove · <kbd>Ctrl/Cmd+0</kbd> fit width</p>
+        <p id="editor-keyboard-help" class="editor-hint">Keyboard: choose a tool, focus the annotation overlay, and press <kbd>Enter</kbd> to add at the visible center. Use the Annotations list to select; arrow keys move the selection, <kbd>Shift</kbd> moves 10px, and <kbd>Delete</kbd> removes it. Shortcuts: <kbd>V</kbd> select · <kbd>Space</kbd> temporary pan · <kbd>Ctrl/Cmd+Z</kbd> undo · <kbd>Ctrl/Cmd+0</kbd> fit width.</p>
       </main>
     </div>
     <script type="module" src="editor.js"></script>

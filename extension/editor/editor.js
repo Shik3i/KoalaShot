@@ -1,8 +1,9 @@
 import { getApi, ensureClipboardPermission } from "../common/browser-api.js";
 import { copyPngBlob } from "../common/clipboard.js";
-import { deleteCapture, getCapture, pruneExpiredCaptures, saveCapture } from "../common/capture-store.js";
+import { deleteCapture, getCapture, pruneExpiredCaptures, saveCaptureDraft } from "../common/capture-store.js";
 import { downloadBlob } from "../popup/capture-controller.js";
 import { makeEditedFilename } from "../common/filename.js";
+import { TEMP_CAPTURE_TTL_MS } from "../common/constants.js";
 import {
   createAnnotation,
   cloneAnnotation,
@@ -10,6 +11,7 @@ import {
   updateAnnotationStyle,
   validateAnnotations,
   tryValidateAnnotations,
+  tryValidateCrop,
 } from "./annotation-model.js";
 import {
   annotationBounds,
@@ -65,6 +67,7 @@ const strokeControl = document.querySelector("#stroke-width");
 const strokeValue = document.querySelector("#stroke-width-value");
 const fontControl = document.querySelector("#font-size");
 const fontValue = document.querySelector("#font-size-value");
+const annotationList = document.querySelector("#annotation-list");
 const editTextButton = document.querySelector("#edit-text-button");
 const cropControls = document.querySelector("#crop-controls");
 const applyCropButton = document.querySelector("#apply-crop-button");
@@ -90,8 +93,13 @@ let pointerOperation = null;
 let temporaryPan = false;
 let textOperation = null;
 let draftTimer = null;
+let expiryTimer = null;
 let draftSaveChain = Promise.resolve();
+let pendingDraft = null;
+let draftSaveRunning = false;
 let discardInProgress = false;
+let exportInProgress = false;
+let lastRenderedExport = null;
 let devicePixelRatioValue = globalThis.devicePixelRatio || 1;
 let annotationColor = "#287a4a";
 let strokeWidth = 6;
@@ -109,6 +117,13 @@ function showError(message) {
   copyButton.disabled = true;
   saveButton.disabled = true;
   discardButton.disabled = !capture;
+}
+
+function setExportBusy(value) {
+  exportInProgress = value;
+  copyButton.disabled = value || !capture;
+  saveButton.disabled = value || !capture;
+  discardButton.disabled = value || !capture;
 }
 
 function hostnameFromUrl(sourceUrl) {
@@ -137,30 +152,80 @@ function documentState(annotations = currentAnnotations(), crop = currentCrop())
   return { annotations, crop };
 }
 
-function scheduleDraftSave() {
-  if (discardInProgress) {
-    return;
+function draftJournalKey() {
+  return `koalashot-editor-draft:${captureId || "unknown"}`;
+}
+
+function writeDraftJournal(state) {
+  const serialized = JSON.stringify(state);
+  try {
+    globalThis.sessionStorage.setItem(draftJournalKey(), serialized);
+  } catch {
+    setStatus("The tab-local draft journal is full; save or copy the edited PNG now.");
   }
+  return serialized;
+}
+
+function queueDraftWrite() {
   window.clearTimeout(draftTimer);
   draftTimer = window.setTimeout(() => {
     draftTimer = null;
-    draftSaveChain = draftSaveChain.then(() => persistDraft()).catch(() => {});
-  }, 500);
+    startDraftSave();
+  }, 250);
 }
 
-async function persistDraft() {
-  if (!capture) {
+function scheduleDraftSave() {
+  if (!capture || discardInProgress) {
+    return;
+  }
+  const state = { annotations: currentAnnotations(), crop: currentCrop() };
+  pendingDraft = { record: { ...capture, ...state }, journal: writeDraftJournal(state) };
+  queueDraftWrite();
+}
+
+function startDraftSave() {
+  if (draftSaveRunning || !pendingDraft || discardInProgress) {
+    return;
+  }
+  const draft = pendingDraft;
+  pendingDraft = null;
+  draftSaveRunning = true;
+  draftSaveChain = persistDraft(draft).finally(() => {
+    draftSaveRunning = false;
+    if (pendingDraft && !discardInProgress) {
+      queueDraftWrite();
+    }
+  });
+}
+
+function flushDraftSave() {
+  if (!capture || discardInProgress) {
+    return draftSaveChain;
+  }
+  window.clearTimeout(draftTimer);
+  draftTimer = null;
+  startDraftSave();
+  return draftSaveChain;
+}
+
+async function persistDraft(draft) {
+  if (!draft) {
     return;
   }
   try {
-    validateAnnotations(currentAnnotations());
-    await saveCapture({ ...capture, annotations: currentAnnotations(), crop: currentCrop() });
-  } catch {
-    setStatus("Draft could not be saved locally; your current editor state remains available.");
+    validateAnnotations(draft.record.annotations);
+    await saveCaptureDraft(draft.record.id, draft.record.annotations, draft.record.crop);
+    if (globalThis.sessionStorage.getItem(draftJournalKey()) === draft.journal) {
+      globalThis.sessionStorage.removeItem(draftJournalKey());
+    }
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : "Local storage failed.";
+    setStatus(`Draft could not be saved locally: ${detail} Your current editor state remains available.`);
   }
 }
 
 function historyChanged() {
+  lastRenderedExport = null;
   updateHistoryButtons();
   updateContextControls();
   drawOverlay();
@@ -172,7 +237,40 @@ function historyChanged() {
 
 const history = new DocumentHistory({ annotations: [], crop: null }, { limit: 100, onChange: historyChanged });
 
+function annotationOptionLabel(annotation, index) {
+  const name = annotation.type.charAt(0).toUpperCase() + annotation.type.slice(1);
+  if (annotation.type === "text") {
+    const text = annotation.text.replace(/\s+/g, " ").trim().slice(0, 32);
+    return `${index + 1}. ${name}: ${text}`;
+  }
+  if (annotation.type === "marker") {
+    return `${index + 1}. ${name} ${annotation.number}`;
+  }
+  return `${index + 1}. ${name}`;
+}
+
+function updateAnnotationList() {
+  const annotations = currentAnnotations();
+  if (selectedId && !annotations.some((annotation) => annotation.id === selectedId)) {
+    selectedId = "";
+  }
+  annotationList.replaceChildren();
+  const emptyOption = document.createElement("option");
+  emptyOption.value = "";
+  emptyOption.textContent = annotations.length ? "None selected" : "No annotations";
+  annotationList.appendChild(emptyOption);
+  annotations.forEach((annotation, index) => {
+    const option = document.createElement("option");
+    option.value = annotation.id;
+    option.textContent = annotationOptionLabel(annotation, index);
+    annotationList.appendChild(option);
+  });
+  annotationList.value = selectedId;
+  overlay.setAttribute("aria-label", `Annotation overlay. ${annotations.length} annotation${annotations.length === 1 ? "" : "s"}.${selectedId ? ` ${annotationOptionLabel(selectedAnnotation(), annotations.findIndex((annotation) => annotation.id === selectedId))} selected.` : ""}`);
+}
+
 function updateHistoryButtons() {
+  updateAnnotationList();
   undoButton.disabled = !history.canUndo;
   redoButton.disabled = !history.canRedo;
   const hasAnnotations = currentAnnotations().length > 0;
@@ -394,6 +492,8 @@ function createMarker(point) {
   });
   history.apply("Create marker", documentState([...currentAnnotations(), marker]));
   selectedId = marker.id;
+  updateHistoryButtons();
+  drawOverlay();
 }
 
 function startPan(event) {
@@ -451,7 +551,7 @@ function pointerDown(event) {
   if (event.button !== 0 && event.pointerType === "mouse") {
     return;
   }
-  stageScroll.focus({ preventScroll: true });
+  overlay.focus({ preventScroll: true });
   if (temporaryPan || activeTool === "pan") {
     startPan(event);
   } else if (activeTool === "select") {
@@ -538,6 +638,8 @@ function deleteSelected() {
   if (next.length !== currentAnnotations().length) {
     history.apply("Delete annotation", documentState(next));
     selectedId = "";
+    updateHistoryButtons();
+    drawOverlay();
   }
 }
 
@@ -547,6 +649,8 @@ function clearAnnotations() {
   }
   history.apply("Clear annotations", documentState([]));
   selectedId = "";
+  updateHistoryButtons();
+  drawOverlay();
 }
 
 function applySelectedStyle(changes) {
@@ -618,6 +722,8 @@ function commitText() {
   }
   textOperation = null;
   textEditor.hidden = true;
+  updateHistoryButtons();
+  drawOverlay();
 }
 
 function cancelText() {
@@ -644,27 +750,51 @@ function handleDoubleClick(event) {
 }
 
 async function copyEdited() {
+  if (!capture || exportInProgress) {
+    return;
+  }
+  const permissionRequest = ensureClipboardPermission();
+  const exportCapture = { ...capture, crop: currentCrop() };
+  const exportAnnotations = currentAnnotations();
+  setExportBusy(true);
   try {
-    if (!(await ensureClipboardPermission())) {
+    if (!(await permissionRequest)) {
       throw new Error("Clipboard permission was not granted.");
     }
     setStatus("Rendering edited PNG for clipboard…");
-    const blob = await renderEditorResultBlob({ ...capture, crop: currentCrop() }, currentAnnotations());
+    const blob = await renderEditorResultBlob(exportCapture, exportAnnotations);
+    lastRenderedExport = { blob, filename: makeEditedFilename(capture.filename) };
     await copyPngBlob(blob, getApi());
     setStatus("Edited screenshot copied.");
   } catch (error) {
-    setStatus(`Copy failed: ${error instanceof Error ? error.message : "The clipboard could not be updated."}`);
+    const fallback = lastRenderedExport ? " The rendered PNG is ready; use Save edited PNG." : "";
+    setStatus(`Copy failed: ${error instanceof Error ? error.message : "The clipboard could not be updated."}${fallback}`);
+  } finally {
+    setExportBusy(false);
   }
 }
 
 async function saveEdited() {
+  if (!capture || exportInProgress) {
+    return;
+  }
+  const exportCapture = { ...capture, crop: currentCrop() };
+  const exportAnnotations = currentAnnotations();
+  setExportBusy(true);
   try {
-    setStatus("Rendering edited PNG for saving…");
-    const blob = await renderEditorResultBlob({ ...capture, crop: currentCrop() }, currentAnnotations());
-    downloadBlob(blob, makeEditedFilename(capture.filename));
+    let result = lastRenderedExport;
+    if (!result) {
+      setStatus("Rendering edited PNG for saving…");
+      const blob = await renderEditorResultBlob(exportCapture, exportAnnotations);
+      result = { blob, filename: makeEditedFilename(capture.filename) };
+      lastRenderedExport = result;
+    }
+    downloadBlob(result.blob, result.filename);
     setStatus("Edited PNG save started.");
   } catch (error) {
     setStatus(`Save failed: ${error instanceof Error ? error.message : "The edited PNG could not be saved."}`);
+  } finally {
+    setExportBusy(false);
   }
 }
 
@@ -673,11 +803,16 @@ async function discardCapture() {
     return;
   }
   discardInProgress = true;
+  window.clearTimeout(expiryTimer);
+  expiryTimer = null;
   discardButton.disabled = true;
   window.clearTimeout(draftTimer);
+  draftTimer = null;
+  pendingDraft = null;
   try {
     await draftSaveChain;
     await deleteCapture(capture.id);
+    globalThis.sessionStorage.removeItem(draftJournalKey());
   } catch {
     discardInProgress = false;
     discardButton.disabled = false;
@@ -698,6 +833,141 @@ async function discardCapture() {
   window.setTimeout(() => window.close(), 0);
 }
 
+async function expireOpenCapture() {
+  if (!capture || discardInProgress) {
+    return;
+  }
+  discardInProgress = true;
+  window.clearTimeout(draftTimer);
+  draftTimer = null;
+  pendingDraft = null;
+  try {
+    await draftSaveChain;
+    await deleteCapture(capture.id);
+    globalThis.sessionStorage.removeItem(draftJournalKey());
+  } catch {
+    discardInProgress = false;
+    setStatus("Expired screenshot cleanup failed; reopen KoalaShot to retry local cleanup.");
+    return;
+  }
+  capture = null;
+  if (imageUrl) {
+    URL.revokeObjectURL(imageUrl);
+    imageUrl = null;
+  }
+  showError("This temporary screenshot reached its 24-hour retention limit and was deleted locally.");
+  setStatus("Temporary screenshot expired and was deleted.");
+}
+
+function scheduleOpenCaptureExpiry() {
+  window.clearTimeout(expiryTimer);
+  const remaining = Math.max(0, capture.createdAt + TEMP_CAPTURE_TTL_MS - Date.now());
+  expiryTimer = window.setTimeout(() => void expireOpenCapture(), remaining);
+}
+
+function visibleImageCenter() {
+  const viewport = getViewportImageBounds();
+  return {
+    x: Math.max(0, Math.min(capture.width, viewport.x + viewport.width / 2)),
+    y: Math.max(0, Math.min(capture.height, viewport.y + viewport.height / 2)),
+  };
+}
+
+function selectNextAnnotation() {
+  const annotations = currentAnnotations();
+  if (annotations.length === 0) {
+    setStatus("There are no annotations to select.");
+    return;
+  }
+  const index = annotations.findIndex((annotation) => annotation.id === selectedId);
+  const next = annotations[(index + 1) % annotations.length];
+  selectedId = next.id;
+  updateHistoryButtons();
+  updateContextControls();
+  drawOverlay();
+  setStatus(`${annotationOptionLabel(next, (index + 1) % annotations.length)} selected.`);
+}
+
+function createKeyboardAnnotation() {
+  if (!capture || ["select", "pan"].includes(activeTool)) {
+    if (activeTool === "select") {
+      selectNextAnnotation();
+    } else {
+      setStatus("Pan the screenshot with the arrow keys or choose an annotation tool.");
+    }
+    return;
+  }
+  const center = visibleImageCenter();
+  if (activeTool === "text") {
+    openTextEditor(center, null);
+    return;
+  }
+  if (activeTool === "crop") {
+    const viewport = getViewportImageBounds();
+    cropSelection = clampCropToImage({
+      x: viewport.x + viewport.width * 0.1,
+      y: viewport.y + viewport.height * 0.1,
+      width: viewport.width * 0.8,
+      height: viewport.height * 0.8,
+    });
+    updateContextControls();
+    drawOverlay();
+    setStatus("Keyboard crop prepared. Use Apply crop to confirm it.");
+    return;
+  }
+  if (activeTool === "marker") {
+    createMarker(center);
+    setStatus("Marker added at the visible center.");
+    return;
+  }
+
+  const halfWidth = Math.max(12, Math.min(80, capture.width / 8));
+  const halfHeight = Math.max(12, Math.min(50, capture.height / 12));
+  let annotation;
+  if (activeTool === "pen" || activeTool === "highlighter") {
+    annotation = createAnnotation(activeTool, { points: [
+      { x: Math.max(0, center.x - halfWidth), y: center.y },
+      { x: Math.min(capture.width, center.x + halfWidth), y: center.y },
+    ] }, { color: annotationColor, strokeWidth, opacity: 0.38 });
+  } else {
+    annotation = createCurrentAnnotation(
+      { x: Math.max(0, center.x - halfWidth), y: Math.max(0, center.y - halfHeight) },
+      { x: Math.min(capture.width, center.x + halfWidth), y: Math.min(capture.height, center.y + halfHeight) },
+    );
+  }
+  if (!annotation) {
+    setStatus("The annotation could not be created at the visible center.");
+    return;
+  }
+  history.apply(`Create ${activeTool} with keyboard`, documentState([...currentAnnotations(), annotation]));
+  selectedId = annotation.id;
+  updateHistoryButtons();
+  updateContextControls();
+  drawOverlay();
+  setStatus(`${annotationOptionLabel(annotation, currentAnnotations().length - 1)} added at the visible center.`);
+}
+
+function moveSelectedWithKeyboard(key, largeStep) {
+  const selected = selectedAnnotation();
+  if (!selected) {
+    return false;
+  }
+  const step = largeStep ? 10 : 1;
+  const delta = {
+    ArrowLeft: [-step, 0],
+    ArrowRight: [step, 0],
+    ArrowUp: [0, -step],
+    ArrowDown: [0, step],
+  }[key];
+  if (!delta) {
+    return false;
+  }
+  const moved = moveAnnotation(selected, delta[0], delta[1]);
+  history.apply("Move annotation with keyboard", documentState(currentAnnotations().map((annotation) => annotation.id === selected.id ? moved : annotation)));
+  setStatus(`Selected annotation moved ${step} pixel${step === 1 ? "" : "s"}.`);
+  return true;
+}
+
 function handleKeyboard(event) {
   const target = event.target;
   const typing = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target?.isContentEditable;
@@ -716,6 +986,15 @@ function handleKeyboard(event) {
     return;
   }
   if (typing) {
+    return;
+  }
+  if (event.target === overlay && event.key === "Enter") {
+    event.preventDefault();
+    createKeyboardAnnotation();
+    return;
+  }
+  if (event.target === overlay && moveSelectedWithKeyboard(event.key, event.shiftKey)) {
+    event.preventDefault();
     return;
   }
   if (event.code === "Space") {
@@ -774,6 +1053,16 @@ document.querySelector("#custom-color").addEventListener("input", (event) => {
   annotationColor = event.target.value;
   document.querySelectorAll(".swatch").forEach((swatch) => swatch.classList.remove("is-selected"));
   applySelectedStyle({ color: annotationColor });
+});
+annotationList.addEventListener("change", () => {
+  selectedId = annotationList.value;
+  selectTool("select");
+  updateHistoryButtons();
+  updateContextControls();
+  drawOverlay();
+  const selected = selectedAnnotation();
+  setStatus(selected ? `${annotationOptionLabel(selected, currentAnnotations().findIndex((annotation) => annotation.id === selected.id))} selected.` : "Annotation selection cleared.");
+  overlay.focus({ preventScroll: true });
 });
 strokeControl.addEventListener("input", (event) => {
   strokeWidth = Number(event.target.value);
@@ -840,9 +1129,15 @@ window.addEventListener("keyup", (event) => {
 });
 window.addEventListener("resize", resizeOverlay);
 window.addEventListener("pagehide", () => {
-  window.clearTimeout(draftTimer);
+  window.clearTimeout(expiryTimer);
+  void flushDraftSave();
   if (imageUrl) {
     URL.revokeObjectURL(imageUrl);
+  }
+});
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") {
+    void flushDraftSave();
   }
 });
 
@@ -860,11 +1155,30 @@ void (async () => {
     }
     capture = await getCapture(captureId);
     if (!capture) {
+      globalThis.sessionStorage.removeItem(draftJournalKey());
       showError("This temporary capture was not found or has expired.");
       return;
     }
-    const draft = tryValidateAnnotations(capture.annotations || []);
-    history.setCurrent({ annotations: draft.valid ? draft.annotations : [], crop: capture.crop || null }, { notify: false });
+    scheduleOpenCaptureExpiry();
+    const storedAnnotations = tryValidateAnnotations(capture.annotations || []);
+    const storedCrop = tryValidateCrop(capture.crop || null);
+    let state = {
+      annotations: storedAnnotations.valid ? storedAnnotations.annotations : [],
+      crop: storedCrop.valid ? storedCrop.crop : null,
+    };
+    try {
+      const journal = JSON.parse(globalThis.sessionStorage.getItem(draftJournalKey()) || "null");
+      const journalAnnotations = tryValidateAnnotations(journal?.annotations);
+      const journalCrop = tryValidateCrop(journal?.crop);
+      if (journalAnnotations.valid && journalCrop.valid) {
+        state = { annotations: journalAnnotations.annotations, crop: journalCrop.crop };
+      } else if (journal) {
+        globalThis.sessionStorage.removeItem(draftJournalKey());
+      }
+    } catch {
+      globalThis.sessionStorage.removeItem(draftJournalKey());
+    }
+    history.setCurrent(state, { notify: false });
     cropSelection = null;
     imageUrl = URL.createObjectURL(capture.blob);
     image.src = imageUrl;

@@ -1,5 +1,5 @@
 export function selectClipboardMethod(capabilities) {
-  if (capabilities.hasFirefoxSetImageData) {
+  if (capabilities.isFirefox && capabilities.hasFirefoxSetImageData) {
     return "firefox-set-image-data";
   }
   if (capabilities.hasClipboardItem && capabilities.hasNavigatorClipboardWrite) {
@@ -10,6 +10,7 @@ export function selectClipboardMethod(capabilities) {
 
 function getCapabilities(api) {
   return {
+    isFirefox: typeof api?.runtime?.getBrowserInfo === "function",
     hasFirefoxSetImageData: typeof api?.clipboard?.setImageData === "function",
     hasClipboardItem: typeof globalThis.ClipboardItem === "function",
     hasNavigatorClipboardWrite: typeof globalThis.navigator?.clipboard?.write === "function",

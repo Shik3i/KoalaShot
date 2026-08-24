@@ -1,5 +1,6 @@
 import {
   CAPTURE_INTERVAL_MS,
+  CAPTURE_REQUEST_TIMEOUT_MS,
   MAX_DYNAMIC_GROWTH_RATIO,
   USER_MESSAGES,
 } from "../common/constants.js";
@@ -37,6 +38,20 @@ function wait(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
+async function withTimeout(promise, milliseconds, error) {
+  let timer;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((resolve, reject) => {
+        timer = setTimeout(() => reject(error), milliseconds);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function ensureNotCancelled(signal) {
   if (signal?.aborted) {
     throw new CaptureError("Capture cancelled.", "cancelled");
@@ -53,6 +68,7 @@ function createPortChannel(port, sessionId, signal) {
     }
     const current = pending;
     pending = null;
+    clearTimeout(current.timer);
     if (message.ok === false) {
       current.reject(new CaptureError(message.message || "The page could not be captured.", message.error));
     } else {
@@ -64,6 +80,7 @@ function createPortChannel(port, sessionId, signal) {
     if (pending) {
       const current = pending;
       pending = null;
+      clearTimeout(current.timer);
       current.reject(new CaptureError("The capture page connection closed.", "disconnected"));
     }
   };
@@ -72,6 +89,12 @@ function createPortChannel(port, sessionId, signal) {
   port.onDisconnect.addListener(onDisconnect);
 
   const abort = () => {
+    if (pending) {
+      const current = pending;
+      pending = null;
+      clearTimeout(current.timer);
+      current.reject(new CaptureError("Capture cancelled.", "cancelled"));
+    }
     if (!closed) {
       try {
         port.disconnect();
@@ -94,10 +117,18 @@ function createPortChannel(port, sessionId, signal) {
         return Promise.reject(new CaptureError("Capture requests overlapped unexpectedly.", "protocol-failed"));
       }
       return new Promise((resolve, reject) => {
-        pending = { resolve, reject };
+        const timer = setTimeout(() => {
+          if (!pending) {
+            return;
+          }
+          pending = null;
+          reject(new CaptureError("The page did not respond to the capture request in time.", "request-timeout"));
+        }, CAPTURE_REQUEST_TIMEOUT_MS);
+        pending = { resolve, reject, timer };
         try {
           port.postMessage({ ...message, sessionId });
         } catch (error) {
+          clearTimeout(timer);
           pending = null;
           reject(error);
         }
@@ -166,7 +197,11 @@ async function captureFullPage(tab, { signal, onProgress, target = "page" }) {
 
   try {
     onProgress?.({ phase: "preparing", message: "Preparing page…" });
-    await injectCaptureScript(tab.id);
+    await withTimeout(
+      injectCaptureScript(tab.id),
+      CAPTURE_REQUEST_TIMEOUT_MS,
+      new CaptureError("KoalaShot could not start on this page in time.", "injection-timeout"),
+    );
     channel = createPortChannel(connectCapture(tab.id, sessionId), sessionId, signal);
     const captureTarget = target === "internal" ? "internal" : "page";
     const ready = await channel.request({ type: "start", target: captureTarget });

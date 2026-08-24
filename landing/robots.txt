@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://shot.koalastuff.net/sitemap.xml

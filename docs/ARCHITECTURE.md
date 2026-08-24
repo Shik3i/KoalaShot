@@ -14,15 +14,15 @@ The popup calls `captureVisibleTab` only after verifying the same window, tab, U
 
 ## Clipboard and save
 
-`common/clipboard.js` selects Firefox `browser.clipboard.setImageData()` when available. Otherwise it uses `navigator.clipboard.write()` with a PNG `ClipboardItem`. Clipboard permission is requested before a popup capture. Saving uses one local Blob URL and an ordinary download link; no downloads permission is requested.
+`common/clipboard.js` selects `browser.clipboard.setImageData()` only after Firefox is identified through `runtime.getBrowserInfo()`. Chromium's similarly named Chrome Apps-only API is deliberately ignored; Chromium uses `navigator.clipboard.write()` with a PNG `ClipboardItem`. Optional permission requests begin synchronously inside the user gesture. When copying is denied or fails, popup and editor retain the exact rendered PNG and expose a save fallback without recapturing or rerendering. Saving uses one local Blob URL and an ordinary download link; no downloads permission is requested.
 
 ## Temporary editor handoff
 
-The one PNG Blob is stored in extension-local IndexedDB with source metadata, dimensions, filename, creation time, and a validated annotation draft. The popup opens `editor/editor.html?capture=<id>`, never a remote or data URL. Popup and editor startup prune records older than 24 hours. The editor debounces local draft writes, can copy or save through one `renderEditorResultBlob()` path, discards immediately, and keeps the original image immutable.
+The one PNG Blob and source metadata are stored once in the extension-local IndexedDB `captures` store. Validated annotations and crop state live in a separate lightweight `drafts` store, avoiding repeated large Blob rewrites in Firefox. A small synchronous `sessionStorage` journal protects the latest tab state across an immediate reload; coalesced IndexedDB writes provide durable local restoration. The popup opens `editor/editor.html?capture=<id>`, never a remote or data URL. Reads reject and delete expired captures, popup/editor startup prunes records older than 24 hours, and an editor that remains open schedules deletion at the exact deadline. Copy and save share one `renderEditorResultBlob()` path, exports are serialized, discard removes both stores and the journal, and the original image stays immutable.
 
 ## Phase 2 editor
 
-`editor/annotation-model.js` owns explicit schemas, secure IDs, validation, cloning, moving, crop validation, and style updates. `editor/geometry.js` owns original-pixel coordinate transforms, rectangle normalization, point reduction, hit testing, arrowheads, text bounds, effect previews, markers, and both viewport and export drawing. `editor/history.js` stores bounded before/after document states containing annotations and crop rather than screenshot snapshots. The page displays the immutable PNG as an `<img>` and uses one viewport-sized overlay canvas for interaction; it does not allocate a permanent full-resolution display canvas.
+`editor/annotation-model.js` owns explicit schemas, secure IDs, validation, cloning, moving, crop validation, and style updates. `editor/geometry.js` owns original-pixel coordinate transforms, rectangle normalization, point reduction, hit testing, arrowheads, text bounds, effect previews, markers, and both viewport and export drawing. `editor/history.js` stores bounded before/after document states containing annotations and crop rather than screenshot snapshots. The page displays the immutable PNG as an `<img>` and uses one focusable, viewport-sized, device-pixel-ratio-aware overlay canvas for pointer and keyboard interaction; it does not allocate a permanent full-resolution display canvas.
 
 ## Compatibility boundary
 

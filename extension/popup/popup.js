@@ -11,6 +11,7 @@ import {
 
 const copyButton = document.querySelector("#copy-button");
 const saveButton = document.querySelector("#save-button");
+const saveResultButton = document.querySelector("#save-result-button");
 const cancelButton = document.querySelector("#cancel-button");
 const openEditor = document.querySelector("#open-editor");
 const captureTarget = document.querySelector("#capture-target");
@@ -18,6 +19,7 @@ const status = document.querySelector("#status");
 const progressBar = document.querySelector("#progress-bar");
 let activeController = null;
 let busy = false;
+let lastCapturedResult = null;
 
 function setStatus(message, progress = null) {
   status.textContent = message;
@@ -31,6 +33,7 @@ function setBusy(value) {
   busy = value;
   copyButton.disabled = value;
   saveButton.disabled = value;
+  saveResultButton.disabled = value;
   openEditor.disabled = value;
   captureTarget.disabled = value;
   cancelButton.hidden = !value;
@@ -48,6 +51,8 @@ async function runCapture(mode) {
     return;
   }
   setBusy(true);
+  lastCapturedResult = null;
+  saveResultButton.hidden = true;
   activeController = new AbortController();
   try {
     let clipboardReady = true;
@@ -79,10 +84,14 @@ async function runCapture(mode) {
         await copyScreenshot(result.blob);
         setStatus("Full-page screenshot copied.", 100);
       } catch (error) {
-        setStatus(`Copy failed: ${getErrorMessage(error)} The PNG is ready to save.`, 100);
+        lastCapturedResult = result;
+        saveResultButton.hidden = false;
+        setStatus(`Copy failed: ${getErrorMessage(error)} Save the completed capture below.`, 100);
       }
     } else if (mode === "copy") {
-      setStatus("Clipboard permission was not granted. The PNG is ready to save.", 100);
+      lastCapturedResult = result;
+      saveResultButton.hidden = false;
+      setStatus("Clipboard permission was not granted. Save the completed capture below.", 100);
     } else if (mode === "save") {
       setStatus("Saving PNG…", 92);
       downloadBlob(result.blob, result.filename);
@@ -112,6 +121,15 @@ async function runCapture(mode) {
 
 copyButton.addEventListener("click", () => void runCapture("copy"));
 saveButton.addEventListener("click", () => void runCapture("save"));
+saveResultButton.addEventListener("click", () => {
+  if (!lastCapturedResult || busy) {
+    return;
+  }
+  downloadBlob(lastCapturedResult.blob, lastCapturedResult.filename);
+  saveResultButton.hidden = true;
+  setStatus("Captured PNG save started.", 100);
+  lastCapturedResult = null;
+});
 cancelButton.addEventListener("click", () => activeController?.abort());
 async function persistSettings() {
   await saveSettings({
@@ -126,6 +144,8 @@ openEditor.addEventListener("change", () => {
 captureTarget.addEventListener("change", () => {
   void persistSettings();
 });
+
+document.documentElement.dataset.koalashotReady = "true";
 
 void (async () => {
   await pruneTemporaryCaptures();
