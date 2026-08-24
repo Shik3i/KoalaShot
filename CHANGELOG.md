@@ -2,7 +2,7 @@
 
 All notable user-visible changes are documented here. KoalaShot uses semantic versioning.
 
-## [0.3.2] - Unreleased
+## [0.3.2] - 2026-08-25
 
 ### Added
 
