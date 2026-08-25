@@ -33,7 +33,7 @@ KoalaShot is not a fit for browser-protected pages, horizontal stitching, nested
 
 - Website: https://shot.koalastuff.net/
 - Privacy: https://shot.koalastuff.net/privacy/
-- Legal notice: https://koalastuff.net/legal
-- Support: https://support.koalastuff.net
+- Legal notice: https://koalastuff.net/imprint
+- Support: https://github.com/Shik3i/KoalaShot/issues
 - Source and issues: https://github.com/Shik3i/KoalaShot
 - License: MIT

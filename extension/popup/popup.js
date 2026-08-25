@@ -8,6 +8,7 @@ import {
   pruneTemporaryCaptures,
   saveSettings,
 } from "./capture-controller.js";
+import { createSerializedWriter } from "../common/async-queue.js";
 
 const copyButton = document.querySelector("#copy-button");
 const saveButton = document.querySelector("#save-button");
@@ -20,6 +21,7 @@ const progressBar = document.querySelector("#progress-bar");
 let activeController = null;
 let busy = false;
 let lastCapturedResult = null;
+const queueSettingsSave = createSerializedWriter(saveSettings);
 
 function setStatus(message, progress = null) {
   status.textContent = message;
@@ -131,11 +133,12 @@ saveResultButton.addEventListener("click", () => {
   lastCapturedResult = null;
 });
 cancelButton.addEventListener("click", () => activeController?.abort());
-async function persistSettings() {
-  await saveSettings({
+function persistSettings() {
+  const nextSettings = {
     openEditorAfterCapture: openEditor.checked,
     captureTarget: captureTarget.value,
-  });
+  };
+  return queueSettingsSave(nextSettings);
 }
 
 openEditor.addEventListener("change", () => {

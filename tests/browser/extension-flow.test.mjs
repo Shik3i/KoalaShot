@@ -300,6 +300,16 @@ class ChromeBrowser {
     }, page.socket ? undefined : page.sessionId);
   }
 
+  async captureScreenshot(page, outputPath) {
+    const socket = page.socket || this.socket;
+    const result = await socket.request("Page.captureScreenshot", {
+      format: "png",
+      captureBeyondViewport: false,
+      fromSurface: true,
+    }, page.socket ? undefined : page.sessionId);
+    writeFileSync(outputPath, Buffer.from(result.result.data, "base64"));
+  }
+
   async activate(page) {
     await this.socket.request("Target.activateTarget", { targetId: page.targetId });
   }
@@ -543,6 +553,8 @@ async function runFlow() {
   const baseUrl = `http://127.0.0.1:${port}`;
   const profile = join(tmpdir(), `koalashot-${browserName}-${Date.now()}`);
   const downloads = join(profile, "downloads");
+  const screenshotDir = process.env.KOALASHOT_SCREENSHOT_DIR ? resolve(process.env.KOALASHOT_SCREENSHOT_DIR) : null;
+  if (screenshotDir && browserName === "chrome") mkdirSync(screenshotDir, { recursive: true });
   mkdirSync(downloads, { recursive: true });
   const browser = browserName === "chrome" ? new ChromeBrowser(baseUrl, profile, downloads) : new FirefoxBrowser(baseUrl, profile, downloads);
   let fixture = null;
@@ -562,6 +574,11 @@ async function runFlow() {
     assert.ok(popupState?.body.includes("Capture this page"), `Popup did not load (extensionId=${browser.extensionId || "n/a"}): ${JSON.stringify(popupState)}`);
     await browser.activate(fixture);
     await browser.evaluate(popup, "document.querySelector('#open-editor').checked = false; document.querySelector('#open-editor').dispatchEvent(new Event('change', { bubbles: true }));");
+    if (screenshotDir && browserName === "chrome") {
+      await browser.setViewport(popup, 1280, 800);
+      await browser.captureScreenshot(popup, join(screenshotDir, "chrome-popup-capture.png"));
+      await browser.setViewport(popup, 1262, 804);
+    }
 
     const firstAction = clipboardDenialMode ? "copy-button" : browserName === "chrome" ? "save-button" : "copy-button";
     await browser.evaluate(popup, `document.querySelector('#${firstAction}').click()`);
@@ -625,6 +642,11 @@ async function runFlow() {
     await browser.wait(editor, "document.querySelector('#stage-wrap') && !document.querySelector('#stage-wrap').hidden && !document.querySelector('#save-button').disabled");
     assert.equal(await browser.evaluate(editor, "document.querySelector('#source-hostname').textContent"), "127.0.0.1");
     assert.equal(await browser.evaluate(editor, "document.querySelector('#capture-image').naturalWidth > 0"), true);
+    if (screenshotDir && browserName === "chrome") {
+      await browser.setViewport(editor, 1280, 800);
+      await browser.captureScreenshot(editor, join(screenshotDir, "chrome-editor-clean.png"));
+      await browser.setViewport(editor, 1400, 1100);
+    }
 
     await browser.draw(editor, "rectangle", [80, 80], [260, 210]);
     await browser.draw(editor, "redact", [300, 90], [470, 180]);
@@ -661,6 +683,11 @@ async function runFlow() {
     })`), (state) => state?.count === 7 && state.crop?.width > 0 && state.crop?.height > 0, 15_000);
     assert.equal(annotationCount.count, 7);
     assert.ok(annotationCount.crop.width > 0);
+    if (screenshotDir && browserName === "chrome") {
+      await browser.setViewport(editor, 1280, 800);
+      await browser.captureScreenshot(editor, join(screenshotDir, "chrome-editor-annotated.png"));
+      await browser.setViewport(editor, 1400, 1100);
+    }
 
     const keyboardAccessibility = await browser.evaluate(editor, `(() => {
       document.querySelector('[data-tool="rectangle"]').click();

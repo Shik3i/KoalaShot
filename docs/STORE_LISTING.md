@@ -42,14 +42,21 @@ Some browser-protected pages, built-in viewers, closed Shadow DOM, cross-origin 
 - User accounts: no.
 - Screenshot uploads: no.
 - Privacy policy: `https://shot.koalastuff.net/privacy/`
-- Legal notice: `https://koalastuff.net/legal`
-- Support: `https://support.koalastuff.net`
+- Legal notice: `https://koalastuff.net/imprint`
+- Support: `https://github.com/Shik3i/KoalaShot/issues`
+
+## Prepared submission assets
+
+- `store-assets/screenshots/chrome-popup-capture.png`: real Chrome popup, 1280×800.
+- `store-assets/screenshots/chrome-editor-clean.png`: real Chrome editor, 1280×800.
+- `store-assets/screenshots/chrome-editor-annotated.png`: real Chrome editor with annotations, 1280×800.
+- `store-assets/chrome-small-promo-440x280.png`: Chrome Web Store small promo tile.
+- `store-assets/chrome-marquee-1400x560.png`: optional Chrome Web Store marquee.
 
 ## Submission assets still requiring owner review
 
-- Real Chrome listing screenshots from the release build.
-- Real Firefox listing screenshots from the release build.
-- Store-specific promotional images in each portal's current required dimensions.
+- Firefox listing screenshots, blocked locally by the Firefox BiDi endpoint timeout.
 - Final store URLs to replace the landing-page placeholders after approval.
+- Optional product video, if one is uploaded.
 
 Do not use composited mockups as proof of runtime behavior. Listing screenshots must show the real packaged extension.

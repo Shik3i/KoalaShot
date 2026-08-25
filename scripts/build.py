@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 EXTENSION = ROOT / "extension"
 LANDING = ROOT / "landing"
 DIST = ROOT / "dist"
+PACKAGE_EXCLUDED_FILES = {Path("icons/icon-master.png")}
 
 
 def project_version() -> str:
@@ -79,7 +80,7 @@ def build_extension(browser: str, version: str) -> Path:
         if path.is_dir() or path.name == ".DS_Store" or ".git" in path.parts:
             continue
         relative = path.relative_to(EXTENSION)
-        if relative.parts[:1] == ("manifests",):
+        if relative.parts[:1] == ("manifests",) or relative in PACKAGE_EXCLUDED_FILES:
             continue
         target = output / relative
         target.parent.mkdir(parents=True, exist_ok=True)

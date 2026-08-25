@@ -124,6 +124,10 @@ function setExportBusy(value) {
   copyButton.disabled = value || !capture;
   saveButton.disabled = value || !capture;
   discardButton.disabled = value || !capture;
+  if (!value && capture && !discardInProgress
+    && Date.now() >= capture.createdAt + TEMP_CAPTURE_TTL_MS) {
+    void expireOpenCapture();
+  }
 }
 
 function hostnameFromUrl(sourceUrl) {
@@ -278,6 +282,14 @@ function updateHistoryButtons() {
   deleteButton.disabled = !selectedId || !currentAnnotations().some((annotation) => annotation.id === selectedId);
 }
 
+function updateColorButtonState() {
+  document.querySelectorAll(".swatch").forEach((swatch) => {
+    const selected = swatch.dataset.color.toLowerCase() === annotationColor.toLowerCase();
+    swatch.classList.toggle("is-selected", selected);
+    swatch.setAttribute("aria-pressed", String(selected));
+  });
+}
+
 function selectedAnnotation() {
   return currentAnnotations().find((annotation) => annotation.id === selectedId) || null;
 }
@@ -295,7 +307,7 @@ function updateContextControls() {
   if (selected) {
     if (selected.color) {
       annotationColor = selected.color;
-      document.querySelectorAll(".swatch").forEach((swatch) => swatch.classList.toggle("is-selected", swatch.dataset.color.toLowerCase() === selected.color.toLowerCase()));
+      updateColorButtonState();
       document.querySelector("#custom-color").value = selected.color;
     }
     if (selected.strokeWidth) {
@@ -332,7 +344,7 @@ function selectTool(tool) {
   } else if (tool === "redact") {
     annotationColor = "#111111";
     document.querySelector("#custom-color").value = annotationColor;
-    document.querySelectorAll(".swatch").forEach((swatch) => swatch.classList.toggle("is-selected", swatch.dataset.color === annotationColor));
+    updateColorButtonState();
   }
   updateContextControls();
   drawOverlay();
@@ -547,6 +559,22 @@ function startSelection(event) {
   drawOverlay();
 }
 
+function selectRelativeAnnotation(direction) {
+  const annotations = currentAnnotations();
+  if (annotations.length === 0) {
+    return;
+  }
+  const currentIndex = annotations.findIndex((annotation) => annotation.id === selectedId);
+  const nextIndex = currentIndex < 0
+    ? direction > 0 ? 0 : annotations.length - 1
+    : (currentIndex + direction + annotations.length) % annotations.length;
+  selectedId = annotations[nextIndex].id;
+  updateHistoryButtons();
+  updateContextControls();
+  setStatus(`Selected ${TOOL_LABELS[annotations[nextIndex].type]?.[0] || "annotation"} ${nextIndex + 1} of ${annotations.length}.`);
+  drawOverlay();
+}
+
 function pointerDown(event) {
   if (event.button !== 0 && event.pointerType === "mouse") {
     return;
@@ -756,6 +784,7 @@ async function copyEdited() {
   const permissionRequest = ensureClipboardPermission();
   const exportCapture = { ...capture, crop: currentCrop() };
   const exportAnnotations = currentAnnotations();
+  const exportFilename = makeEditedFilename(capture.filename);
   setExportBusy(true);
   try {
     if (!(await permissionRequest)) {
@@ -763,7 +792,7 @@ async function copyEdited() {
     }
     setStatus("Rendering edited PNG for clipboard…");
     const blob = await renderEditorResultBlob(exportCapture, exportAnnotations);
-    lastRenderedExport = { blob, filename: makeEditedFilename(capture.filename) };
+    lastRenderedExport = { blob, filename: exportFilename };
     await copyPngBlob(blob, getApi());
     setStatus("Edited screenshot copied.");
   } catch (error) {
@@ -780,13 +809,14 @@ async function saveEdited() {
   }
   const exportCapture = { ...capture, crop: currentCrop() };
   const exportAnnotations = currentAnnotations();
+  const exportFilename = makeEditedFilename(capture.filename);
   setExportBusy(true);
   try {
     let result = lastRenderedExport;
     if (!result) {
       setStatus("Rendering edited PNG for saving…");
       const blob = await renderEditorResultBlob(exportCapture, exportAnnotations);
-      result = { blob, filename: makeEditedFilename(capture.filename) };
+      result = { blob, filename: exportFilename };
       lastRenderedExport = result;
     }
     downloadBlob(result.blob, result.filename);
@@ -834,7 +864,7 @@ async function discardCapture() {
 }
 
 async function expireOpenCapture() {
-  if (!capture || discardInProgress) {
+  if (!capture || discardInProgress || exportInProgress) {
     return;
   }
   discardInProgress = true;
@@ -1007,6 +1037,11 @@ function handleKeyboard(event) {
     deleteSelected();
     return;
   }
+  if ((event.target === overlay || event.target === stageScroll) && ["ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown"].includes(event.key)) {
+    event.preventDefault();
+    selectRelativeAnnotation(event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 1);
+    return;
+  }
   const key = event.key.toLowerCase();
   if (SHORTCUTS[key]) {
     selectTool(SHORTCUTS[key]);
@@ -1045,13 +1080,13 @@ document.querySelectorAll("[data-tool]").forEach((button) => button.addEventList
 document.querySelectorAll(".swatch").forEach((button) => button.addEventListener("click", () => {
   annotationColor = button.dataset.color;
   document.querySelector("#custom-color").value = annotationColor;
-  document.querySelectorAll(".swatch").forEach((swatch) => swatch.classList.toggle("is-selected", swatch === button));
+  updateColorButtonState();
   applySelectedStyle({ color: annotationColor });
   updateContextControls();
 }));
 document.querySelector("#custom-color").addEventListener("input", (event) => {
   annotationColor = event.target.value;
-  document.querySelectorAll(".swatch").forEach((swatch) => swatch.classList.remove("is-selected"));
+  updateColorButtonState();
   applySelectedStyle({ color: annotationColor });
 });
 annotationList.addEventListener("change", () => {

@@ -1,0 +1,34 @@
+name: Bug report
+description: Report a reproducible KoalaShot problem
+title: "bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include screenshots, URLs, credentials, or personal data from private pages.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Extension version or commit.
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and OS
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Exact steps and a minimal public fixture URL if one is needed.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
