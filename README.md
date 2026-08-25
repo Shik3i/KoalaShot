@@ -1,12 +1,10 @@
 # KoalaShot
 
-[![Source version](https://img.shields.io/badge/Source-v0.3.2-blue)](https://github.com/Shik3i/KoalaShot)
-[![CI](https://github.com/Shik3i/KoalaShot/actions/workflows/ci.yml/badge.svg)](https://github.com/Shik3i/KoalaShot/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/Shik3i/KoalaShot/actions/workflows/codeql.yml/badge.svg)](https://github.com/Shik3i/KoalaShot/actions/workflows/codeql.yml)
+[![Release](https://img.shields.io/badge/Release-v0.3.3-blue)](https://github.com/Shik3i/KoalaShot/releases)
 
 KoalaShot – Full Page Screenshot is a privacy-first browser extension for capturing a complete vertical webpage as one PNG and annotating it locally. It is built from readable vanilla HTML, CSS, and JavaScript with no runtime dependencies.
 
-Current source version: v0.3.2. The latest published GitHub release remains available on the [Releases page](https://github.com/Shik3i/KoalaShot/releases).
+Current release: v0.3.3
 
 ## v0.3.2 scope
 
@@ -15,19 +13,19 @@ Implemented:
 - Chromium and Firefox Manifest V3 source manifests.
 - Popup-owned full-page capture using an injected content script and a long-lived runtime Port.
 - Measured CSS-to-bitmap scale detection, overlap-aware vertical stitching, conservative memory limits, and PNG output.
-- Copy original PNG, save original PNG, exact-PNG save fallback after clipboard denial/failure, cancellation, progress, page-state restoration, and bounded dynamic-height handling.
+- Copy original PNG, save original PNG, cancellation, progress, page-state restoration, and bounded dynamic-height handling.
 - Optional local editor handoff through temporary extension-local IndexedDB storage.
 - Optional capture target: the normal page or the largest fully visible scrollable area inside the page. The selected mode is persistent and can be switched off in the popup.
 - Non-destructive editor with Select, Pan, Pen, Highlighter, Arrow, Line, Rectangle, Ellipse, Text, secure opaque Redact, Pixelate, Blur, numbered Markers, Crop, Undo, Redo, Delete, Clear all, zoom, fit-to-width, actual size, Copy edited, Save edited PNG, and discard.
-- Original-pixel annotation model, viewport-sized interaction canvas, shared geometry/render primitives, bounded history, responsive editor layout, synchronous tab-local draft journaling, and coalesced IndexedDB draft restoration.
-- Static landing page at `landing/` with `/`, project-specific `/privacy/`, shared KoalaStuff legal notice, canonical/social metadata, sitemap, robots policy, and `llms.txt`.
+- Original-pixel annotation model, viewport-sized interaction canvas, shared geometry/render primitives, bounded history, and debounced local draft restoration.
+- Static local landing page at `landing/` with `/`, `/privacy/`, and `/legal/`.
 - Dependency-free Python build/validation scripts and Node built-in unit tests.
 
-Deliberately outside this release: resize handles, image insertion, cloud sharing, horizontal stitching, store submission, and localization beyond the English catalog. These are tracked as later milestones rather than presented as incomplete v0.3.2 behavior.
+Not implemented: resize handles, image insertion, cloud sharing, horizontal stitching, store publishing, and localization beyond the English catalog. The landing output is deployable as a static site; deployment operations and DNS remain outside this repository.
 
 ## Privacy principles
 
-Capture begins only after explicit user action. Screenshots and page content remain on the device. KoalaShot has no accounts, uploads, history interface, cookies, tracking, analytics, telemetry, remote configuration, or remote code. Temporary editor records become unavailable after 24 hours, are deleted at that deadline while the editor remains open, and are otherwise deleted the next time the popup or editor starts. They can be discarded immediately at any time.
+Capture begins only after explicit user action. Screenshots and page content remain on the device. KoalaShot has no accounts, uploads, history interface, cookies, tracking, analytics, telemetry, remote configuration, or remote code. Temporary editor records are local and expire within 24 hours.
 
 ## Browser support
 
@@ -47,12 +45,6 @@ Run tests:
 npm test
 ```
 
-Run real Chrome and Firefox success plus clipboard-denial flows:
-
-```sh
-npm run test:browser:matrix
-```
-
 Build unpacked directories, ZIP archives, and the landing output:
 
 ```sh
@@ -65,15 +57,38 @@ Validate manifests, source policy, required files, and generated archives:
 npm run validate
 ```
 
+Audit Markdown links and required open-source project documents:
+
+```sh
+npm run audit:docs
+```
+
 Build output:
 
 ```text
 dist/chrome/
 dist/firefox/
-dist/koalashot-chrome-0.3.2.zip
-dist/koalashot-firefox-0.3.2.zip
+dist/koalashot-chrome-0.3.3.zip
+dist/koalashot-firefox-0.3.3.zip
 dist/landing/
 ```
+
+## Prepare a release
+
+Release preparation is explicit and happens before the annotated tag is created. This keeps the tag source tree identical to the tree used by the release workflow:
+
+```sh
+npm run release:prepare -- 0.4.0
+npm test
+git diff --check
+git add README.md package.json package-lock.json extension/manifests/chrome.json extension/manifests/firefox.json extension/common/constants.js landing/version.json
+git commit -m "chore(release): prepare v0.4.0"
+git push origin main
+git tag -a v0.4.0 -m "KoalaShot v0.4.0"
+git push origin v0.4.0
+```
+
+The tag push runs `.github/workflows/release.yml`, which validates the source versions, rebuilds both browser archives and the landing output, generates checksums and attestations, and publishes the GitHub release. See [docs/RELEASE.md](docs/RELEASE.md) before using a real release number.
 
 ## Load the extension locally
 
@@ -98,7 +113,7 @@ The manual fixtures are in `tests/fixtures/` and are intended to be served by a 
 
 Annotations are plain validated objects in original screenshot pixels. Zoom and device-pixel ratio change only the display transform. The original PNG remains immutable; Copy edited and Save edited PNG call the same full-resolution export function. Redact paints an opaque rectangle into the exported PNG and does not retroactively alter the temporary original capture.
 
-Keyboard shortcuts include `V` Select, `Space` temporary Pan, `P` Pen, `H` Highlighter, `A` Arrow, `L` Line, `R` Rectangle, `E` Ellipse, `T` Text, `X` Redact, `I` Pixelate, `B` Blur, `M` Marker, `C` Crop, `Delete`, `Escape`, `Ctrl/Cmd+Z`, `Ctrl+Y`, `Cmd+Shift+Z`, `Ctrl/Cmd++`, `Ctrl/Cmd+-`, and `Ctrl/Cmd+0`. Focus the canvas and press Enter to create the active tool at the visible center; in Select mode Enter advances through annotations. Arrow keys move the selected annotation by one pixel, or ten with Shift. The context panel's annotation list provides direct keyboard selection.
+Keyboard shortcuts include `V` Select, `Space` temporary Pan, `P` Pen, `H` Highlighter, `A` Arrow, `L` Line, `R` Rectangle, `E` Ellipse, `T` Text, `X` Redact, `I` Pixelate, `B` Blur, `M` Marker, `C` Crop, `Delete`, `Escape`, `Ctrl/Cmd+Z`, `Ctrl+Y`, `Cmd+Shift+Z`, `Ctrl/Cmd++`, `Ctrl/Cmd+-`, and `Ctrl/Cmd+0`.
 
 ## Known limitations
 
@@ -107,14 +122,19 @@ Keyboard shortcuts include `V` Select, `Space` temporary Pan, `P` Pen, `H` Highl
 - Fixed and sticky suppression is best-effort and cannot inspect closed Shadow DOM or cross-origin frames.
 - Highly dynamic pages may exceed the 25% bounded growth allowance.
 - Canvas allocation is conservatively capped; KoalaShot never silently downscales or crops an over-limit page.
-- Legal links point directly to the shared canonical notice at `https://koalastuff.net/legal`; KoalaShot does not duplicate legal identity content.
+- Publisher and contact information are linked to the central [KoalaStuff legal notice](https://koalastuff.net/imprint); project-specific privacy behavior is documented in [docs/PRIVACY_MODEL.md](docs/PRIVACY_MODEL.md).
 
-Post-v0.3.2 work is tracked in [docs/ROADMAP.md](docs/ROADMAP.md). The current editor contract is documented in [docs/EDITOR_SPEC.md](docs/EDITOR_SPEC.md), release evidence in [docs/STATUS.md](docs/STATUS.md), and submission preparation in [docs/STORE_LISTING.md](docs/STORE_LISTING.md).
-
-## Security and contributing
-
-Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md). Development and verification expectations are documented in [CONTRIBUTING.md](CONTRIBUTING.md).
+The direct future editor work is resize handles, configurable arrowheads, text outlines, image insertion, horizontal stitching, store publishing, and localization. The current editor contract is documented in [docs/EDITOR_SPEC.md](docs/EDITOR_SPEC.md).
 
 ## License
 
 MIT. Copyright (c) 2026 Shik3i.
+
+## Project documents
+
+- [Contributing](CONTRIBUTING.md)
+- [Security policy](SECURITY.md)
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Changelog](CHANGELOG.md)
+- [Release runbook](docs/RELEASE.md)
+- [Landing deployment](docs/LANDING_DEPLOYMENT.md)

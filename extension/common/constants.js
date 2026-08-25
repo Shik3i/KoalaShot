@@ -1,6 +1,6 @@
 export const APP_NAME = "KoalaShot";
 export const STORE_NAME = "KoalaShot – Full Page Screenshot";
-export const VERSION = "0.3.2";
+export const VERSION = "0.3.3";
 
 export const CAPTURE_INTERVAL_MS = 600;
 export const PAINT_SETTLE_MS = 120;

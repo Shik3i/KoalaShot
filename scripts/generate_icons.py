@@ -99,18 +99,20 @@ def source_pixel(pixels: bytes, width: int, x: int, y: int) -> tuple[int, int, i
 
 def resize_rgba(pixels: bytes, width: int, height: int, size: int) -> bytes:
     output = bytearray(size * size * 4)
+    content_size = max(1, round(size * 0.75))
+    padding = (size - content_size) // 2
     samples = 4
-    for target_y in range(size):
-        for target_x in range(size):
+    for target_y in range(content_size):
+        for target_x in range(content_size):
             alpha_sum = 0.0
             premultiplied = [0.0, 0.0, 0.0]
             for sample_y in range(samples):
-                source_y = (target_y + (sample_y + 0.5) / samples) * height / size - 0.5
+                source_y = (target_y + (sample_y + 0.5) / samples) * height / content_size - 0.5
                 y0 = max(0, min(height - 1, math.floor(source_y)))
                 y1 = min(height - 1, y0 + 1)
                 fraction_y = max(0.0, min(1.0, source_y - y0))
                 for sample_x in range(samples):
-                    source_x = (target_x + (sample_x + 0.5) / samples) * width / size - 0.5
+                    source_x = (target_x + (sample_x + 0.5) / samples) * width / content_size - 0.5
                     x0 = max(0, min(width - 1, math.floor(source_x)))
                     x1 = min(width - 1, x0 + 1)
                     fraction_x = max(0.0, min(1.0, source_x - x0))
@@ -133,7 +135,7 @@ def resize_rgba(pixels: bytes, width: int, height: int, size: int) -> bytes:
                 color = tuple(round(channel / alpha_sum) for channel in premultiplied) + (alpha,)
             else:
                 color = (0, 0, 0, 0)
-            offset = (target_y * size + target_x) * 4
+            offset = ((target_y + padding) * size + target_x + padding) * 4
             output[offset : offset + 4] = bytes(color)
     return bytes(output)
 

@@ -296,6 +296,13 @@
     }
   }
 
+  function isCurrentSession(session, port, sessionId) {
+    return activeSession === session
+      && session.port === port
+      && session.sessionId === sessionId
+      && !session.cleaned;
+  }
+
   async function startSession(port, message) {
     if (activeSession) {
       restorePage(activeSession);
@@ -385,7 +392,7 @@
 
   async function scrollSession(port, message) {
     const session = activeSession;
-    if (!session || session.port !== port || session.sessionId !== message.sessionId || session.cleaned) {
+    if (!session || !isCurrentSession(session, port, message.sessionId)) {
       send(port, { ok: false, sessionId: message.sessionId, error: "stale-session", message: "The capture session is no longer active." });
       return;
     }
@@ -397,8 +404,16 @@
         window.scrollTo({ left: 0, top: message.requestedY, behavior: "auto" });
       }
       await waitForPaint();
+      if (!isCurrentSession(session, port, message.sessionId)) {
+        send(port, { ok: false, sessionId: message.sessionId, error: "stale-session", message: "The capture session is no longer active." });
+        return;
+      }
       applySectionVisibility(session, message.sectionIndex, message.isFinal);
       await waitForPaint();
+      if (!isCurrentSession(session, port, message.sessionId)) {
+        send(port, { ok: false, sessionId: message.sessionId, error: "stale-session", message: "The capture session is no longer active." });
+        return;
+      }
       const after = measureSession(session);
       send(port, {
         ok: true,
