@@ -50,8 +50,9 @@ try {
     const scrolled = await request({type:'scroll',requestedY:800,sectionIndex:1,sectionCount:4,isFinal:false});
     const [position] = await api.scripting.executeScript({target:{tabId:tab.id},func:()=>({pageY:scrollY,innerY:document.querySelector('#inner').scrollTop})});
     await request({type:'restore'});port.disconnect();
-    return {readyHeight:ready.documentHeight,reportedY:scrolled.actualY,actual:position.result};
+    return {readyHeight:ready.documentHeight,reportedY:scrolled.actualY,actual:position.result,error:position.error};
   })()`);
+  assert.ok(results.mixedScroll.actual, JSON.stringify(results.mixedScroll));
   assert.equal(results.mixedScroll.actual.pageY, 800);
   assert.equal(results.mixedScroll.actual.innerY, 0);
 
@@ -145,10 +146,10 @@ try {
   await browser.evaluate(editor,`window.dispatchEvent(new KeyboardEvent('keyup',{key:' ',code:'Space',bubbles:true}))`);
 
   const editorUrl=await browser.evaluate(editor,'location.href');
-  await browser.evaluate(popup, `(async()=>{
+  await browser.evaluate(editor, `(async()=>{
     const {saveCaptureDraft}=await import('../common/capture-store.js');
     const annotations=Array.from({length:5000},(_,i)=>({id:'limit-annotation-'+i,type:'redact',color:'#000000',x:10,y:10,width:5,height:5}));
-    await saveCaptureDraft(new URL(${JSON.stringify(editorUrl)}).searchParams.get('capture'),annotations,null);
+    await saveCaptureDraft(new URLSearchParams(location.search).get('capture'),annotations,null);
   })()`);
   await browser.navigate(editor,editorUrl);
   await browser.wait(editor,'document.querySelector("#annotation-list").options.length === 5001');
@@ -161,12 +162,12 @@ try {
   assert.equal(results.selectionAtLimit,'limit-annotation-0');
   const duplicate=await browser.open(editorUrl,false);
   await browser.wait(duplicate,'document.querySelector("#capture-image").naturalWidth === 800');
-  await browser.evaluate(popup,`(async()=>{const {deleteCapture}=await import('../common/capture-store.js');await deleteCapture(new URL(${JSON.stringify(editorUrl)}).searchParams.get('capture'))})()`);
+  await browser.evaluate(editor,`(async()=>{const {deleteCapture}=await import('../common/capture-store.js');await deleteCapture(new URLSearchParams(location.search).get('capture'))})()`);
   await browser.wait(duplicate,'document.querySelector("#save-button").disabled');
-  results.orphanDraft = await browser.evaluate(popup,`(async()=>{
+  results.orphanDraft = await browser.evaluate(editor,`(async()=>{
     const store=await import('../common/capture-store.js');
     let rejected=false;
-    try {await store.saveCaptureDraft(new URL(${JSON.stringify(editorUrl)}).searchParams.get('capture'),[],null)}catch(e){rejected=e.code==='capture-unavailable'}
+    try {await store.saveCaptureDraft(new URLSearchParams(location.search).get('capture'),[],null)}catch(e){rejected=e.code==='capture-unavailable'}
     await store.pruneExpiredCaptures();
     return new Promise(resolve=>{const r=indexedDB.open('koalashot-captures',2);r.onsuccess=()=>{const db=r.result,t=db.transaction(['captures','drafts']);const c=t.objectStore('captures').count(),d=t.objectStore('drafts').count();t.oncomplete=()=>{resolve({captures:c.result,drafts:d.result,rejected});db.close()}}});
   })()`);

@@ -269,13 +269,19 @@ class ChromeBrowser {
     const targetId = created.result.targetId;
     const attached = await this.socket.request("Target.attachToTarget", { targetId, flatten: true });
     const page = { targetId, sessionId: attached.result.sessionId };
-    await this.wait(page, "document.readyState === 'complete'");
+    await this.waitForDocument(page, url);
     return page;
   }
 
   async navigate(page, url) {
     await (page.socket || this.socket).request("Page.navigate", { url }, page.sessionId);
-    await this.wait(page, "document.readyState === 'complete'");
+    await this.waitForDocument(page, url);
+  }
+
+  async waitForDocument(page, url) {
+    return waitFor("document navigation", () => this.evaluate(page,
+      "({ url: location.href, ready: document.readyState === 'complete' })"),
+    (state) => state?.url === url && state.ready);
   }
 
   async lockViewport(page) {

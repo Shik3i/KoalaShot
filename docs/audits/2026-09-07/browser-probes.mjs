@@ -142,7 +142,7 @@ try {
   const editorUrl=await browser.evaluate(editor,'location.href');
   const duplicate=await browser.open(editorUrl,false);
   await browser.wait(duplicate,'document.querySelector("#capture-image").naturalWidth === 800');
-  await browser.evaluate(popup,`(async()=>{const {deleteCapture}=await import('../common/capture-store.js');await deleteCapture(new URL(${JSON.stringify(editorUrl)}).searchParams.get('capture'))})()`);
+  await browser.evaluate(editor,`(async()=>{const {deleteCapture}=await import('../common/capture-store.js');await deleteCapture(new URLSearchParams(location.search).get('capture'))})()`);
   await browser.draw(duplicate,'redact',[100,100],[200,180]);
   await browser.wait(duplicate,`new Promise(resolve=>{const r=indexedDB.open('koalashot-captures',2);r.onsuccess=()=>{const db=r.result;const t=db.transaction('drafts');const q=t.objectStore('drafts').count();q.onsuccess=()=>{resolve(q.result>0);db.close()}}})`);
   results.orphanDraft = await browser.evaluate(duplicate,`new Promise(resolve=>{const r=indexedDB.open('koalashot-captures',2);r.onsuccess=()=>{const db=r.result,t=db.transaction(['captures','drafts']);const c=t.objectStore('captures').count(),d=t.objectStore('drafts').count();t.oncomplete=()=>{resolve({captures:c.result,drafts:d.result,editorSaveEnabled:!document.querySelector('#save-button').disabled});db.close()}}})`);
