@@ -121,18 +121,18 @@ try {
   await browser.wait(editor, 'document.querySelector("#capture-image").naturalWidth === 800');
   await browser.setViewport(editor, 1280, 900, 1);
   await browser.evaluate(editor, `(() => {
-    window.auditEncodes=0;const original=HTMLCanvasElement.prototype.toBlob;window.auditOriginalToBlob=original;
-    HTMLCanvasElement.prototype.toBlob=function(cb,...args){window.auditEncodes++;original.call(this,blob=>{window.auditRelease=()=>cb(blob)},...args)};
+    window.auditEncodes=0;window.auditReleases=[];const original=HTMLCanvasElement.prototype.toBlob;window.auditOriginalToBlob=original;
+    HTMLCanvasElement.prototype.toBlob=function(cb,...args){window.auditEncodes++;original.call(this,blob=>{window.auditReleases.push(()=>cb(blob))},...args)};
     document.querySelector('#save-button').click();
   })()`);
-  await browser.wait(editor, 'typeof window.auditRelease === "function"');
+  await browser.wait(editor, 'window.auditReleases.length === 1');
   await browser.draw(editor, 'redact', [100,100], [250,200]);
   results.exportRace = await browser.evaluate(editor, `({annotationsDuringExport:document.querySelector('#annotation-list').options.length-1,saveDisabled:document.querySelector('#save-button').disabled})`);
-  await browser.evaluate(editor, 'window.auditRelease()');
+  await browser.evaluate(editor, 'window.auditReleases.shift()()');
   await browser.wait(editor, '!document.querySelector("#save-button").disabled');
   await browser.evaluate(editor, 'document.querySelector("#save-button").click()');
-  await browser.wait(editor, 'window.auditEncodes === 2');
-  await browser.evaluate(editor, 'window.auditRelease()');
+  await browser.wait(editor, 'window.auditEncodes === 2 && window.auditReleases.length === 1');
+  await browser.evaluate(editor, 'window.auditReleases.shift()()');
   await browser.wait(editor, '!document.querySelector("#save-button").disabled');
   results.exportRace.encodesAfterTwoSaves = await browser.evaluate(editor, 'window.auditEncodes');
   assert.equal(results.exportRace.annotationsDuringExport, 1);
@@ -146,6 +146,13 @@ try {
   await browser.evaluate(editor,`window.dispatchEvent(new KeyboardEvent('keyup',{key:' ',code:'Space',bubbles:true}))`);
 
   const editorUrl=await browser.evaluate(editor,'location.href');
+  // Let the editor finish its real debounced write before replacing the fixture draft.
+  await browser.wait(editor, `(async()=>{
+    const id=new URLSearchParams(location.search).get('capture');
+    const {getCapture}=await import('../common/capture-store.js');
+    const record=await getCapture(id);
+    return record.annotations.length===1 && sessionStorage.getItem('koalashot-editor-draft:'+id)===null;
+  })()`);
   await browser.evaluate(editor, `(async()=>{
     const {saveCaptureDraft}=await import('../common/capture-store.js');
     const annotations=Array.from({length:5000},(_,i)=>({id:'limit-annotation-'+i,type:'redact',color:'#000000',x:10,y:10,width:5,height:5}));
