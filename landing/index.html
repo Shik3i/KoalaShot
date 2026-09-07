@@ -8,7 +8,7 @@
     <meta property="og:description" content="Capture the whole page. Copy or save it locally as a PNG.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://shot.koalastuff.net/">
-    <meta property="og:image" content="https://shot.koalastuff.net/assets/og-card.svg">
+    <meta property="og:image" content="https://shot.koalastuff.net/assets/og-card.png">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; font-src 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests">
     <link rel="canonical" href="https://shot.koalastuff.net/">
     <title>KoalaShot – Full Page Screenshot</title>
@@ -26,25 +26,25 @@
         <div>
           <p class="eyebrow">Full-page screenshot for your browser</p>
           <h1>Capture the whole page.</h1>
-          <p class="lede">Copy an entire webpage to your clipboard or save it as a PNG. Free, open source, and processed entirely on your device.</p>
-          <div class="hero-actions"><a class="button button-primary" href="#workflow">See how it works</a><a class="button button-secondary" href="https://github.com/Shik3i/KoalaShot">View source on GitHub</a></div>
+          <p class="lede">Capture a full vertical webpage, redact sensitive details, and copy or save the PNG. Free, open source, and processed entirely on your device.</p>
+          <div class="hero-actions"><a class="button button-primary" data-store="chrome" hidden>Get KoalaShot for Chrome</a><a class="button button-primary" data-store="firefox" hidden>Get KoalaShot for Firefox</a><a class="button button-primary" href="#workflow">See how it works</a><a class="button button-secondary" href="https://github.com/Shik3i/KoalaShot">View source on GitHub</a></div>
         </div>
         <div class="hero-visual" aria-hidden="true">
           <div class="browser-frame"><div class="browser-bar"><i></i><i></i><i></i></div><div class="page-lines"><span></span><span></span><span></span><span></span><span></span></div></div>
           <div class="capture-frame"></div>
-          <img class="hero-mascot" src="assets/koalashot-mascot.png" alt="" width="1334" height="1179">
+          <img class="hero-mascot" src="assets/koalashot-mascot.webp" alt="" width="1334" height="1179">
         </div>
       </section>
 
       <section id="workflow" class="section">
         <div class="site-shell">
           <p class="eyebrow">Simple by design</p>
-          <h2>From page to PNG in a few seconds.</h2>
+          <h2>Capture, edit, and keep it local.</h2>
           <p class="section-intro">KoalaShot scrolls through the current page, captures each viewport, and stitches the sections into one vertical image. The original capture stays available for your next step.</p>
           <div class="grid-3">
             <article class="card"><span class="number">1</span><h3>Capture</h3><p>Open KoalaShot and capture the complete vertical page, not just the visible viewport.</p></article>
             <article class="card"><span class="number">2</span><h3>Copy or save</h3><p>Copy the original PNG directly to the clipboard or start a normal local file download.</p></article>
-            <article class="card"><span class="number">3</span><h3>Edit locally</h3><p>Optionally draw, highlight, add arrows, add text, outline rectangles, and securely redact before copying or saving the edited PNG.</p></article>
+            <article class="card"><span class="number">3</span><h3>Edit locally</h3><p>Choose Capture &amp; edit to crop, annotate, and redact before any copy or download. Blur and pixelation are cosmetic; use Redact for sensitive details.</p></article>
           </div>
         </div>
       </section>
@@ -52,17 +52,17 @@
       <section id="privacy" class="section">
         <div class="site-shell trust-row">
           <div><p class="eyebrow">Privacy first</p><h2>Your screenshot stays with you.</h2><p class="section-intro">KoalaShot has no account system, upload pipeline, analytics, or remote configuration. Processing happens in the browser after an explicit action.</p></div>
-          <ul class="trust-list"><li>No accounts or uploads.</li><li>No tracking, telemetry, cookies, or history.</li><li>No remote code, fonts, scripts, or third-party embeds.</li><li>Temporary editor captures stay local and expire within 24 hours.</li></ul>
+          <ul class="trust-list"><li>No accounts or uploads.</li><li>No tracking, telemetry, cookies, or history.</li><li>No remote code, fonts, scripts, or third-party embeds.</li><li>Temporary editor captures stay local, expire after 24 hours, and are deleted by an open editor or when KoalaShot is next opened.</li></ul>
         </div>
       </section>
 
       <section class="section">
         <div class="site-shell grid-3">
-          <article class="card"><h3>Chrome and Chromium</h3><p>Designed for Chrome and Chromium-based browsers such as Vivaldi, Edge, and Brave. Install the current local Manifest V3 build unpacked for testing.</p></article>
-          <article class="card"><h3>Firefox</h3><p>A separate Manifest V3 build supports temporary installation for local testing.</p></article>
+          <article class="card"><h3>Chrome and Chromium</h3><p>Designed for Chrome and Chromium-based browsers such as Vivaldi, Edge, and Brave. Desktop Manifest V3 build. Store availability is shown here when the listing is approved; other Chromium browsers require separate compatibility testing.</p></article>
+          <article class="card"><h3>Firefox</h3><p>Separate desktop build for Firefox 142 or later. Store availability is shown here when the listing is approved.</p></article>
           <article class="card"><h3>Open source</h3><p>Readable vanilla HTML, CSS, JavaScript, and Python build tooling live in the <a href="https://github.com/Shik3i/KoalaShot">public repository</a>.</p></article>
         </div>
-        <div class="card store-placeholder"><h3>Store links are coming later</h3><p>Chrome Web Store: link pending. Firefox Add-ons: link pending. The current build is for local unpacked and temporary installation; this page intentionally shows no inactive store buttons.</p></div>
+        <div class="site-shell"><div class="card store-placeholder" data-store-pending><h3>Preparing for the browser stores</h3><p>KoalaShot is not yet available from the stores. Follow <a href="https://github.com/Shik3i/KoalaShot/releases">releases on GitHub</a> for published builds and <a href="https://github.com/Shik3i/KoalaShot#readme">installation instructions</a>.</p></div></div>
       </section>
 
       <section class="section">
@@ -75,7 +75,7 @@
       </section>
     </main>
 
-    <footer class="site-shell site-footer"><span>© <span data-current-year>2026</span> Shik3i · KoalaShot · <span data-app-version data-version-url="version.json">development build</span></span><span class="footer-links"><a href="privacy/">Privacy</a><a href="legal/">Legal</a><a href="https://github.com/Shik3i/KoalaShot">GitHub</a></span></footer>
+    <footer class="site-shell site-footer"><span>© <span data-current-year>2026</span> Shik3i · KoalaShot · <span data-app-version data-version-url="version.json" hidden></span></span><span class="footer-links"><a href="privacy/">Privacy</a><a href="legal/">Legal</a><a href="https://github.com/Shik3i/KoalaShot">GitHub</a></span></footer>
     <script src="main.js"></script>
   </body>
 </html>

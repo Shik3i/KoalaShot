@@ -2,7 +2,7 @@
 
 ## Development setup
 
-Requirements: Node.js 20 or newer, npm, Python 3, and Git.
+Requirements: Node.js `^20.19.0 || ^22.13.0 || >=24`, npm, Python 3.10 or newer, and Git. These Node versions match the installed ESLint toolchain.
 
 ```sh
 git clone https://github.com/Shik3i/KoalaShot.git
@@ -11,7 +11,7 @@ npm ci
 npm test
 ```
 
-Build the unpacked extensions and deterministic ZIP archives with `npm run build`. Run `npm run test:browser:matrix` for the real Chrome and Firefox success and clipboard-denial flows.
+Build the unpacked extensions and deterministic ZIP archives with `npm run build`. Run `npm run test:browser:matrix` for the Chrome and Firefox success and clipboard-denial flows, then `npm run test:regressions` for capture/editor edge cases and the built landing page. See `docs/TESTING.md` for test-permission and manual-acceptance boundaries.
 
 ## Change expectations
 

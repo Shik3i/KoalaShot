@@ -12,6 +12,12 @@ import { createSerializedWriter } from "../common/async-queue.js";
 
 const copyButton = document.querySelector("#copy-button");
 const saveButton = document.querySelector("#save-button");
+const editButton = document.querySelector("#edit-button");
+const editResultButton = document.querySelector("#edit-result-button");
+const copyResultButton = document.querySelector("#copy-result-button");
+const preview = document.querySelector("#capture-preview");
+let previewUrl = null;
+let initializing = true;
 const saveResultButton = document.querySelector("#save-result-button");
 const cancelButton = document.querySelector("#cancel-button");
 const openEditor = document.querySelector("#open-editor");
@@ -35,6 +41,9 @@ function setBusy(value) {
   busy = value;
   copyButton.disabled = value;
   saveButton.disabled = value;
+  editButton.disabled = value;
+  editResultButton.disabled = value;
+  copyResultButton.disabled = value;
   saveResultButton.disabled = value;
   openEditor.disabled = value;
   captureTarget.disabled = value;
@@ -49,12 +58,16 @@ function getErrorMessage(error) {
 }
 
 async function runCapture(mode) {
-  if (busy) {
+  if (busy || initializing) {
     return;
   }
   setBusy(true);
+  const config = { target: captureTarget.value, openEditor: openEditor.checked || mode === "edit" };
   lastCapturedResult = null;
   saveResultButton.hidden = true;
+  editResultButton.hidden = true; copyResultButton.hidden = true; preview.hidden = true;
+  if (previewUrl) URL.revokeObjectURL(previewUrl);
+  previewUrl = null;
   activeController = new AbortController();
   try {
     let clipboardReady = true;
@@ -68,7 +81,7 @@ async function runCapture(mode) {
 
     const result = await captureScreenshot({
       signal: activeController.signal,
-      target: captureTarget.value,
+      target: config.target,
       onProgress: ({ message, current, total, phase }) => {
         if (phase === "capturing" && total) {
           setStatus(message, (current / total) * 82);
@@ -80,6 +93,11 @@ async function runCapture(mode) {
       },
     });
 
+    if (activeController.signal.aborted) return;
+    lastCapturedResult = result;
+    previewUrl = URL.createObjectURL(result.blob); preview.src = previewUrl;
+    preview.hidden = false; saveResultButton.hidden = false;
+    editResultButton.hidden = false; copyResultButton.hidden = false;
     if (mode === "copy" && clipboardReady) {
       setStatus("Copying to clipboard…", 92);
       try {
@@ -104,7 +122,7 @@ async function runCapture(mode) {
       setStatus(`${status.textContent} ${result.warning}`);
     }
 
-    if (openEditor.checked) {
+    if (config.openEditor && !activeController.signal.aborted) {
       setStatus("Opening editor…", 98);
       await openEditorForCapture(result);
       setStatus("Editor opened with the original PNG.", 100);
@@ -128,9 +146,7 @@ saveResultButton.addEventListener("click", () => {
     return;
   }
   downloadBlob(lastCapturedResult.blob, lastCapturedResult.filename);
-  saveResultButton.hidden = true;
   setStatus("Captured PNG save started.", 100);
-  lastCapturedResult = null;
 });
 cancelButton.addEventListener("click", () => activeController?.abort());
 function persistSettings() {
@@ -148,15 +164,37 @@ captureTarget.addEventListener("change", () => {
   void persistSettings();
 });
 
-document.documentElement.dataset.koalashotReady = "true";
+
 
 void (async () => {
-  await pruneTemporaryCaptures();
+  void pruneTemporaryCaptures();
   try {
     const settings = await loadSettings();
     openEditor.checked = settings.openEditorAfterCapture;
     captureTarget.value = settings.captureTarget;
   } catch {
     openEditor.checked = false;
+  } finally {
+    initializing = false; setBusy(false);
+    document.documentElement.dataset.koalashotReady = "true";
   }
 })();
+
+editButton.addEventListener("click", () => void runCapture("edit"));
+editResultButton.addEventListener("click", async () => {
+  if (!lastCapturedResult || busy) return;
+  setBusy(true);
+  try { await openEditorForCapture(lastCapturedResult); setStatus("Editor opened with the original PNG."); }
+  catch (error) { setStatus(getErrorMessage(error)); }
+  finally { setBusy(false); }
+});
+copyResultButton.addEventListener("click", async () => {
+  if (!lastCapturedResult || busy) return;
+  const permission = prepareClipboard(); setBusy(true);
+  try {
+    if (!(await permission)) throw new Error("Clipboard permission was not granted. Save the completed capture below.");
+    await copyScreenshot(lastCapturedResult.blob); setStatus("Full-page screenshot copied.");
+  } catch (error) { setStatus(getErrorMessage(error)); }
+  finally { setBusy(false); }
+});
+window.addEventListener("pagehide", () => { activeController?.abort(); if (previewUrl) URL.revokeObjectURL(previewUrl); });

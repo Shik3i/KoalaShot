@@ -73,6 +73,7 @@
         </section>
 
         <section class="stage-panel" aria-label="Screenshot workspace">
+          <p id="capture-warning" class="capture-warning" role="status" hidden></p>
           <div id="loading-state" class="message-card" role="status" aria-live="polite"><h1>Loading screenshot…</h1><p>The temporary local capture is being opened.</p></div>
           <div id="error-state" class="message-card" hidden><h1>Screenshot unavailable</h1><p id="error-message">This temporary capture may have expired.</p></div>
           <div id="stage-wrap" class="stage-wrap" hidden>
@@ -84,6 +85,7 @@
           </div>
         </section>
         <p id="status" class="status-line" role="status" aria-live="polite">Loading local screenshot…</p>
+        <p class="editor-hint">Redact protects exported pixels; the local original remains until discarded. Blur and Pixelate are cosmetic. <a href="https://shot.koalastuff.net/privacy/" target="_blank" rel="noopener">Privacy</a> · <a href="https://github.com/Shik3i/KoalaShot/issues" target="_blank" rel="noopener">Help</a></p>
         <p id="editor-keyboard-help" class="editor-hint">Keyboard: choose a tool, focus the annotation overlay, and press <kbd>Enter</kbd> to add at the visible center. Use the Annotations list to select; arrow keys move the selection, <kbd>Shift</kbd> moves 10px, and <kbd>Delete</kbd> removes it. Shortcuts: <kbd>V</kbd> select · <kbd>Space</kbd> temporary pan · <kbd>Ctrl/Cmd+Z</kbd> undo · <kbd>Ctrl/Cmd+0</kbd> fit width.</p>
       </main>
     </div>

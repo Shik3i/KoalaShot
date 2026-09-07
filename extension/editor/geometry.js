@@ -257,8 +257,10 @@ export function drawAnnotation(context, annotation) {
 
 export function drawAnnotations(context, annotations, selectedId = "") {
   annotations.forEach((annotation) => drawAnnotation(context, annotation));
-  if (selectedId) {
-    const selected = annotations.find((annotation) => annotation.id === selectedId);
+  drawSelection(context, annotations.find((annotation) => annotation.id === selectedId));
+}
+
+export function drawSelection(context, selected) {
     if (selected) {
       const bounds = annotationBounds(selected);
       context.save();
@@ -268,5 +270,4 @@ export function drawAnnotations(context, annotations, selectedId = "") {
       context.strokeRect(bounds.x - 4, bounds.y - 4, bounds.width + 8, bounds.height + 8);
       context.restore();
     }
-  }
 }

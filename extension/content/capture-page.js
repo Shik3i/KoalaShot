@@ -107,6 +107,14 @@
         continue;
       }
       const style = getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      if (style.visibility !== "visible" || style.display === "none"
+        || rect.left < 0 || rect.top < 0 || rect.right > measurement.viewportWidth + 1
+        || rect.bottom > measurement.viewportHeight + 1
+        || Math.abs(rect.width - element.offsetWidth) > 1
+        || Math.abs(rect.height - element.offsetHeight) > 1) {
+        continue;
+      }
       const scrollable = /(auto|scroll|overlay)/.test(style.overflowY);
       const sizeable = element.clientWidth >= measurement.viewportWidth * 0.5
         && element.clientHeight >= measurement.viewportHeight * 0.35;
@@ -173,6 +181,7 @@
   }
 
   function restoreStyle(record) {
+    if (!record) return;
     if (record.value) {
       record.element.style.setProperty(record.property, record.value, record.priority);
     } else {
@@ -189,7 +198,7 @@
     const atTop = rect.top <= 8 || style.top !== "auto";
     const atBottom = rect.bottom >= window.innerHeight - 8 || style.bottom !== "auto";
     if (style.position === "sticky") {
-      return atTop ? "sticky-top" : atBottom ? "sticky-bottom" : null;
+      return "sticky";
     }
     return atTop ? "fixed-top" : atBottom ? "fixed-bottom" : "fixed-floating";
   }
@@ -206,7 +215,12 @@
           element,
           kind,
           visibility: recordStyle(element, "visibility"),
+          layout: kind === "sticky" ? ["position", "top", "right", "bottom", "left"].map((property) => recordStyle(element, property)) : [],
         });
+        if (kind === "sticky") {
+          element.style.setProperty("position", "relative", "important");
+          for (const property of ["top", "right", "bottom", "left"]) element.style.setProperty(property, "auto", "important");
+        }
       }
     }
     return elements;
@@ -222,6 +236,7 @@
 
   function applySectionVisibility(session, sectionIndex, isFinal) {
     for (const item of session.positionedElements) {
+      if (item.kind === "sticky") continue;
       const hidden = item.kind === "fixed-top" || item.kind === "sticky-top"
         ? sectionIndex > 0
         : item.kind === "fixed-bottom" || item.kind === "sticky-bottom"
@@ -240,6 +255,7 @@
       "html.koalashot-capturing [data-koalashot-capture-target] { scrollbar-width: none !important; }",
       "html.koalashot-capturing [data-koalashot-capture-target]::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }",
       "html.koalashot-capturing, html.koalashot-capturing * { scroll-behavior: auto !important; }",
+      "html.koalashot-capturing, html.koalashot-capturing * { scroll-snap-type: none !important; overflow-anchor: none !important; }",
       "html.koalashot-capturing *, html.koalashot-capturing *::before, html.koalashot-capturing *::after { animation-play-state: paused !important; transition: none !important; caret-color: transparent !important; }",
     ].join("\n");
     (document.head || document.documentElement).appendChild(style);
@@ -253,6 +269,7 @@
     session.cleaned = true;
     for (const item of session.positionedElements || []) {
       restoreStyle(item.visibility);
+      item.layout.forEach(restoreStyle);
     }
     if (session.targetElement) {
       if (session.targetAttributeValue === null) {
@@ -310,8 +327,9 @@
     }
     const before = measurePage();
     const captureTarget = message.target === "internal" ? "internal" : "page";
-    const internalScrollArea = findInternalScrollArea(before);
-    if (captureTarget === "page" && internalScrollArea && before.documentHeight <= before.viewportHeight + 2) {
+    const candidate = findInternalScrollArea(before);
+    const internalScrollArea = captureTarget === "internal" ? candidate : null;
+    if (captureTarget === "page" && candidate && before.documentHeight <= before.viewportHeight + 2) {
       send(port, { ok: false, sessionId: message.sessionId, error: "internal-scroll", message: "This page has a scrollable area inside the page. Select “Scrollable area inside the page” to capture it." });
       return;
     }
@@ -424,6 +442,7 @@
         maxScrollY: Math.max(0, after.documentHeight - after.viewportHeight),
         documentHeight: after.documentHeight,
         viewportWidth: after.viewportWidth,
+        documentWidth: after.documentWidth,
         viewportHeight: after.viewportHeight,
         screenViewportWidth: after.screenViewportWidth,
         screenViewportHeight: after.screenViewportHeight,

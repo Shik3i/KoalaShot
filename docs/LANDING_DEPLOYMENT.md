@@ -32,3 +32,7 @@ shot.koalastuff.net {
 ```
 
 After deployment, verify all routes over HTTPS and confirm that `/version.json` reports the release version. The canonical publisher details remain at [KoalaStuff's legal notice](https://koalastuff.net/imprint).
+
+Serve `/version.json` with `Cache-Control: no-store`; ordinary assets use `public, max-age=86400`. Confirm correct MIME types for `.webp` and `.png`. The hero uses the optimized local WebP; Open Graph uses `assets/og-card.png`.
+
+Store installation links are controlled by `stores.chrome` and `stores.firefox` in `landing/version.json`. Keep them `null` until approved store URLs exist. Set only HTTPS URLs on `chromewebstore.google.com/detail/` or `addons.mozilla.org/.../firefox/addon/`, rebuild and deploy. Test both populated and unavailable-store states. Do not advertise a pending listing as installable.

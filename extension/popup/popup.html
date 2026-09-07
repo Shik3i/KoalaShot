@@ -20,25 +20,30 @@
         <h2 id="capture-heading">Capture this page</h2>
         <p class="muted">Capture the complete vertical page at the current browser resolution.</p>
         <div class="button-stack">
-          <button id="copy-button" class="button button-primary" type="button">Capture &amp; Copy</button>
-          <button id="save-button" class="button button-secondary" type="button">Save PNG</button>
+          <button id="edit-button" class="button button-primary" type="button" disabled>Capture &amp; edit</button>
+          <button id="copy-button" class="button button-secondary" type="button" disabled>Capture &amp; Copy</button>
+          <button id="save-button" class="button button-secondary" type="button" disabled>Save PNG</button>
         </div>
         <label class="field-label" for="capture-target">Capture area</label>
-        <select id="capture-target" class="select-control">
+        <select id="capture-target" class="select-control" disabled>
           <option value="page">Full page</option>
           <option value="internal">Scrollable area inside the page</option>
         </select>
         <label class="checkbox-row" for="open-editor">
-          <input id="open-editor" type="checkbox">
-          <span>Open editor after capture</span>
+          <input id="open-editor" type="checkbox" disabled>
+          <span>Also open editor after Copy or Save</span>
         </label>
       </section>
 
       <section class="status-card" aria-labelledby="status-heading">
+        <p class="muted capture-help">Capture &amp; edit lets you redact before copying or saving. Keep this popup open until capture finishes.</p>
         <h2 id="status-heading">Status</h2>
         <p id="status" class="status-line" role="status" aria-live="polite">Ready.</p>
         <div class="progress-track" aria-hidden="true"><span id="progress-bar"></span></div>
+        <img id="capture-preview" alt="Preview of the completed capture" hidden>
         <button id="save-result-button" class="button button-secondary result-action" type="button" hidden>Save captured PNG</button>
+        <button id="edit-result-button" class="button button-secondary result-action" type="button" hidden>Edit captured PNG</button>
+        <button id="copy-result-button" class="button button-secondary result-action" type="button" hidden>Copy captured PNG</button>
         <button id="cancel-button" class="button button-cancel" type="button" hidden>Cancel</button>
       </section>
 
@@ -46,6 +51,7 @@
         <span class="privacy-mark" aria-hidden="true">●</span>
         <span>Screenshots are processed entirely on your device.</span>
       </footer>
+      <p class="help-links"><a href="https://shot.koalastuff.net/privacy/" target="_blank" rel="noopener">Privacy</a> · <a href="https://github.com/Shik3i/KoalaShot/issues" target="_blank" rel="noopener">Help and report a problem</a></p>
     </main>
     <script type="module" src="popup.js"></script>
   </body>

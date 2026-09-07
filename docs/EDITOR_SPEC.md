@@ -1,6 +1,6 @@
 # Phase 2 editor specification and implementation contract
 
-The v0.3.2 editor is implemented in the local editor page. This document is the durable contract for its non-destructive model and the boundary for future editor work. The popup capture flow optionally hands the original PNG to the editor through local IndexedDB.
+The current editor is implemented in the local editor page. This document is the durable contract for its non-destructive model and the boundary for future editor work. Capture & edit hands the original PNG to the editor through local IndexedDB without first copying or downloading it. Copy/Save original may optionally open the editor afterward.
 
 Implemented tools: Select, Pan, Freehand Pen, Highlighter, Arrow, Line, Rectangle, Ellipse, Text, secure opaque Redact, cosmetic Pixelate, cosmetic Blur, numbered Markers, Crop, Undo, Redo, Delete selected annotation, Clear all annotations, Zoom in/out, Fit to width, Actual size, Copy edited, Save edited PNG, and Close and discard.
 
@@ -37,15 +37,15 @@ The toolbar implements Select, Freehand pen, Highlighter, Arrow, Line, Rectangle
 
 ## Rendering
 
-Use Canvas 2D and vanilla JavaScript only. Keep the original image as an `<img>` and maintain an annotation object list. The editor uses a viewport-sized overlay canvas for visible interaction; it does not keep a permanent full-resolution display canvas. Render the edited result only when an export is requested. Copy and Save both call `renderEditorResultBlob()` so they cannot diverge. The temporary export canvas uses original-image dimensions and preserves full output resolution.
+Use Canvas 2D and vanilla JavaScript only. Keep the original image as an `<img>` and maintain an annotation object list. The editor uses a viewport-sized overlay canvas for visible interaction; it does not keep a permanent full-resolution display canvas. Render the edited result only when an export is requested. Copy and Save both call `renderEditorResultBlob()` and reject a result if the document revision changed during encoding. Preview and export share the effect/redaction compositor; opaque masks are drawn last with outward-rounded pixel bounds. The temporary export canvas uses original-image dimensions and preserves full output resolution.
 
 ## History
 
-Use command- or object-based undo/redo. Each command records the minimum before/after object state or an insertion/deletion/move operation. Do not store a full-image snapshot for every history entry. New edits clear the redo stack. Selection state is UI state and need not be part of the document history.
+Use command- or object-based undo/redo. Document history shares immutable unchanged annotation objects between before/after snapshots. Retention is limited to 100 actions and a conservative 16 MiB serialized-state budget, retaining at least one undo action; the current document is separately limited to 5000 annotations. Do not store a full-image snapshot for every history entry. New edits clear the redo stack. Selection state is UI state and need not be part of the document history.
 
 ## Selection and hit-testing
 
-Hit-test in original-image coordinates after inverting the display transform. Use geometry-specific tolerances scaled by zoom: distance to line segments for pen/line/arrow, bounds for rectangles/text, and stroke path proximity for freehand. A selected object gets a non-exported overlay with handles. Moving updates only the object coordinates; Delete removes the selected object through a history command.
+Hit-test in original-image coordinates after inverting the display transform. Use geometry-specific tolerances scaled by zoom: distance to line segments for pen/line/arrow, bounds for rectangles/text, and stroke path proximity for freehand. A selected object gets a non-exported dashed bounding overlay; resize handles are not implemented. Moving updates only the object coordinates; Delete removes the selected object through a history command.
 
 ## Keyboard operation
 

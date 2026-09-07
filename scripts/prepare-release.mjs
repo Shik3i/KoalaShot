@@ -46,8 +46,8 @@ if (updatedConstants === constants) {
 const readmePath = path.join(root, "README.md");
 const readme = fs.readFileSync(readmePath, "utf8");
 const updatedReadme = readme
-  .replace(/Release-v\d+\.\d+\.\d+-blue/g, `Release-v${version}-blue`)
-  .replace(/Current release: v\d+\.\d+\.\d+/g, `Current release: v${version}`)
+  .replace(/Build-v\d+\.\d+\.\d+-blue/g, `Build-v${version}-blue`)
+  .replace(/Current build: v\d+\.\d+\.\d+/g, `Current build: v${version}`)
   .replace(/koalashot-(chrome|firefox)-\d+\.\d+\.\d+\.zip/g, `koalashot-$1-${version}.zip`);
 if (updatedReadme === readme) {
   throw new Error("README.md does not contain the release metadata expected by the release process");
@@ -62,4 +62,4 @@ fs.writeFileSync(constantsPath, updatedConstants, "utf8");
 fs.writeFileSync(readmePath, updatedReadme, "utf8");
 
 console.log(`Prepared KoalaShot v${version}.`);
-console.log("Review the diff, run npm test, commit main, then push the annotated tag.");
+console.log("Review the diff and run all verification gates. Merge through a reviewed PR before creating a release tag.");

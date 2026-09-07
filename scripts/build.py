@@ -85,7 +85,7 @@ def build_extension(browser: str, version: str) -> Path:
         target = output / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(path, target)
-    (output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    (output / "manifest.json").write_bytes((json.dumps(manifest, indent=2) + "\n").encode("utf-8"))
     return output
 
 
@@ -96,6 +96,7 @@ def zip_directory(directory: Path, archive: Path) -> None:
                 continue
             relative = path.relative_to(directory).as_posix()
             info = zipfile.ZipInfo(relative, date_time=(2026, 1, 1, 0, 0, 0))
+            info.create_system = 3
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = 0o100644 << 16
             handle.writestr(info, path.read_bytes())

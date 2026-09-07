@@ -27,6 +27,9 @@ def main() -> None:
             if permission != "clipboardWrite"
         ]
     manifest["permissions"] = sorted(permissions)
+    # BiDi cannot navigate a web-content tab into a privileged extension URL.
+    # The isolated test extension opens its own UI, as a normal extension can.
+    manifest["background"] = {"scripts": ["test-bootstrap.js"]}
 
     archive.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as output:
@@ -34,6 +37,7 @@ def main() -> None:
             if path.is_file() and path != manifest_path:
                 output.write(path, path.relative_to(source).as_posix())
         output.writestr("manifest.json", json.dumps(manifest, indent=2, ensure_ascii=False) + "\n")
+        output.writestr("test-bootstrap.js", 'browser.runtime.onInstalled.addListener(() => browser.tabs.create({url: browser.runtime.getURL("popup/popup.html")}));\n')
 
 
 if __name__ == "__main__":

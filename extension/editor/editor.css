@@ -64,7 +64,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [tabindex]:fo
 .zoom-value { min-width: 48px; color: var(--muted); font-size: 0.76rem; font-variant-numeric: tabular-nums; text-align: center; }
 
 .editor-layout { display: grid; grid-template-columns: 88px 1fr; height: calc(100vh - 66px); }
-.tool-sidebar { display: flex; flex-direction: column; justify-content: space-between; padding: 12px 8px; border-right: 1px solid var(--border); background: var(--surface); }
+.tool-sidebar { display: flex; min-height: 0; overflow-y: auto; flex-direction: column; justify-content: space-between; padding: 12px 8px; border-right: 1px solid var(--border); background: var(--surface); }
 .tool-group { display: grid; gap: 4px; }
 .tool-label { margin: 0 0 4px; color: var(--muted); font-size: 0.63rem; font-weight: 800; letter-spacing: 0.08em; text-align: center; text-transform: uppercase; }
 .tool-button { display: grid; min-height: 52px; gap: 3px; place-items: center; padding: 5px 2px; border: 1px solid transparent; border-radius: 9px; background: transparent; color: var(--muted); font-size: 0.64rem; }
@@ -73,7 +73,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [tabindex]:fo
 .tool-glyph { min-height: 19px; color: currentColor; font-size: 1.05rem; line-height: 1; }
 .danger-tool { color: var(--danger); }
 
-.workspace { display: grid; min-width: 0; grid-template-rows: auto 1fr auto auto; }
+.workspace { display: grid; min-width: 0; min-height: 0; grid-template-rows: auto minmax(0, 1fr) auto auto auto; }
 .context-bar { display: flex; min-height: 65px; gap: 15px; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--surface-raised); }
 .context-copy { display: grid; gap: 2px; min-width: 175px; }
 .context-copy strong { font-size: 0.86rem; }
@@ -97,6 +97,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [tabindex]:fo
 input[type="range"] { width: 110px; accent-color: var(--accent); }
 
 .stage-panel { position: relative; min-height: 0; overflow: hidden; background: #cbd6ce; }
+.capture-warning { position: absolute; z-index: 7; top: 0; left: 0; right: 0; margin: 0; padding: 8px 16px; background: var(--surface); color: var(--text); border-bottom: 2px solid var(--accent); font-size: 0.8rem; }
 @media (prefers-color-scheme: dark) { .stage-panel { background: #0a100c; } }
 .stage-wrap { position: absolute; inset: 0; }
 .stage-scroll { position: absolute; inset: 0; overflow: auto; overscroll-behavior: contain; padding: 22px; background: color-mix(in srgb, var(--surface-muted) 80%, transparent); }
@@ -137,7 +138,7 @@ kbd { padding: 1px 4px; border: 1px solid var(--border); border-radius: 4px; bac
   .tool-group-bottom { margin-left: 9px; padding-left: 9px; border-left: 1px solid var(--border); }
   .tool-label { display: none; }
   .tool-button { min-width: 62px; min-height: 47px; }
-  .workspace { min-height: 620px; grid-template-rows: auto minmax(420px, 1fr) auto auto; }
+  .workspace { min-height: 620px; grid-template-rows: auto minmax(420px, 1fr) auto auto auto; }
   .context-bar { align-items: stretch; flex-direction: column; gap: 8px; padding: 9px 11px; }
   .context-copy { min-width: 0; }
   .context-controls { width: 100%; flex-wrap: nowrap; justify-content: start; overflow-x: auto; padding: 2px 2px 5px; scrollbar-width: thin; }

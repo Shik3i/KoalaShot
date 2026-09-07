@@ -1,6 +1,6 @@
 import { getApi, ensureClipboardPermission } from "../common/browser-api.js";
 import { copyPngBlob } from "../common/clipboard.js";
-import { deleteCapture, getCapture, pruneExpiredCaptures, saveCaptureDraft } from "../common/capture-store.js";
+import { deleteCapture, getCapture, pruneExpiredCaptures, saveCaptureDraft, subscribeCaptureDeletion } from "../common/capture-store.js";
 import { downloadBlob } from "../popup/capture-controller.js";
 import { makeEditedFilename } from "../common/filename.js";
 import { TEMP_CAPTURE_TTL_MS } from "../common/constants.js";
@@ -17,13 +17,13 @@ import {
   annotationBounds,
   boundsIntersectViewport,
   drawAnnotation,
-  drawAnnotations,
+  drawSelection,
   hitTestAnnotation,
   normalizeRectangle,
   reducePoints,
 } from "./geometry.js";
 import { DocumentHistory } from "./history.js";
-import { renderEditorResultBlob } from "./editor-export.js";
+import { renderEditorResultBlob, drawEditorAnnotations, clearEffectCache } from "./editor-export.js";
 
 const MIN_ZOOM = 0.1;
 const MAX_ZOOM = 4;
@@ -145,11 +145,11 @@ function formatMetadata(record, crop = null) {
 }
 
 function currentAnnotations() {
-  return history.getState().annotations;
+  return history.peekState().annotations;
 }
 
 function currentCrop() {
-  return history.getState().crop;
+  return history.peekState().crop;
 }
 
 function documentState(annotations = currentAnnotations(), crop = currentCrop()) {
@@ -223,6 +223,7 @@ async function persistDraft(draft) {
       globalThis.sessionStorage.removeItem(draftJournalKey());
     }
   } catch (error) {
+    if (error?.code === "capture-unavailable") { invalidateCapture(error.message); return; }
     const detail = error instanceof Error ? error.message : "Local storage failed.";
     setStatus(`Draft could not be saved locally: ${detail} Your current editor state remains available.`);
   }
@@ -299,7 +300,7 @@ function updateContextControls() {
   const toolHasColor = ["pen", "highlighter", "arrow", "line", "rectangle", "ellipse", "text", "redact", "pixelate", "blur", "marker"].includes(activeTool);
   colorControls.hidden = !toolHasColor && !selected;
   const styleTarget = selected || { type: activeTool };
-  const hasStroke = ["pen", "highlighter", "arrow", "line", "rectangle", "ellipse", "pixelate", "blur", "marker"].includes(styleTarget.type);
+  const hasStroke = ["pen", "highlighter", "arrow", "line", "rectangle", "ellipse", "marker"].includes(styleTarget.type);
   const hasFont = styleTarget.type === "text";
   strokeControl.parentElement.hidden = !hasStroke;
   fontControl.parentElement.hidden = !hasFont;
@@ -400,7 +401,8 @@ function drawOverlay() {
   context.setTransform(devicePixelRatioValue * zoom, 0, 0, devicePixelRatioValue * zoom, devicePixelRatioValue * offsetX, devicePixelRatioValue * offsetY);
   context.clearRect(-offsetX / zoom, -offsetY / zoom, overlayRect.width / zoom, overlayRect.height / zoom);
   const visible = currentAnnotations().filter((annotation) => boundsIntersectViewport(annotationBounds(annotation), viewport, 50));
-  drawAnnotations(context, visible, selectedId);
+  drawEditorAnnotations(context, visible, image);
+  drawSelection(context, visible.find((annotation) => annotation.id === selectedId));
   if (transientAnnotation) {
     drawAnnotation(context, transientAnnotation);
   }
@@ -521,6 +523,7 @@ function startPan(event) {
 }
 
 function startDrawing(event) {
+  if (currentAnnotations().length >= 5000 && activeTool !== "crop") { setStatus("The editor supports at most 5000 annotations. Export or remove some annotations first."); return; }
   const start = getImagePoint(event);
   if (activeTool === "marker") {
     createMarker(start);
@@ -576,6 +579,7 @@ function selectRelativeAnnotation(direction) {
 }
 
 function pointerDown(event) {
+  if (!capture) return;
   if (event.button !== 0 && event.pointerType === "mouse") {
     return;
   }
@@ -785,14 +789,18 @@ async function copyEdited() {
   const exportCapture = { ...capture, crop: currentCrop() };
   const exportAnnotations = currentAnnotations();
   const exportFilename = makeEditedFilename(capture.filename);
+  const exportRevision = history.revision;
   setExportBusy(true);
   try {
+    await requireCurrentCapture();
     if (!(await permissionRequest)) {
       throw new Error("Clipboard permission was not granted.");
     }
     setStatus("Rendering edited PNG for clipboard…");
     const blob = await renderEditorResultBlob(exportCapture, exportAnnotations);
-    lastRenderedExport = { blob, filename: exportFilename };
+    await requireCurrentCapture();
+    if (history.revision !== exportRevision) throw new Error("The image changed during export. Copy again to include your latest edits.");
+    lastRenderedExport = { blob, filename: exportFilename, revision: exportRevision };
     await copyPngBlob(blob, getApi());
     setStatus("Edited screenshot copied.");
   } catch (error) {
@@ -810,15 +818,19 @@ async function saveEdited() {
   const exportCapture = { ...capture, crop: currentCrop() };
   const exportAnnotations = currentAnnotations();
   const exportFilename = makeEditedFilename(capture.filename);
+  const exportRevision = history.revision;
   setExportBusy(true);
   try {
-    let result = lastRenderedExport;
+    await requireCurrentCapture();
+    let result = lastRenderedExport?.revision === exportRevision ? lastRenderedExport : null;
     if (!result) {
       setStatus("Rendering edited PNG for saving…");
       const blob = await renderEditorResultBlob(exportCapture, exportAnnotations);
-      result = { blob, filename: exportFilename };
-      lastRenderedExport = result;
+      result = { blob, filename: exportFilename, revision: exportRevision };
     }
+    await requireCurrentCapture();
+    if (history.revision !== exportRevision) throw new Error("The image changed during export. Save again to include your latest edits.");
+    lastRenderedExport = result;
     downloadBlob(result.blob, result.filename);
     setStatus("Edited PNG save started.");
   } catch (error) {
@@ -849,16 +861,7 @@ async function discardCapture() {
     setStatus("Screenshot could not be discarded locally; try again.");
     return;
   }
-  capture = null;
-  if (imageUrl) {
-    URL.revokeObjectURL(imageUrl);
-    imageUrl = null;
-  }
-  stageWrap.hidden = true;
-  errorState.hidden = false;
-  errorMessage.textContent = "The temporary screenshot and local annotation draft were discarded.";
-  copyButton.disabled = true;
-  saveButton.disabled = true;
+  invalidateCapture("The temporary screenshot and local annotation draft were discarded.");
   setStatus("Screenshot discarded.");
   window.setTimeout(() => window.close(), 0);
 }
@@ -880,12 +883,7 @@ async function expireOpenCapture() {
     setStatus("Expired screenshot cleanup failed; reopen KoalaShot to retry local cleanup.");
     return;
   }
-  capture = null;
-  if (imageUrl) {
-    URL.revokeObjectURL(imageUrl);
-    imageUrl = null;
-  }
-  showError("This temporary screenshot reached its 24-hour retention limit and was deleted locally.");
+  invalidateCapture("This temporary screenshot reached its 24-hour retention limit and was deleted locally.");
   setStatus("Temporary screenshot expired and was deleted.");
 }
 
@@ -919,6 +917,7 @@ function selectNextAnnotation() {
 }
 
 function createKeyboardAnnotation() {
+  if (currentAnnotations().length >= 5000 && !["select", "pan", "crop"].includes(activeTool)) { setStatus("The editor supports at most 5000 annotations. Export or remove some annotations first."); return; }
   if (!capture || ["select", "pan"].includes(activeTool)) {
     if (activeTool === "select") {
       selectNextAnnotation();
@@ -1000,7 +999,8 @@ function moveSelectedWithKeyboard(key, largeStep) {
 
 function handleKeyboard(event) {
   const target = event.target;
-  const typing = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target?.isContentEditable;
+  const typing = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target?.isContentEditable
+    || target?.closest?.("button, select, a");
   if (event.key === "Escape") {
     if (!textEditor.hidden) {
       cancelText();
@@ -1015,7 +1015,7 @@ function handleKeyboard(event) {
     }
     return;
   }
-  if (typing) {
+  if (typing || !capture) {
     return;
   }
   if (event.target === overlay && event.key === "Enter") {
@@ -1043,7 +1043,7 @@ function handleKeyboard(event) {
     return;
   }
   const key = event.key.toLowerCase();
-  if (SHORTCUTS[key]) {
+  if (SHORTCUTS[key] && !event.ctrlKey && !event.metaKey && !event.altKey) {
     selectTool(SHORTCUTS[key]);
     return;
   }
@@ -1163,7 +1163,9 @@ window.addEventListener("keyup", (event) => {
   }
 });
 window.addEventListener("resize", resizeOverlay);
+window.addEventListener("blur", finishTemporaryPan);
 window.addEventListener("pagehide", () => {
+  unsubscribeDeletion();
   window.clearTimeout(expiryTimer);
   void flushDraftSave();
   if (imageUrl) {
@@ -1173,6 +1175,8 @@ window.addEventListener("pagehide", () => {
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") {
     void flushDraftSave();
+  } else if (capture) {
+    void requireCurrentCapture().catch(() => {});
   }
 });
 
@@ -1180,6 +1184,30 @@ image.addEventListener("load", () => {
   updateStageSize();
   setStatus("Ready. Original screenshot is immutable; annotations are stored locally as a draft.");
 });
+const unsubscribeDeletion = subscribeCaptureDeletion((ids) => {
+  if (capture && ids.includes(capture.id) && !discardInProgress) invalidateCapture("This screenshot was deleted in another KoalaShot tab.");
+});
+image.addEventListener("error", () => showError("The original PNG could not be decoded. Capture the page again."));
+
+function invalidateCapture(message) {
+  discardInProgress = true;
+  window.clearTimeout(draftTimer);
+  window.clearTimeout(expiryTimer);
+  pendingDraft = null; lastRenderedExport = null; capture = null;
+  history.setCurrent({ annotations: [], crop: null }, { notify: false });
+  clearEffectCache(image);
+  try { globalThis.sessionStorage.removeItem(draftJournalKey()); } catch { /* Storage may be unavailable. */ }
+  if (imageUrl) URL.revokeObjectURL(imageUrl);
+  imageUrl = null; image.removeAttribute("src");
+  showError(message);
+}
+
+async function requireCurrentCapture() {
+  if (!capture || Date.now() >= capture.createdAt + TEMP_CAPTURE_TTL_MS || !(await getCapture(capture.id))) {
+    invalidateCapture("This screenshot was deleted or expired. Capture the page again.");
+    throw new Error("The temporary screenshot was deleted or expired.");
+  }
+}
 
 void (async () => {
   try {
@@ -1220,6 +1248,9 @@ void (async () => {
     image.alt = capture.sourceTitle ? `Original full-page screenshot of ${capture.sourceTitle}` : "Original full-page screenshot";
     sourceHostname.textContent = hostnameFromUrl(capture.sourceUrl);
     captureMeta.textContent = formatMetadata(capture, currentCrop());
+    const notice = document.querySelector("#capture-warning");
+    notice.textContent = capture.warning || "";
+    notice.hidden = !capture.warning;
     loadingState.hidden = true;
     errorState.hidden = true;
     stageWrap.hidden = false;

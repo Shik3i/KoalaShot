@@ -66,6 +66,7 @@ function createPortChannel(port, sessionId, signal) {
     if (!pending || message?.sessionId !== sessionId) {
       return;
     }
+    if (message.ok !== false && message.type !== pending.expectedType) return;
     const current = pending;
     pending = null;
     clearTimeout(current.timer);
@@ -101,6 +102,7 @@ function createPortChannel(port, sessionId, signal) {
       } catch {
         // The content script's disconnect handler still provides cleanup.
       }
+      closed = true;
     }
   };
   signal?.addEventListener("abort", abort, { once: true });
@@ -124,7 +126,7 @@ function createPortChannel(port, sessionId, signal) {
           pending = null;
           reject(new CaptureError("The page did not respond to the capture request in time.", "request-timeout"));
         }, CAPTURE_REQUEST_TIMEOUT_MS);
-        pending = { resolve, reject, timer };
+        pending = { resolve, reject, timer, expectedType: { start: "ready", scroll: "scrolled", restore: "restored", ping: "pong" }[message.type] };
         try {
           port.postMessage({ ...message, sessionId });
         } catch (error) {
@@ -194,14 +196,17 @@ async function captureFullPage(tab, { signal, onProgress, target = "page" }) {
   let stitcher = null;
   let restored = false;
   const initialTab = { id: tab.id, windowId: tab.windowId, url: tab.url || "" };
+  const deadline = Date.now() + 5 * 60 * 1000;
 
   try {
+    ensureNotCancelled(signal);
     onProgress?.({ phase: "preparing", message: "Preparing page…" });
     await withTimeout(
       injectCaptureScript(tab.id),
       CAPTURE_REQUEST_TIMEOUT_MS,
       new CaptureError("KoalaShot could not start on this page in time.", "injection-timeout"),
     );
+    ensureNotCancelled(signal);
     channel = createPortChannel(connectCapture(tab.id, sessionId), sessionId, signal);
     const captureTarget = target === "internal" ? "internal" : "page";
     const ready = await channel.request({ type: "start", target: captureTarget });
@@ -234,12 +239,14 @@ async function captureFullPage(tab, { signal, onProgress, target = "page" }) {
     });
     let targetHeight = Math.max(viewportHeight, initialHeight);
     let growthWarning = false;
+    let widthWarning = ready.documentWidth > viewportWidth + 1;
     let positions = generateCapturePositions(targetHeight, viewportHeight);
     let index = 0;
     let lastCaptureAt = 0;
 
     while (index < positions.length) {
       ensureNotCancelled(signal);
+      if (Date.now() > deadline) throw new CaptureError("Capture exceeded five minutes. Try a smaller capture area.", "capture-timeout");
       const isFinal = index === positions.length - 1;
       const requestedY = positions[index];
       await verifyCaptureTab(initialTab);
@@ -256,6 +263,14 @@ async function captureFullPage(tab, { signal, onProgress, target = "page" }) {
         sectionCount: positions.length,
         isFinal,
       });
+      ensureNotCancelled(signal);
+      if (!Number.isFinite(scrolled.actualY) || Math.abs(scrolled.actualY - requestedY) > 1) {
+        throw new CaptureError("The page could not reach the requested scroll position. Its layout may have changed or scrolling is locked.", "scroll-stalled");
+      }
+      if (!Number.isFinite(scrolled.documentHeight) || scrolled.documentHeight < targetHeight - 1) {
+        throw new CaptureError("Capture stopped because the page became shorter. Wait for the page to finish loading and try again.", "page-shrank");
+      }
+      widthWarning ||= scrolled.documentWidth > viewportWidth + 1;
       if (scrolled.pageUrl && initialTab.url && scrolled.pageUrl !== initialTab.url) {
         throw new CaptureError("Capture stopped because the page navigated.", "navigation");
       }
@@ -288,11 +303,16 @@ async function captureFullPage(tab, { signal, onProgress, target = "page" }) {
       onProgress?.({ phase: "capturing", message: `Capturing section ${index + 1} of ${positions.length}…`, current: index + 1, total: positions.length });
       let dataUrl;
       try {
-        dataUrl = await captureVisibleTab(tab.windowId);
+        dataUrl = await withTimeout(captureVisibleTab(tab.windowId), CAPTURE_REQUEST_TIMEOUT_MS,
+          new CaptureError("The browser screenshot request timed out.", "capture-timeout"));
       } catch (error) {
         throw normalizeCaptureError(error);
       }
+      ensureNotCancelled(signal);
+      await verifyCaptureTab(initialTab);
+      await channel.request({ type: "ping" });
       await stitcher.add(dataUrl, scrolled.actualY);
+      ensureNotCancelled(signal);
       lastCaptureAt = Date.now();
       index += 1;
 
@@ -302,16 +322,22 @@ async function captureFullPage(tab, { signal, onProgress, target = "page" }) {
       }
     }
 
+    await channel.request({ type: "restore" });
+    restored = true;
+    channel.close();
+    ensureNotCancelled(signal);
     onProgress?.({ phase: "processing", message: "Processing PNG…" });
     const blob = await stitcher.toBlob();
+    ensureNotCancelled(signal);
     return {
       blob,
       filename: makeFilename(ready.pageUrl || tab.url),
-      sourceUrl: ready.pageUrl || tab.url || "",
+      sourceUrl: safeSourceOrigin(ready.pageUrl || tab.url),
       sourceTitle: typeof ready.pageTitle === "string" ? ready.pageTitle : "",
       width: stitcher.outputWidth,
       height: stitcher.outputHeight,
-      warning: growthWarning ? "The page kept growing; dynamically added content beyond the safe limit may not be included." : "",
+      warning: [growthWarning ? "The page kept growing; dynamically added content beyond the safe limit may not be included." : "",
+        widthWarning ? "Vertical capture only: content beyond the right edge of the capture area is not included." : ""].filter(Boolean).join(" "),
     };
   } catch (error) {
     throw normalizeCaptureError(error);
@@ -330,9 +356,14 @@ async function captureFullPage(tab, { signal, onProgress, target = "page" }) {
 }
 
 export async function captureScreenshot(options = {}) {
+  ensureNotCancelled(options.signal);
   const tab = await getCaptureTab();
   const result = await captureFullPage(tab, options);
   return result;
+}
+
+function safeSourceOrigin(url) {
+  try { return new URL(url).origin; } catch { return ""; }
 }
 
 export async function copyScreenshot(blob) {
@@ -360,6 +391,7 @@ export async function openEditorForCapture(result) {
     width: result.width,
     height: result.height,
     filename: result.filename,
+    warning: result.warning || "",
   });
   try {
     await createTab(`${getExtensionUrl("editor/editor.html")}?capture=${encodeURIComponent(id)}`);

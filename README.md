@@ -1,12 +1,14 @@
 # KoalaShot
 
-[![Release](https://img.shields.io/badge/Release-v0.3.3-blue)](https://github.com/Shik3i/KoalaShot/releases)
+[![Build](https://img.shields.io/badge/Build-v0.4.0-blue)](https://github.com/Shik3i/KoalaShot/releases)
 
 KoalaShot – Full Page Screenshot is a privacy-first browser extension for capturing a complete vertical webpage as one PNG and annotating it locally. It is built from readable vanilla HTML, CSS, and JavaScript with no runtime dependencies.
 
-Current release: v0.3.3
+Current build: v0.4.0
 
-## v0.3.2 scope
+Publication is separate from this source version. See [release status](docs/STATUS.md) and the [audit fixes](docs/audits/2026-09-07/FIXES.md) before submission.
+
+## Implemented scope
 
 Implemented:
 
@@ -14,6 +16,7 @@ Implemented:
 - Popup-owned full-page capture using an injected content script and a long-lived runtime Port.
 - Measured CSS-to-bitmap scale detection, overlap-aware vertical stitching, conservative memory limits, and PNG output.
 - Copy original PNG, save original PNG, cancellation, progress, page-state restoration, and bounded dynamic-height handling.
+- Primary Capture & edit action, completed-capture preview, and reusable Copy/Save/Edit actions.
 - Optional local editor handoff through temporary extension-local IndexedDB storage.
 - Optional capture target: the normal page or the largest fully visible scrollable area inside the page. The selected mode is persistent and can be switched off in the popup.
 - Non-destructive editor with Select, Pan, Pen, Highlighter, Arrow, Line, Rectangle, Ellipse, Text, secure opaque Redact, Pixelate, Blur, numbered Markers, Crop, Undo, Redo, Delete, Clear all, zoom, fit-to-width, actual size, Copy edited, Save edited PNG, and discard.
@@ -68,8 +71,8 @@ Build output:
 ```text
 dist/chrome/
 dist/firefox/
-dist/koalashot-chrome-0.3.3.zip
-dist/koalashot-firefox-0.3.3.zip
+dist/koalashot-chrome-0.4.0.zip
+dist/koalashot-firefox-0.4.0.zip
 dist/landing/
 ```
 

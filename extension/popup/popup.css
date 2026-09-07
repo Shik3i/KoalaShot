@@ -13,6 +13,10 @@
   --danger: #9b3030;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
+#capture-preview { display: block; width: 100%; height: 100px; object-fit: contain; margin-top: 10px; background: var(--surface-muted); }
+#capture-preview[hidden] { display: none; }
+.capture-help, .help-links { font-size: 0.75rem; }
+.help-links a { color: var(--text); }
 
 @media (prefers-color-scheme: dark) {
   :root {

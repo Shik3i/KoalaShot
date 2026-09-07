@@ -10,7 +10,9 @@ import { tryValidateAnnotations, tryValidateCrop } from "../editor/annotation-mo
 function openDatabase() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(STORAGE_DATABASE_NAME, STORAGE_DATABASE_VERSION);
-    request.onerror = () => reject(request.error || new Error("Could not open temporary capture storage."));
+    let expired = false;
+    const timer = setTimeout(() => { expired = true; reject(new Error("Temporary storage did not open in time. Close other KoalaShot tabs and retry.")); }, 10_000);
+    request.onerror = () => { clearTimeout(timer); reject(request.error || new Error("Could not open temporary capture storage.")); };
     request.onupgradeneeded = () => {
       if (!request.result.objectStoreNames.contains(STORAGE_OBJECT_STORE)) {
         request.result.createObjectStore(STORAGE_OBJECT_STORE, { keyPath: "id" });
@@ -19,7 +21,12 @@ function openDatabase() {
         request.result.createObjectStore(STORAGE_DRAFT_STORE, { keyPath: "id" });
       }
     };
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => {
+      clearTimeout(timer);
+      if (expired) { request.result.close(); return; }
+      request.result.onversionchange = () => request.result.close();
+      resolve(request.result);
+    };
   });
 }
 
@@ -31,18 +38,25 @@ function runTransaction(mode, operation, storeName = STORAGE_OBJECT_STORE) {
       ? Object.fromEntries(storeNames.map((name) => [name, transaction.objectStore(name)]))
       : transaction.objectStore(storeName);
     let result;
+    let operationError;
+    const timer = setTimeout(() => { operationError = new Error("Temporary storage timed out."); transaction.abort(); }, 15_000);
     try {
       result = operation(store);
+      if (result?.then) result.catch((error) => { operationError = error; try { transaction.abort(); } catch { /* Already completed. */ } });
     } catch (error) {
+      clearTimeout(timer);
+      transaction.abort();
       database.close();
       reject(error);
       return;
     }
-    transaction.onerror = () => {
+    transaction.onabort = transaction.onerror = () => {
+      clearTimeout(timer);
       database.close();
-      reject(transaction.error || new Error("Temporary capture storage failed."));
+      reject(operationError || transaction.error || new Error("Temporary capture storage failed."));
     };
     transaction.oncomplete = () => {
+      clearTimeout(timer);
       database.close();
       resolve(result);
     };
@@ -104,25 +118,35 @@ export async function saveCaptureDraft(id, annotations, crop) {
   if (!cropValidation.valid) {
     throw new Error("Invalid temporary crop selection.");
   }
-  await runTransaction("readwrite", (store) => store.put({
-    id,
-    annotations: annotationValidation.annotations,
-    crop: cropValidation.crop,
-    updatedAt: Date.now(),
-  }), STORAGE_DRAFT_STORE);
+  const saved = await runTransaction("readwrite", (stores) => new Promise((resolve, reject) => {
+    const request = stores[STORAGE_OBJECT_STORE].get(id);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      if (isCaptureExpired(request.result)) { resolve(false); return; }
+      stores[STORAGE_DRAFT_STORE].put({ id, annotations: annotationValidation.annotations, crop: cropValidation.crop, updatedAt: Date.now() });
+      resolve(true);
+    };
+  }), [STORAGE_OBJECT_STORE, STORAGE_DRAFT_STORE]);
+  if (!saved) {
+    const error = new Error("This screenshot was deleted or expired. The draft was not saved.");
+    error.code = "capture-unavailable";
+    throw error;
+  }
 }
 
 export async function getCapture(id) {
   if (typeof id !== "string" || !/^[A-Za-z0-9-]{16,128}$/.test(id)) {
     return null;
   }
-  const record = await runTransaction("readonly", (store) => new Promise((resolve, reject) => {
-    const request = store.get(id);
-    request.onerror = () => reject(request.error || new Error("Could not read temporary capture."));
-    request.onsuccess = () => {
-      resolve(request.result || null);
-    };
-  }));
+  // Read one consistent snapshot. A discard cannot fall between the capture
+  // read and the draft read and leave initialization with an orphan original.
+  const [record, draft] = await runTransaction("readonly", (stores) => Promise.all(
+    [STORAGE_OBJECT_STORE, STORAGE_DRAFT_STORE].map((name) => new Promise((resolve, reject) => {
+      const request = stores[name].get(id);
+      request.onerror = () => reject(request.error || new Error("Could not read temporary capture."));
+      request.onsuccess = () => resolve(request.result || null);
+    })),
+  ), [STORAGE_OBJECT_STORE, STORAGE_DRAFT_STORE]);
   if (!record) {
     return null;
   }
@@ -130,11 +154,6 @@ export async function getCapture(id) {
     await deleteCapture(id);
     return null;
   }
-  const draft = await runTransaction("readonly", (store) => new Promise((resolve, reject) => {
-    const request = store.get(id);
-    request.onerror = () => reject(request.error || new Error("Could not read temporary editor draft."));
-    request.onsuccess = () => resolve(request.result || null);
-  }), STORAGE_DRAFT_STORE);
   const validation = tryValidateAnnotations(draft?.annotations ?? record.annotations ?? []);
   const cropValidation = tryValidateCrop(draft?.crop ?? record.crop ?? null);
   return {
@@ -152,6 +171,20 @@ export async function deleteCapture(id) {
     stores[STORAGE_OBJECT_STORE].delete(id);
     stores[STORAGE_DRAFT_STORE].delete(id);
   }, [STORAGE_OBJECT_STORE, STORAGE_DRAFT_STORE]);
+  notifyDeletion([id]);
+}
+
+function notifyDeletion(ids) {
+  if (typeof BroadcastChannel !== "function" || !ids.length) return;
+  const channel = new globalThis.BroadcastChannel("koalashot-deleted-captures");
+  channel.postMessage(ids); channel.close();
+}
+
+export function subscribeCaptureDeletion(listener) {
+  if (typeof BroadcastChannel !== "function") return () => {};
+  const channel = new globalThis.BroadcastChannel("koalashot-deleted-captures");
+  channel.onmessage = (event) => { if (Array.isArray(event.data)) listener(event.data); };
+  return () => channel.close();
 }
 
 export async function pruneExpiredCaptures(now = Date.now()) {
@@ -173,5 +206,20 @@ export async function pruneExpiredCaptures(now = Date.now()) {
       cursor.continue();
     };
   }), [STORAGE_OBJECT_STORE, STORAGE_DRAFT_STORE]);
+  await runTransaction("readwrite", (stores) => new Promise((resolve, reject) => {
+    const request = stores[STORAGE_DRAFT_STORE].openCursor();
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (!cursor) { resolve(); return; }
+      const captureRequest = stores[STORAGE_OBJECT_STORE].get(cursor.primaryKey);
+      captureRequest.onerror = () => reject(captureRequest.error);
+      captureRequest.onsuccess = () => {
+        if (isCaptureExpired(captureRequest.result, now)) cursor.delete();
+        cursor.continue();
+      };
+    };
+  }), [STORAGE_OBJECT_STORE, STORAGE_DRAFT_STORE]);
+  notifyDeletion(removedIds);
   return removedIds.length;
 }
