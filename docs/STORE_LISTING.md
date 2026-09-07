@@ -1,6 +1,6 @@
 # Store listing packet
 
-This file contains submission-ready copy. Store publication and account actions are separate owner-controlled steps.
+Listing draft for the local v0.4.0 candidate. Review the actual store dashboard declarations before submitting. Publication and account actions are separate owner-controlled steps.
 
 ## Name
 
@@ -12,7 +12,7 @@ Capture a complete webpage, copy or save the PNG, and annotate it locally.
 
 ## Detailed description
 
-KoalaShot captures the full vertical length of the page you choose, stitches it into one PNG, and lets you copy, save, or edit the result without uploading it.
+KoalaShot captures the vertical length of the page you choose, stitches it into one PNG, and lets you edit the result before copying or saving it. Capture & edit opens the local editor without creating an original download or clipboard copy. Completed captures can be reused from the popup preview.
 
 The local editor includes pen, highlighter, arrows, lines, rectangles, ellipses, multiline text, opaque redaction, cosmetic pixelation and blur, numbered markers, crop, selection, movement, undo/redo, zoom, and pan. The original capture stays immutable while edited exports are rendered at full resolution.
 
@@ -50,13 +50,15 @@ Some browser-protected pages, built-in viewers, closed Shadow DOM, cross-origin 
 - `store-assets/screenshots/chrome-popup-capture.png`: real Chrome popup, 1280×800.
 - `store-assets/screenshots/chrome-editor-clean.png`: real Chrome editor, 1280×800.
 - `store-assets/screenshots/chrome-editor-annotated.png`: real Chrome editor with annotations, 1280×800.
+- `store-assets/screenshots/firefox-editor-clean.png` and `firefox-editor-annotated.png`: real Firefox editor, 1280×800.
+- `store-assets/screenshots/firefox-popup-capture.png`: real Firefox popup opened as a tab, supporting image.
 - `store-assets/chrome-small-promo-440x280.png`: Chrome Web Store small promo tile.
 - `store-assets/chrome-marquee-1400x560.png`: optional Chrome Web Store marquee.
 
 ## Submission assets still requiring owner review
 
-- Firefox listing screenshots, blocked locally by the Firefox BiDi endpoint timeout.
-- Final store URLs to replace the landing-page placeholders after approval.
+- Review the new Chrome/Firefox screenshots; use the annotated editor first. Popup screenshots show the real popup as a tab, not a toolbar overlay.
+- Configure final official store URLs in `landing/version.json` after approval; unavailable install links remain hidden.
 - Optional product video, if one is uploaded.
 
 Do not use composited mockups as proof of runtime behavior. Listing screenshots must show the real packaged extension.

@@ -221,6 +221,9 @@ export class PngStitcher {
         previousBottom: this.previousBottom,
         outputHeight: this.canvas.height,
       });
+      if (placement.destinationY > this.previousBottom + 1) {
+        throw new StitchingError("Capture stopped because scrolling left a gap in the image.", "capture-gap");
+      }
       if (placement.availableHeight > 0) {
         this.context.drawImage(
           bitmap,
@@ -250,6 +253,9 @@ export class PngStitcher {
     );
     if (finalHeight <= 0) {
       throw new StitchingError("The browser could not determine the PNG dimensions.", "canvas-failed");
+    }
+    if (this.previousBottom < finalHeight - 1) {
+      throw new StitchingError("The page could not be captured completely. Please try again.", "incomplete-capture");
     }
     let outputCanvas = this.canvas;
     if (finalHeight !== this.canvas.height) {
@@ -286,6 +292,7 @@ export class PngStitcher {
   }
 
   clear() {
+    if (this.canvas) { this.canvas.width = 1; this.canvas.height = 1; }
     this.context = null;
     this.canvas = null;
   }

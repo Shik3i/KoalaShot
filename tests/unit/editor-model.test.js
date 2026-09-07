@@ -92,3 +92,22 @@ test("document history undoes annotations and crop as one state", () => {
   assert.deepEqual(history.getState().crop, { x: 2, y: 3, width: 40, height: 50 });
 });
 
+test("document snapshots share unchanged annotations without exposing mutable history", () => {
+  const annotation = createAnnotation("redact", { x: 1, y: 2, width: 10, height: 10 }, { color: "#111111" });
+  const history = new DocumentHistory({ annotations: [annotation], crop: null });
+  const before = history.peekState();
+  history.apply("crop", { ...before, crop: { x: 1, y: 1, width: 5, height: 5 } });
+  assert.equal(history.peekState().annotations[0], before.annotations[0]);
+  assert.throws(() => { before.annotations[0].x = 90; }, TypeError);
+  const copy = history.getState(); copy.annotations[0].x = 40;
+  assert.equal(history.peekState().annotations[0].x, 1);
+  assert.equal(history.revision, 1);
+  history.undo(); assert.equal(history.revision, 2);
+});
+
+test("document history also bounds retained state by bytes", () => {
+  const history = new DocumentHistory({ annotations: [], crop: null }, { byteLimit: 200 });
+  for (let x = 1; x < 20; x++) history.apply("crop", { annotations: [], crop: { x, y: 1, width: 5, height: 5 } });
+  assert.equal(history.past.length, 1);
+});
+

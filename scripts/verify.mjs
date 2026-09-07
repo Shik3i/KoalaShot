@@ -13,9 +13,10 @@ const checks = [
   ["unit tests", "npm", ["run", "test:unit"]],
   ["lint", "npm", ["run", "lint"]],
   ["documentation audit", "npm", ["run", "audit:docs"]],
-  ["production dependency audit", "npm", ["audit", "--omit=dev"]],
+  ["dependency audit (including build tools)", "npm", ["audit"]],
   ["extension build", "npm", ["run", "build"]],
   ["source and archive validation", "npm", ["run", "validate"]],
+  ["archive validator negative tests", "npm", ["run", "test:archives"]],
   ["AMO validation (Firefox)", "npx", ["--yes", "addons-linter@10.10.0", "--warnings-as-errors", `dist/koalashot-firefox-${version}.zip`]],
 ];
 

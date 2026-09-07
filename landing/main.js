@@ -14,11 +14,27 @@ if (versionTarget) {
       return response.json();
     })
     .then((metadata) => {
+      for (const link of document.querySelectorAll("[data-store]")) {
+        const raw = metadata.stores?.[link.dataset.store];
+        if (!raw) continue;
+        try {
+          const url = new URL(raw);
+          const valid = url.protocol === "https:" && (link.dataset.store === "chrome"
+            ? url.hostname === "chromewebstore.google.com" && url.pathname.startsWith("/detail/")
+            : url.hostname === "addons.mozilla.org" && /\/firefox\/addon\//.test(url.pathname));
+          if (valid) { link.href = url.href; link.hidden = false; }
+        } catch { /* Keep unpublished store links hidden. */ }
+      }
+      if ([...document.querySelectorAll("[data-store]")].some(link => !link.hidden)) {
+        const pending = document.querySelector("[data-store-pending]");
+        if (pending) pending.hidden = true;
+      }
       if (typeof metadata.version === "string" && metadata.version) {
         versionTarget.textContent = `v${metadata.version}`;
+        versionTarget.hidden = false;
       }
     })
     .catch(() => {
-      versionTarget.textContent = "development build";
+      versionTarget.hidden = true;
     });
 }

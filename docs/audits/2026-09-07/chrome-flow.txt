@@ -1,0 +1,34 @@
+
+> koalashot@0.4.0 test:browser:chrome
+> node scripts/run-browser-matrix.mjs chrome
+
+
+==> chrome full flow
+{
+  "browser": "chrome",
+  "clipboard": [
+    "editor: Edited screenshot copied."
+  ],
+  "downloads": [
+    "KoalaShot_127.0.0.1_2026-09-07_22-21-28.png",
+    "KoalaShot_127.0.0.1_2026-09-07_22-21-32.png",
+    "KoalaShot_127.0.0.1_2026-09-07_22-21-37.png",
+    "KoalaShot_127.0.0.1_2026-09-07_22-21-37_edited.png"
+  ],
+  "limitations": [],
+  "version": "Chrome/153.0.8010.12",
+  "narrowEditorWidth": 390
+}
+
+==> chrome permission denial
+{
+  "browser": "chrome",
+  "clipboard": [],
+  "downloads": [
+    "KoalaShot_127.0.0.1_2026-09-07_22-21-56.png"
+  ],
+  "limitations": [],
+  "version": "Chrome/153.0.8010.12"
+}
+
+Browser matrix passed

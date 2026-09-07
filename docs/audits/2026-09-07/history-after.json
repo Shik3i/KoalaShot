@@ -1,0 +1,21 @@
+{
+  "annotations": 300,
+  "pointsPerAnnotation": 500,
+  "historySteps": 10,
+  "timingsMs": [
+    0.559,
+    0.348,
+    0.24,
+    0.236,
+    0.254,
+    0.258,
+    0.24,
+    0.25,
+    0.237,
+    0.227
+  ],
+  "heapUsedMiB": 20.58,
+  "tenThousandReadMs": 0.359,
+  "runtime": "v25.2.1",
+  "note": "Node model benchmark using immutable production update/read path. Excludes DOM rendering, draft serialization, browser GC and export. Not a browser FPS measurement; retained heap after optional GC differs from historical peak heap."
+}

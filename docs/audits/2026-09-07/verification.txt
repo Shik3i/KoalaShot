@@ -1,0 +1,118 @@
+
+> koalashot@0.4.0 test
+> npm run verify
+
+
+> koalashot@0.4.0 verify
+> node scripts/verify.mjs
+
+
+==> unit tests
+
+> koalashot@0.4.0 test:unit
+> node --test tests/unit/*.test.js
+
+✔ actual light/dark primary button colors, including hover, meet WCAG AA (1.5785ms)
+✔ editor exposes a keyboard-operable annotation surface and selection list (0.796ms)
+✔ serialized writer never overlaps writes (13.5991ms)
+✔ serialized writer continues after a failed write (0.3642ms)
+✔ requests clipboardWrite synchronously without losing the user-action context (2.1991ms)
+✔ accepts an already-required clipboardWrite permission without an API request (0.8026ms)
+✔ checks the effective permission only after a denied direct request (1.178ms)
+✔ capture rejects a stalled page and restores it without retries (8.6411ms)
+✔ capture rejects shrinking documents rather than exporting missing content (2.993ms)
+✔ abort during final encoding never returns a screenshot (3.154ms)
+✔ successful capture warns about horizontal truncation and retains only source origin (3.632ms)
+✔ selects Firefox setImageData when available (0.7115ms)
+✔ selects the standard ClipboardItem path for Chromium capabilities (0.1255ms)
+✔ does not use the Chrome Apps-only setImageData API in Chromium extensions (0.1063ms)
+✔ reports unsupported image clipboard capabilities (0.1177ms)
+✔ edited filenames retain the safe original base (0.7211ms)
+✔ secure redaction drawing always uses opaque fill (2.5545ms)
+✔ canonical export keeps redaction opaque (0.7759ms)
+✔ canonical export crops the immutable image before applying annotations (0.3551ms)
+✔ validates explicit annotation schemas and rejects arbitrary objects (1.6769ms)
+✔ validates v0.3 editor tools and crop state (2.1614ms)
+✔ moves annotations without changing their logical coordinate system (0.7196ms)
+✔ normalizes rectangles and reduces redundant pen points (0.4125ms)
+✔ centralizes screen-to-image coordinates and keeps zoom out of the model (0.1553ms)
+✔ provides shared arrow geometry and zoom-aware hit testing (0.3094ms)
+✔ calculates text bounds and annotation bounds (0.2971ms)
+✔ history groups changes, bounds entries, and invalidates redo (0.2765ms)
+✔ document history undoes annotations and crop as one state (0.4476ms)
+✔ document snapshots share unchanged annotations without exposing mutable history (0.5328ms)
+✔ document history also bounds retained state by bytes (0.2525ms)
+✔ formats local timestamps with filesystem-safe separators (1.4229ms)
+✔ sanitizes hostnames and falls back to page (0.2791ms)
+✔ generates deterministic positions and ends at the actual maximum scroll (0.9598ms)
+✔ centralizes CSS-pixel to bitmap-pixel rounding (0.1139ms)
+✔ crops the overlapping top of the final section (0.1459ms)
+✔ bounds dynamic document growth (0.5797ms)
+✔ estimates four bytes per output pixel (0.1151ms)
+✔ expires temporary records at the documented TTL (0.5706ms)
+✔ uses a conservative settings default (0.5491ms)
+✔ validates capture sessions and rejects stale or malformed messages (0.1923ms)
+ℹ tests 40
+ℹ suites 0
+ℹ pass 40
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 168.1629
+
+==> lint
+
+> koalashot@0.4.0 lint
+> eslint extension scripts tests
+
+
+==> documentation audit
+
+> koalashot@0.4.0 audit:docs
+> node scripts/audit-docs.mjs
+
+Documentation audit passed: 21 Markdown files checked.
+
+==> dependency audit (including build tools)
+found 0 vulnerabilities
+
+==> extension build
+
+> koalashot@0.4.0 build
+> node scripts/run-python.cjs scripts/build.py
+
+Built dist/chrome/
+Built dist/firefox/
+Built dist/koalashot-chrome-0.4.0.zip
+Built dist/koalashot-firefox-0.4.0.zip
+Built dist/landing/
+
+==> source and archive validation
+
+> koalashot@0.4.0 validate
+> node scripts/run-python.cjs scripts/validate.py
+
+Validated both extension ZIP archives against their complete source inventory.
+Validation passed.
+
+==> archive validator negative tests
+
+> koalashot@0.4.0 test:archives
+> node scripts/run-python.cjs tests/archive_validation_test.py
+
+.......
+----------------------------------------------------------------------
+Ran 7 tests in 0.119s
+
+OK
+
+==> AMO validation (Firefox)
+Validation Summary:
+
+errors          0
+notices         0
+warnings        0
+
+
+Release verification passed

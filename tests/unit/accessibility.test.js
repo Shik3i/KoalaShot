@@ -18,13 +18,15 @@ function contrastRatio(foreground, background) {
   return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
 }
 
-test("dark-mode primary buttons meet WCAG AA text contrast", () => {
-  for (const [name, background] of [
-    ["landing", "#1f633c"],
-    ["popup", "#1d6039"],
-    ["editor", "#1f633c"],
-  ]) {
-    assert.ok(contrastRatio("#ffffff", background) >= 4.5, `${name} primary button contrast is below 4.5:1`);
+test("actual light/dark primary button colors, including hover, meet WCAG AA", () => {
+  for (const file of ["landing/styles.css", "extension/popup/popup.css", "extension/editor/editor.css"]) {
+    const css = readFileSync(resolve(ROOT, file), "utf8");
+    const colors = [...css.matchAll(/--button-primary(?:-hover)?:\s*(#[0-9a-f]{6})/gi)];
+    assert.equal(colors.length, 4, `${file} must define normal/hover colors in both themes`);
+    assert.match(css, /\.button-primary\s*\{[^}]*color:\s*#fff\s*;/);
+    for (const [, background] of colors) {
+      assert.ok(contrastRatio("#ffffff", background) >= 4.5, `${file}: ${background} is below 4.5:1`);
+    }
   }
 });
 

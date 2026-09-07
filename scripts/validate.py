@@ -131,20 +131,34 @@ def validate_landing_version() -> None:
 
 
 def validate_archives() -> None:
-    if not DIST.exists():
-        print("No dist/ directory found; source validation passed and archive validation was skipped.")
-        return
-    forbidden_parts = {"node_modules", "tests", "docs", ".git"}
-    for archive in sorted(DIST.glob("*.zip")):
+    version = project_version()
+    expected_archives = {f"koalashot-{browser}-{version}.zip" for browser in ("chrome", "firefox")}
+    actual_archives = {path.name for path in DIST.glob("*.zip")} if DIST.exists() else set()
+    if actual_archives != expected_archives:
+        fail(f"expected exactly {sorted(expected_archives)}, found {sorted(actual_archives)}; run npm run build")
+    sources = {
+        path.relative_to(EXTENSION).as_posix(): path
+        for path in EXTENSION.rglob("*")
+        if path.is_file() and path.name != ".DS_Store"
+        and path.relative_to(EXTENSION).parts[0] != "manifests"
+        and path.relative_to(EXTENSION).as_posix() != "icons/icon-master.png"
+    }
+    expected_files = set(sources) | {"manifest.json"}
+    for browser in ("chrome", "firefox"):
+        archive = DIST / f"koalashot-{browser}-{version}.zip"
         with zipfile.ZipFile(archive) as handle:
             names = handle.namelist()
-            for name in names:
-                parts = set(Path(name).parts)
-                if parts & forbidden_parts or name.endswith(".map") or name.endswith(".DS_Store"):
-                    fail(f"development-only file in {archive.name}: {name}")
-            if "manifest.json" not in names:
-                fail(f"manifest.json missing from {archive.name}")
-    print(f"Validated {len(list(DIST.glob('*.zip')))} extension ZIP archive(s).")
+            if len(names) != len(set(names)) or set(names) != expected_files:
+                fail(f"unexpected file inventory in {archive.name}")
+            manifest = json.loads(handle.read("manifest.json"))
+            if manifest != read_json(EXTENSION / "manifests" / f"{browser}.json"):
+                fail(f"manifest differs from source in {archive.name}")
+            for name, source in sources.items():
+                if handle.read(name) != source.read_bytes():
+                    fail(f"source mismatch in {archive.name}: {name}")
+            if handle.testzip() is not None:
+                fail(f"corrupt ZIP: {archive.name}")
+    print("Validated both extension ZIP archives against their complete source inventory.")
 
 
 def main() -> None:

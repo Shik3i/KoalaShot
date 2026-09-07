@@ -1,0 +1,35 @@
+{
+  "noProgress": {
+    "sections": [
+      1,
+      1,
+      2,
+      2,
+      2,
+      2,
+      2
+    ],
+    "outcome": "cancelled",
+    "note": "Fault injection: constant actualY=0, stable documentHeight=1600. Explicit test abort after five attempts of section 2."
+  },
+  "history": {
+    "annotations": 300,
+    "pointsPerAnnotation": 500,
+    "historySteps": 10,
+    "timingsMs": [
+      158,
+      170,
+      143,
+      159,
+      152,
+      145,
+      151,
+      150,
+      150,
+      158
+    ],
+    "heapUsedMiB": 179,
+    "runtime": "v25.2.1",
+    "note": "Node microbenchmark, not a browser FPS measurement."
+  }
+}

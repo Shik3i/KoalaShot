@@ -55,6 +55,14 @@ function effectSourceRect(annotation, image) {
   return { x: left, y: top, width: right - left, height: bottom - top };
 }
 
+const effectCache = new WeakMap();
+
+export function clearEffectCache(image) {
+  const cache = effectCache.get(image);
+  if (cache) for (const canvas of cache.values()) { canvas.width = 1; canvas.height = 1; }
+  effectCache.delete(image);
+}
+
 function applyImageEffect(context, annotation, sourceImage) {
   if (!sourceImage || typeof document === "undefined") {
     drawAnnotation(context, annotation);
@@ -68,29 +76,53 @@ function applyImageEffect(context, annotation, sourceImage) {
   const scale = annotation.type === "pixelate"
     ? Math.min(1 / 10, maximumPreviewDimension / Math.max(source.width, source.height))
     : Math.min(1, maximumPreviewDimension / Math.max(source.width, source.height));
-  const preview = document.createElement("canvas");
-  preview.width = Math.max(1, Math.ceil(source.width * scale));
-  preview.height = Math.max(1, Math.ceil(source.height * scale));
-  const previewContext = preview.getContext("2d");
-  if (!previewContext) {
-    throw new Error("The browser could not allocate the effect preview.");
-  }
-  try {
+  let cache = effectCache.get(sourceImage);
+  if (!cache) { cache = new Map(); effectCache.set(sourceImage, cache); }
+  const key = JSON.stringify([annotation.type, source.x, source.y, source.width, source.height]);
+  let preview = cache.get(key);
+  if (!preview) {
+    preview = document.createElement("canvas");
+    preview.width = Math.max(1, Math.ceil(source.width * scale));
+    preview.height = Math.max(1, Math.ceil(source.height * scale));
+    const previewContext = preview.getContext("2d");
+    if (!previewContext) {
+      throw new Error("The browser could not allocate the effect preview.");
+    }
     previewContext.imageSmoothingEnabled = annotation.type !== "pixelate";
     if (annotation.type === "blur") {
       previewContext.filter = `blur(${Math.max(3, Math.min(18, 8 * scale))}px)`;
     }
     previewContext.drawImage(sourceImage, source.x, source.y, source.width, source.height, 0, 0, preview.width, preview.height);
-    context.save();
-    context.beginPath();
-    context.rect(annotation.x, annotation.y, annotation.width, annotation.height);
-    context.clip();
-    context.imageSmoothingEnabled = annotation.type !== "pixelate";
-    context.drawImage(preview, 0, 0, preview.width, preview.height, source.x, source.y, source.width, source.height);
-    context.restore();
-  } finally {
-    preview.width = 1;
-    preview.height = 1;
+    if (cache.size >= 8) {
+      const oldest = cache.keys().next().value;
+      const expired = cache.get(oldest); expired.width = 1; expired.height = 1;
+      cache.delete(oldest);
+    }
+    cache.set(key, preview);
+  }
+  context.save();
+  context.beginPath();
+  context.rect(annotation.x, annotation.y, annotation.width, annotation.height);
+  context.clip();
+  context.imageSmoothingEnabled = annotation.type !== "pixelate";
+  context.drawImage(preview, 0, 0, preview.width, preview.height, source.x, source.y, source.width, source.height);
+  context.restore();
+}
+
+// Redaction is a final protection mask, independent of annotation order.
+// Preview and export share this compositor and use original-image coordinates.
+export function drawEditorAnnotations(context, annotations, sourceImage) {
+  for (const annotation of annotations) {
+    if (annotation.type === "redact") continue;
+    if (annotation.type === "pixelate" || annotation.type === "blur") applyImageEffect(context, annotation, sourceImage);
+    else drawAnnotation(context, annotation);
+  }
+  for (const annotation of annotations) {
+    if (annotation.type !== "redact") continue;
+    const x = Math.floor(annotation.x), y = Math.floor(annotation.y);
+    drawAnnotation(context, { ...annotation, x, y,
+      width: Math.ceil(annotation.x + annotation.width) - x,
+      height: Math.ceil(annotation.y + annotation.height) - y });
   }
 }
 
@@ -136,14 +168,8 @@ export async function renderEditorResultBlob(capture, annotations = capture?.ann
     context.drawImage(original.image, crop.x, crop.y, crop.width, crop.height, 0, 0, crop.width, crop.height);
     context.save();
     context.translate?.(-crop.x, -crop.y);
-    validation.annotations.forEach((annotation) => {
-      validateAnnotation(annotation);
-      if (annotation.type === "pixelate" || annotation.type === "blur") {
-        applyImageEffect(context, annotation, original.image);
-      } else {
-        drawAnnotation(context, annotation);
-      }
-    });
+    validation.annotations.forEach(validateAnnotation);
+    drawEditorAnnotations(context, validation.annotations, original.image);
     context.restore();
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
     if (!blob) {

@@ -420,7 +420,7 @@ class FirefoxBrowser {
     ].join("\n"));
     const executable = firefoxExecutable();
     const port = 9522 + Math.floor(Math.random() * 200);
-    this.process = spawn(executable, ["--headless", "--no-remote", "--marionette", `--profile`, this.profile, `--remote-debugging-port=${port}`], { stdio: ["ignore", "pipe", "pipe"] });
+    this.process = spawn(executable, ["--headless", "--no-remote", "--marionette", "--remote-allow-system-access", `--profile`, this.profile, `--remote-debugging-port=${port}`], { stdio: ["ignore", "pipe", "pipe"] });
     await waitFor("Firefox BiDi endpoint", async () => {
       try {
         const response = await fetch(`http://127.0.0.1:${port}/json/version`);
@@ -433,6 +433,7 @@ class FirefoxBrowser {
     await this.socket.connect();
     const session = await this.socket.request("session.new", { capabilities: { alwaysMatch: {} } });
     this.sessionId = session.result.sessionId;
+    this.capabilities = session.result.capabilities;
     await runProcess(process.execPath, [
       join(ROOT, "scripts", "run-python.cjs"),
       join(ROOT, "scripts", "create-firefox-test-archive.py"),
@@ -443,10 +444,16 @@ class FirefoxBrowser {
     const installation = await this.socket.request("webExtension.install", { extensionData: { type: "archivePath", path: this.extensionArchive } }, this.sessionId);
     const uuid = installation.result?.extension;
     assertNotEmpty(uuid, "Firefox did not expose the KoalaShot extension UUID.");
-    this.extensionUrl = `moz-extension://${this.extensionUuid}`;
+    const popup = await waitFor("Firefox extension-owned popup tab", async () => {
+      const tree = await this.socket.request("browsingContext.getTree", {}, this.sessionId);
+      return tree.result.contexts.find(context => context.url?.startsWith("moz-extension://") && context.url.endsWith("/popup/popup.html"));
+    });
+    this.extensionUrl = popup.url.slice(0, popup.url.indexOf("/popup/popup.html"));
+    this.popupContext = popup.context;
   }
 
   async open(url) {
+    if (url === `${this.extensionUrl}/popup/popup.html`) return { context: this.popupContext };
     const created = await this.socket.request("browsingContext.create", { type: "tab" }, this.sessionId);
     const page = { context: created.result.context };
     await this.navigate(page, url);
@@ -454,6 +461,12 @@ class FirefoxBrowser {
   }
 
   async navigate(page, url) {
+    if (url.startsWith("moz-extension://") && await this.evaluate(page, "location.href") === url) {
+      await this.evaluate(page, "setTimeout(() => location.reload(), 0)");
+      await delay(250);
+      await this.wait(page, "document.readyState === 'complete'");
+      return;
+    }
     try {
       await this.socket.request("browsingContext.navigate", { context: page.context, url, wait: "none" }, this.sessionId);
     } catch (error) {
@@ -473,10 +486,19 @@ class FirefoxBrowser {
   }
 
   async activate(page) {
+    const url = await this.evaluate(page, "location.href");
+    if (url?.startsWith("moz-extension://")) {
+      await this.evaluate(page, "(async () => { const tab = await browser.tabs.getCurrent(); await browser.tabs.update(tab.id, { active: true }); })()");
+      return;
+    }
     await this.socket.request("browsingContext.activate", { context: page.context }, this.sessionId);
   }
 
   async setViewport(page, width, height, devicePixelRatio = 1) {
+    if ((await this.evaluate(page, "location.href"))?.startsWith("moz-extension://")) {
+      await this.evaluate(page, `(async () => { const current = await browser.windows.getCurrent(); await browser.windows.update(current.id, { width: ${width} + outerWidth - innerWidth, height: ${height} + outerHeight - innerHeight }); })()`);
+      return;
+    }
     await this.socket.request("browsingContext.setViewport", {
       context: page.context,
       viewport: { width, height },
@@ -497,6 +519,13 @@ class FirefoxBrowser {
 
   async draw(page, tool, start, end) {
     await this.evaluate(page, `document.querySelector('[data-tool="${tool}"]').click()`);
+    // Recent Firefox BiDi does not support native input in extension scope.
+    // Keep this coverage explicit; trusted toolbar/pointer acceptance is manual.
+    if ((await this.evaluate(page, "location.href"))?.startsWith("moz-extension://")) {
+      await this.evaluate(page, "document.querySelector('#interaction-canvas').setPointerCapture = () => {}; document.querySelector('#interaction-canvas').releasePointerCapture = () => {};");
+      await this.evaluate(page, evaluatePointerScript(tool, start, end));
+      return;
+    }
     const rect = await this.evaluate(page, "document.querySelector('#interaction-canvas').getBoundingClientRect().toJSON()");
     const point = (coordinates) => ({ x: Math.round(rect.left + coordinates[0]), y: Math.round(rect.top + coordinates[1]) });
     const first = point(start);
@@ -560,9 +589,10 @@ async function runFlow() {
   let fixture = null;
   let popup = null;
   let editor = null;
-  const result = { browser: browserName, clipboard: [], downloads: [] };
+  const result = { browser: browserName, clipboard: [], downloads: [], limitations: browserName === "firefox" ? ["Editor pointer events are synthetic; privileged-scope BiDi input is unsupported.", "Editor DPR emulation is Chrome-only; Firefox fixtures still use real BiDi DPR emulation."] : [] };
   try {
     await browser.start();
+    result.version = browserName === "firefox" ? browser.capabilities?.browserVersion : (await browser.socket.request("Browser.getVersion")).result.product;
     fixture = await browser.open(`${baseUrl}${FIXTURE}`, false);
     await browser.setViewport(fixture, 1262, 804, 2);
     assert.equal(await browser.evaluate(fixture, "devicePixelRatio"), 2);
@@ -740,6 +770,9 @@ async function runFlow() {
     assert.match(await browser.evaluate(editor, "document.querySelector('#zoom-value').textContent"), /%$/);
 
     const editorUrl = await browser.evaluate(editor, "location.href");
+    await browser.setViewport(editor, 1280, 800);
+    await browser.wait(editor, "document.querySelector('#editor-keyboard-help').getBoundingClientRect().bottom <= innerHeight");
+    assert.equal(await browser.evaluate(editor, "getComputedStyle(document.querySelector('.tool-sidebar')).overflowY"), "auto");
     await browser.navigate(editor, editorUrl);
     await browser.wait(editor, "document.querySelector('#stage-wrap') && !document.querySelector('#stage-wrap').hidden");
     assert.equal(await browser.evaluate(editor, `new Promise((resolve, reject) => {
@@ -748,17 +781,22 @@ async function runFlow() {
       request.onsuccess = () => { const getAll = request.result.transaction('drafts').objectStore('drafts').getAll(); getAll.onsuccess = () => { resolve(getAll.result[0]?.annotations?.length || 0); request.result.close(); }; };
     })`), 7);
 
-    await browser.setViewport(editor, 390, 844);
+    // Firefox's real browser window has a 500px minimum; privileged extension
+    // pages cannot use BiDi viewport emulation. Keep this boundary explicit.
+    const narrowWidth = browserName === "firefox" ? 500 : 390;
+    await browser.setViewport(editor, narrowWidth, 844);
     const narrowLayout = await waitFor("responsive editor layout", () => browser.evaluate(editor, `({
       width: innerWidth,
       scrollWidth: document.documentElement.scrollWidth,
       headerWidth: document.querySelector('.editor-header').getBoundingClientRect().width,
       sidebarOverflow: getComputedStyle(document.querySelector('.tool-sidebar')).overflowX,
       stageHeight: document.querySelector('.stage-panel').getBoundingClientRect().height
-    })`), (state) => state?.width === 390 && state.scrollWidth <= 390 && state.headerWidth <= 390 && state.stageHeight >= 400);
+    })`), (state) => state?.width === narrowWidth && state.scrollWidth <= narrowWidth && state.headerWidth <= narrowWidth && state.stageHeight >= 400);
+    result.narrowEditorWidth = narrowWidth;
     assert.equal(narrowLayout.scrollWidth <= narrowLayout.width, true);
     assert.match(narrowLayout.sidebarOverflow, /auto|scroll/);
 
+    if (browserName === "chrome") {
     await browser.setViewport(editor, 900, 700, 2);
     const hidpiOverlay = await waitFor("HiDPI editor overlay", () => browser.evaluate(editor, `(() => {
       const canvas = document.querySelector('#interaction-canvas');
@@ -766,6 +804,7 @@ async function runFlow() {
       return { ratio: devicePixelRatio, bitmapWidth: canvas.width, cssWidth: rect.width, bitmapHeight: canvas.height, cssHeight: rect.height };
     })()`), (state) => state?.ratio === 2 && Math.abs(state.bitmapWidth - state.cssWidth * 2) <= 2 && Math.abs(state.bitmapHeight - state.cssHeight * 2) <= 2);
     assert.equal(hidpiOverlay.ratio, 2);
+    }
 
     assert.equal(await readCaptureCount(editor), 1);
 
@@ -828,5 +867,8 @@ async function readCaptureCount(page) {
   })`);
 }
 
-const result = await runFlow();
-console.log(JSON.stringify(result, null, 2));
+export { ChromeBrowser, FirefoxBrowser };
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const result = await runFlow();
+  console.log(JSON.stringify(result, null, 2));
+}
