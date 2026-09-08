@@ -177,6 +177,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download and verify draft bytes, manifests and provenance before publication
-        run: node scripts/verify-release.mjs
+        run: node scripts/verify-release.mjs --publish
         env:
           RELEASE_COMMIT: ${{ needs.preflight.outputs.commit }}

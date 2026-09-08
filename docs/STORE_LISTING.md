@@ -1,6 +1,6 @@
 # Store listing packet
 
-Listing draft for the v0.5.1 candidate. Review the actual store dashboard declarations before submitting. Publication and account actions are separate owner-controlled steps.
+Listing draft for the v0.5.2 candidate. Review the actual store dashboard declarations before submitting. Publication and account actions are separate owner-controlled steps.
 
 ## Name
 

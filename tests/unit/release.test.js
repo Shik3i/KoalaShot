@@ -12,14 +12,15 @@ test("release rejects lightweight tags, wrong main, source mismatch and nonstabl
 
 test("draft publication happens only after downloaded bytes and all attestations pass, without asset races", () => {
   const names = ["chrome", "firefox", "landing"].map(target => `koalashot-${target}-1.2.3.zip`);
-  for (const fault of [null, "download", "checksum", "attestation", "race", "tag-race"]) {
+  for (const fault of [null, "download", "checksum", "attestation", "race", "tag-race", "duplicate-release", "check-only"]) {
     let published = false;
     let reads = 0;
     let attestations = 0;
     const execute = (command, args) => {
+      if (args[0] === "api" && args.includes("--paginate")) return JSON.stringify([[{ id: 123, tag_name: "v1.2.3" }, ...(fault === "duplicate-release" ? [{ id: 456, tag_name: "v1.2.3" }] : [])]]);
       if (args[0] === "api" && args[1].includes("/git/ref/tags/")) return JSON.stringify({ object: { type: "tag", sha: "b".repeat(40) } });
       if (args[0] === "api" && args[1].includes("/git/tags/")) return JSON.stringify({ object: { type: "commit", sha: fault === "tag-race" ? "c".repeat(40) : commit } });
-      if (args[0] === "api" && args[1].includes("/releases/tags/")) {
+      if (args[0] === "api" && args[1] === "repos/Shik3i/KoalaShot/releases/123") {
         reads++;
         return JSON.stringify({ id: 123, tag_name: "v1.2.3", draft: !published, prerelease: false, assets: [...names, "SHA256SUMS"].map((name, id) => ({ id: id + (fault === "race" && reads > 1 ? 100 : 0), name, state: "uploaded", size: 123, updated_at: "fixed" })) });
       }
@@ -29,8 +30,8 @@ test("draft publication happens only after downloaded bytes and all attestations
       if (args.includes("PATCH")) { assert.equal(attestations, 3); assert.ok(args.includes("repos/Shik3i/KoalaShot/releases/123")); published = true; }
       return "";
     };
-    if (fault) assert.throws(() => verifyRelease("v1.2.3", commit, "Shik3i/KoalaShot", "unused", execute));
-    else verifyRelease("v1.2.3", commit, "Shik3i/KoalaShot", "unused", execute);
+    if (fault && fault !== "check-only") assert.throws(() => verifyRelease("v1.2.3", commit, "Shik3i/KoalaShot", "unused", execute, true));
+    else verifyRelease("v1.2.3", commit, "Shik3i/KoalaShot", "unused", execute, fault !== "check-only");
     assert.equal(published, fault === null);
   }
 });
