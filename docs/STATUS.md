@@ -1,4 +1,4 @@
-# Status — v0.5.1
+# Status — v0.5.2
 
 Updated 2026-09-08. This source version is not a claim of GitHub publication, Chrome Web Store approval, Firefox Add-ons approval, or website deployment.
 

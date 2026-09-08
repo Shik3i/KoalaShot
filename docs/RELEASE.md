@@ -36,6 +36,8 @@ All three ZIPs (Chrome, Firefox and static website) receive basename-only `SHA25
 
 The workflow does not rewrite source after the tag. A failing browser job prevents publication.
 
+Drafts are located through the authenticated release list and then read by numeric ID. The release-by-tag REST endpoint is for published releases. `scripts/verify-release.mjs` is read-only by default; the workflow passes `--publish` explicitly and must compare downloads with its verified build before changing the draft state.
+
 The preflight checkout explicitly uses `github.ref` to preserve the annotated tag object; relying on the implicit event SHA can replace the local tag with its commit. Ordinary CI and CodeQL run on branch pushes and PRs, while tag pushes run the dedicated release verification. This prevents new tag checks from replacing completed main checks during preflight.
 
 ## After publication

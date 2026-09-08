@@ -4,6 +4,11 @@ All notable user-visible changes are documented here. KoalaShot uses semantic ve
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-09-08
+
+- Resolve release drafts through the authenticated release list and verify the pinned numeric release ID. The tag-name endpoint does not expose unpublished drafts. Publication now requires an explicit `--publish`; the default verification mode is read-only.
+- Includes the changes below. v0.5.1 remains an unpublished draft after its final verification stopped at the unavailable tag-name endpoint.
+
 ## [0.5.1] - 2026-09-08
 
 - Preserve the annotated tag object during release checkout and run ordinary CI/CodeQL on branches and PRs, avoiding duplicate tag jobs racing the release preflight. Tag releases still run their own complete browser and package verification.
