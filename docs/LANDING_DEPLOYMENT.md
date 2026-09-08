@@ -47,7 +47,7 @@ shot.koalastuff.net {
 }
 ```
 
-Apply the same security headers to error responses. Validate the Caddy configuration before reloading it. `_headers` is deployment metadata, not a substitute for configuring Caddy: add `Cache-Control: no-store` specifically for `/version.json` and appropriate MIME types. The canonical publisher details remain at [KoalaStuff's legal notice](https://koalastuff.net/imprint).
+Apply the same security headers to error responses. Validate the Caddy configuration before reloading it. `_headers` is deployment metadata, not a substitute for configuring Caddy: add `Cache-Control: no-store` specifically for `/version.json` and appropriate MIME types. The canonical publisher details remain at [KoalaStuff's legal notice](https://koalastuff.net/legal).
 
 Serve `/version.json` with `Cache-Control: no-store`; ordinary assets use `public, max-age=86400`. Confirm correct MIME types for `.webp` and `.png`. The hero uses the optimized local WebP; Open Graph uses `assets/og-card.png`.
 

@@ -1,20 +1,20 @@
-# Übergabe für Deployment — v0.5.3
+# Übergabe für Deployment — v0.5.4
 
 ## Vorbereitet
 
-Dieses Paket enthält das neue Kamera-Icon, die überarbeiteten Datenschutz- und Store-Texte, fünf echte Produktmotive je Browser, Store-Icons, Promo-Grafiken sowie reproduzierbare Bildquellen. Alle Versionsangaben und Screenshots gehören zu v0.5.3.
+Dieses Paket enthält das neue Kamera-Icon, die überarbeiteten Datenschutz- und Store-Texte, fünf echte Produktmotive je Browser, Store-Icons, Promo-Grafiken sowie reproduzierbare Bildquellen. Alle Versionsangaben und Screenshots gehören zu v0.5.4.
 
 Die Extension verarbeitet Screenshots lokal. Kein Screenshot-Upload, Konto, Tracking, Analytics, Telemetrie oder Remote-Code-Service. Bildinhalte, temporäre Herkunftsangaben und Editor-Entwürfe werden auf dem Gerät für die angeforderte Aufnahme verwendet. Die Datenschutztexte erklären Originale, 24-Stunden-Ablauf, tatsächliche Löschung, Clipboard/Downloads, Redact und Chrome Limited Use.
 
-Commit, Push, PR, CI, Tag, GitHub-Release und lokaler Neubau sind Aufgaben des Coding-Agenten. Den verbindlichen Publikationsstatus und die Prüfungen zeigt [GitHub v0.5.3](https://github.com/Shik3i/KoalaShot/releases/tag/v0.5.3). Bestehende Tags werden nicht ersetzt.
+Commit, Push, PR, CI, Tag, GitHub-Release und lokaler Neubau sind Aufgaben des Coding-Agenten. Den verbindlichen Publikationsstatus und die Prüfungen zeigt [GitHub v0.5.4](https://github.com/Shik3i/KoalaShot/releases/tag/v0.5.4). Bestehende Tags werden nicht ersetzt.
 
 ## Deployment durch den Eigentümer
 
 Die Website ist laut Eigentümer noch nicht eingerichtet. Die frühere TLS-Antwort ist kein nachgewiesener Defekt einer bestehenden Website und kein Blocker für den GitHub-Release. Website bereitstellen und Extension in die Stores hochladen macht ausschließlich der Eigentümer.
 
-1. Die statische Website aus dem geprüften v0.5.3-Landing-Archiv bereitstellen und Domain/HTTPS erstmals einrichten. Danach `npm run verify:deployment -- https://shot.koalastuff.net 0.5.3` ausführen. `/privacy/` muss bei der Store-Einreichung öffentlich erreichbar sein.
+1. Die statische Website aus dem geprüften v0.5.4-Landing-Archiv bereitstellen und Domain/HTTPS erstmals einrichten. Danach `npm run verify:deployment -- https://shot.koalastuff.net 0.5.4` ausführen. `/privacy/` muss bei der Store-Einreichung öffentlich erreichbar sein.
 2. Hostingbezogene Angaben an die tatsächlich eingerichtete Infrastruktur anpassen: Betreiber, Hosting-Dienst, Zugriffslogs und Fristen. Es wurde kein Anbieter und keine Speicherfrist erfunden. Die sieben Tage der zentralen KoalaStuff-Seite wurden nicht ungeprüft übernommen. Die vorhandene zentrale Legal-Verlinkung bleibt erhalten.
-3. Das passende Chrome-/Firefox-Archiv v0.5.3 zusammen mit den Unterlagen aus diesem Ordner hochladen. Konto-/Kontaktverifikation und die zutreffende Trader-Einstufung im bestehenden Publisher-Konto prüfen. Diese Account-Zustände wurden nicht eingesehen oder geändert.
+3. Das passende Chrome-/Firefox-Archiv v0.5.4 zusammen mit den Unterlagen aus diesem Ordner hochladen. Konto-/Kontaktverifikation und die zutreffende Trader-Einstufung im bestehenden Publisher-Konto prüfen. Diese Account-Zustände wurden nicht eingesehen oder geändert.
 4. Nach Store-Freigabe die offiziellen URLs in `landing/version.json` eintragen lassen. Bis dahin ist `null` korrekt; Installations- und Bewertungslinks bleiben ausgeblendet. Ein weiterer Build übernimmt die URLs in Extension und Website.
 
 ## Prüfumfang und verbleibende Grenzen

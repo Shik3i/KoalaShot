@@ -27,7 +27,7 @@ export async function verifyDeployment(base, version, request = fetch) {
         if ((await response.json()).version !== version) throw new Error(`Deployed version differs from ${version}`);
       } else {
         const html = await response.text();
-        if (!html.includes("KoalaShot") || !html.includes('href="https://koalastuff.net/imprint"')) throw new Error("Missing product or central legal link");
+        if (!html.includes("KoalaShot") || !html.includes('href="https://koalastuff.net/legal"')) throw new Error("Missing product or central legal link");
         if (missing && (!html.includes("Page not found") || !html.includes('href="/help/"'))) throw new Error("Missing usable custom 404 page");
         if (!missing && !html.includes(`>v${version}</span>`)) throw new Error("HTML version differs from release (stale or unbuilt page)");
       }

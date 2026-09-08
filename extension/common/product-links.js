@@ -1,5 +1,5 @@
 export const PRIVACY_URL = "https://shot.koalastuff.net/privacy/";
-export const LEGAL_URL = "https://koalastuff.net/imprint";
+export const LEGAL_URL = "https://koalastuff.net/legal";
 export const SUPPORT_URL = "https://github.com/Shik3i/KoalaShot/issues";
 
 export function validStoreUrl(raw, browser) {

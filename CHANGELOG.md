@@ -4,6 +4,10 @@ All notable user-visible changes are documented here. KoalaShot uses semantic ve
 
 ## [Unreleased]
 
+## [0.5.4] - 2026-09-08
+
+- Correct the Legal link to https://koalastuff.net/legal in the popup, editor, website and store submission instructions.
+
 ## [0.5.3] - 2026-09-08
 
 - Replace the detailed mascot with a camera-first icon across the toolbar, editor, website and store artwork. Keep small toolbar icons large and use separate padding for the 128px store icon.
