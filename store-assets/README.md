@@ -1,18 +1,48 @@
-# KoalaShot store assets
+# KoalaShot — Store-Paket
 
-Screenshots regenerated from the local v0.4.0 packaged editor using [the owned demo page](../tests/fixtures/store-demo.html). No customer data, external assets or composited UI mockups.
+Alle Texte und Bilder für die manuelle Einreichung an einem Ort, orientiert an KoalaSync/assets/StoreAssets/. Stand: Release-Paket v0.5.3 vom 8. September 2026. Passende Versionen für Extension, Website und Store-Bilder.
+
+## Texte
+
+- [StoreDescription.md](StoreDescription.md): englische Hauptfassung mit Name, Kurzbeschreibung und vollständigem Eintrag.
+- [StoreDescription.de.md](StoreDescription.de.md): vorbereitete deutsche Übersetzung; die Produktoberfläche bleibt Englisch.
+- [ChromeWebStore.md](ChromeWebStore.md): Feldtexte, Berechtigungen und Datenschutzangaben.
+- [FirefoxAddons.md](FirefoxAddons.md): AMO-Angaben und Unterschiede zu Chrome.
+- [ReviewerNotes.txt](ReviewerNotes.txt): englische Anleitung für die Store-Prüfung.
+- [RELEASE_READINESS.md](RELEASE_READINESS.md): Hindernisse und letzte Schritte.
+- [SOURCES.md](SOURCES.md): recherchierte offizielle Vorgaben.
+
+## Bilder
+
+[Bildübersicht öffnen](preview.html). Jedes Vorschaubild verlinkt die PNG-Datei in Originalgröße.
+
+| Ordner / Datei | Inhalt |
+| --- | --- |
+| chrome/Screen_01.png bis Screen_05.png | Fünf Chrome-Motive, jeweils 1280 × 800 |
+| firefox/Screen_01.png bis Screen_05.png | Dieselben Themen mit echten Firefox-Aufnahmen |
+| chrome/StoreIcon.png, firefox/StoreIcon.png | 128 × 128, transparent, mit Store-Abstand |
+| chrome/SmallAD.png | Pflicht-Promo, 440 × 280 |
+| chrome/MarqueePromoTile.png | Optionales Marquee, 1400 × 560 |
+| screenshots/ | Originalaufnahmen und Aufnahmeprotokolle |
+| source/ | Editierbares HTML/CSS-Layout für Beschriftungen und Promo-Grafiken |
+| asset-manifest.json | Versionsstand, Formate und Bildzuordnung |
+
+Reihenfolge: ganze Seite → Kopieren/Speichern → Anmerkungen → Schwärzen → Zuschneiden. Die Popup-Motive sind echte Popup-Seiten, die als Tabs geöffnet und auf ihre gemessene Inhaltsfläche zugeschnitten wurden. Keine Aufnahme des Browser-Toolbar-Menüs. Keine Kundeninhalte; die Beispielseite gehört zum Repository.
+
+Die nummerierten Bilder kombinieren echte Screenshots mit separaten Erklärtexten. Die Produktoberfläche wurde nicht nachgebaut. Promo-Grafiken sind Markenmaterial, kein Funktionsnachweis. Die bisherigen Dateinamen chrome-small-promo-440x280.png und chrome-marquee-1400x560.png enthalten Kopien der neuen Motive.
+
+## Neu erzeugen
 
 ```sh
+npm run icons
 npm run build
 node scripts/capture-store-assets.mjs chrome
 node scripts/capture-store-assets.mjs firefox
+node scripts/render-store-assets.mjs
+npm run build
+npm run validate
 ```
 
-- screenshots/chrome-editor-clean.png and chrome-editor-annotated.png: real editor, 1280×800.
-- screenshots/chrome-popup-capture.png: completed-capture popup opened as a tab; supporting image, not the first listing image.
-- Equivalent firefox-* screenshots are produced using Firefox tab capture because BiDi cannot screenshot extension scope.
-- chrome-small-promo-440x280.png and chrome-marquee-1400x560.png: existing mascot-based marketing assets; no runtime claim.
+Das zweite Build übernimmt den aktualisierten Firefox-Editor-Screenshot in die Website. Die Aufnahmen verwenden isolierte Testprofile mit erweiterten Harness-Berechtigungen; die Produktionsmanifeste bleiben unverändert. Sie ersetzen keine Abnahme der echten Toolbar-Aktivierung.
 
-The harness uses expanded test-only permissions; see [testing boundaries](../docs/TESTING.md). Editor screenshots show packaged product HTML/CSS/JS and actual captured page content. Prefer the annotated editor as the first listing image, the clean editor second, and the popup image only as supporting material.
-
-Review final listing appearance and browser-specific asset requirements in each store dashboard before submission. The old promo artwork remains unchanged.
+Für diese Einreichung die geprüften v0.5.3-Archive und die beiliegenden v0.5.3-Bilder verwenden. Bei späteren Versionsänderungen die Bilder erneut erzeugen. Die tatsächlichen Store-Felder beim Upload prüfen. Keine automatische Veröffentlichung oder Website-Bereitstellung.

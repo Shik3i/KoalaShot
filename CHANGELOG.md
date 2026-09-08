@@ -4,6 +4,12 @@ All notable user-visible changes are documented here. KoalaShot uses semantic ve
 
 ## [Unreleased]
 
+## [0.5.3] - 2026-09-08
+
+- Replace the detailed mascot with a camera-first icon across the toolbar, editor, website and store artwork. Keep small toolbar icons large and use separate padding for the 128px store icon.
+- Clarify local screenshot processing, temporary storage, clipboard/download boundaries, support messages and Chrome Web Store Limited Use in the privacy policy.
+- Prepare English and German listing copy, permission explanations, reviewer instructions and five reproducible store images for each browser using actual product captures.
+
 ## [0.5.2] - 2026-09-08
 
 - Resolve release drafts through the authenticated release list and verify the pinned numeric release ID. The tag-name endpoint does not expose unpublished drafts. Publication now requires an explicit `--publish`; the default verification mode is read-only.

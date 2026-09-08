@@ -1,0 +1,77 @@
+{
+  "version": "0.5.3",
+  "generatedAt": "2026-09-08T20:39:26.397Z",
+  "screenshots": "Actual packaged UI with separately composed explanatory labels; see screenshots/*-capture-evidence.json for capture scope.",
+  "files": [
+    {
+      "file": "chrome/Screen_01.png",
+      "width": 1280,
+      "height": 800,
+      "sourceBrowser": "chrome"
+    },
+    {
+      "file": "chrome/Screen_02.png",
+      "width": 1280,
+      "height": 800,
+      "sourceBrowser": "chrome"
+    },
+    {
+      "file": "chrome/Screen_03.png",
+      "width": 1280,
+      "height": 800,
+      "sourceBrowser": "chrome"
+    },
+    {
+      "file": "chrome/Screen_04.png",
+      "width": 1280,
+      "height": 800,
+      "sourceBrowser": "chrome"
+    },
+    {
+      "file": "chrome/Screen_05.png",
+      "width": 1280,
+      "height": 800,
+      "sourceBrowser": "chrome"
+    },
+    {
+      "file": "firefox/Screen_01.png",
+      "width": 1280,
+      "height": 800,
+      "sourceBrowser": "firefox"
+    },
+    {
+      "file": "firefox/Screen_02.png",
+      "width": 1280,
+      "height": 800,
+      "sourceBrowser": "firefox"
+    },
+    {
+      "file": "firefox/Screen_03.png",
+      "width": 1280,
+      "height": 800,
+      "sourceBrowser": "firefox"
+    },
+    {
+      "file": "firefox/Screen_04.png",
+      "width": 1280,
+      "height": 800,
+      "sourceBrowser": "firefox"
+    },
+    {
+      "file": "firefox/Screen_05.png",
+      "width": 1280,
+      "height": 800,
+      "sourceBrowser": "firefox"
+    },
+    {
+      "file": "chrome/SmallAD.png",
+      "width": 440,
+      "height": 280
+    },
+    {
+      "file": "chrome/MarqueePromoTile.png",
+      "width": 1400,
+      "height": 560
+    }
+  ]
+}

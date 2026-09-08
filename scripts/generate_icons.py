@@ -12,6 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "extension" / "icons"
 MASTER = OUTPUT / "icon-master.png"
+FAVICON = ROOT / "landing" / "assets" / "favicon.png"
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 
@@ -99,7 +100,8 @@ def source_pixel(pixels: bytes, width: int, x: int, y: int) -> tuple[int, int, i
 
 def resize_rgba(pixels: bytes, width: int, height: int, size: int) -> bytes:
     output = bytearray(size * size * 4)
-    content_size = max(1, round(size * 0.75))
+    # Chrome's store icon uses 16px padding; toolbar icons keep a 1px inset.
+    content_size = 96 if size == 128 else max(1, size - 2)
     padding = (size - content_size) // 2
     samples = 4
     for target_y in range(content_size):
@@ -158,6 +160,8 @@ def main() -> None:
         raise SystemExit("icon-master.png must be a square RGBA PNG of at least 512px")
     for size in (16, 32, 48, 96, 128):
         write_rgba_png(OUTPUT / f"icon-{size}.png", size, resize_rgba(pixels, width, height, size))
+    # The website header/favicon is a small UI icon, not the padded store tile.
+    FAVICON.write_bytes((OUTPUT / "icon-96.png").read_bytes())
 
 
 if __name__ == "__main__":
