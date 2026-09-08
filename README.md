@@ -1,10 +1,10 @@
 # KoalaShot
 
-[![Build](https://img.shields.io/badge/Build-v0.5.3-blue)](https://github.com/Shik3i/KoalaShot/releases)
+[![Build](https://img.shields.io/badge/Build-v0.5.4-blue)](https://github.com/Shik3i/KoalaShot/releases)
 
 KoalaShot – Full Page Screenshot is a privacy-first browser extension for capturing a complete vertical webpage as one PNG and annotating it locally. It is built from readable vanilla HTML, CSS, and JavaScript with no runtime dependencies.
 
-Current build: v0.5.3
+Current build: v0.5.4
 
 Publication is separate from this source version. See [release status](docs/STATUS.md) and the [audit fixes](docs/audits/2026-09-07/FIXES.md) before submission.
 
@@ -75,8 +75,8 @@ Build output:
 ```text
 dist/chrome/
 dist/firefox/
-dist/koalashot-chrome-0.5.3.zip
-dist/koalashot-firefox-0.5.3.zip
+dist/koalashot-chrome-0.5.4.zip
+dist/koalashot-firefox-0.5.4.zip
 dist/landing/
 ```
 
@@ -129,7 +129,7 @@ Keyboard shortcuts include `V` Select, `Space` temporary Pan, `P` Pen, `H` Highl
 - Fixed and sticky suppression is best-effort and cannot inspect closed Shadow DOM or cross-origin frames.
 - Highly dynamic pages may exceed the 25% bounded growth allowance.
 - Canvas allocation is conservatively capped; KoalaShot never silently downscales or crops an over-limit page.
-- Publisher and contact information are linked to the central [KoalaStuff legal notice](https://koalastuff.net/imprint); project-specific privacy behavior is documented in [docs/PRIVACY_MODEL.md](docs/PRIVACY_MODEL.md).
+- Publisher and contact information are linked to the central [KoalaStuff legal notice](https://koalastuff.net/legal); project-specific privacy behavior is documented in [docs/PRIVACY_MODEL.md](docs/PRIVACY_MODEL.md).
 
 The direct future editor work is resize handles, configurable arrowheads, text outlines, image insertion, horizontal stitching, store publishing, and localization. The current editor contract is documented in [docs/EDITOR_SPEC.md](docs/EDITOR_SPEC.md).
 

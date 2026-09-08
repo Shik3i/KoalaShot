@@ -1,6 +1,6 @@
 # KoalaShot — Store-Paket
 
-Alle Texte und Bilder für die manuelle Einreichung an einem Ort, orientiert an KoalaSync/assets/StoreAssets/. Stand: Release-Paket v0.5.3 vom 8. September 2026. Passende Versionen für Extension, Website und Store-Bilder.
+Alle Texte und Bilder für die manuelle Einreichung an einem Ort, orientiert an KoalaSync/assets/StoreAssets/. Stand: Release-Paket v0.5.4 vom 8. September 2026. Passende Versionen für Extension, Website und Store-Bilder.
 
 ## Texte
 
@@ -45,4 +45,4 @@ npm run validate
 
 Das zweite Build übernimmt den aktualisierten Firefox-Editor-Screenshot in die Website. Die Aufnahmen verwenden isolierte Testprofile mit erweiterten Harness-Berechtigungen; die Produktionsmanifeste bleiben unverändert. Sie ersetzen keine Abnahme der echten Toolbar-Aktivierung.
 
-Für diese Einreichung die geprüften v0.5.3-Archive und die beiliegenden v0.5.3-Bilder verwenden. Bei späteren Versionsänderungen die Bilder erneut erzeugen. Die tatsächlichen Store-Felder beim Upload prüfen. Keine automatische Veröffentlichung oder Website-Bereitstellung.
+Für diese Einreichung die geprüften v0.5.4-Archive und die beiliegenden v0.5.4-Bilder verwenden. Bei späteren Versionsänderungen die Bilder erneut erzeugen. Die tatsächlichen Store-Felder beim Upload prüfen. Keine automatische Veröffentlichung oder Website-Bereitstellung.

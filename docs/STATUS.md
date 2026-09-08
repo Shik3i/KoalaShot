@@ -1,4 +1,4 @@
-# Status — v0.5.3
+# Status — v0.5.4
 
 Updated 2026-09-08. This source version is not a claim of GitHub publication, Chrome Web Store approval, Firefox Add-ons approval, or website deployment.
 
@@ -18,7 +18,7 @@ Updated 2026-09-08. This source version is not a claim of GitHub publication, Ch
 
 Historical local release checks: [v0.4.0 validation](releases/0.4.0.md).
 
-Earlier command outputs, browser versions, screenshots and limitations are consolidated in [audit fix status](audits/2026-09-07/FIXES.md). The original [audit](audits/2026-09-07/AUDIT.md) describes the pre-fix commit and remains historical evidence. Use the v0.5.3 release commit and its GitHub Actions checks for the current verification record.
+Earlier command outputs, browser versions, screenshots and limitations are consolidated in [audit fix status](audits/2026-09-07/FIXES.md). The original [audit](audits/2026-09-07/AUDIT.md) describes the pre-fix commit and remains historical evidence. Use the v0.5.4 release commit and its GitHub Actions checks for the current verification record.
 
 Do not infer a current result from older v0.3.2/v0.3.3 run notes. Local gates and remote CI are separate. Check the exact release commit on GitHub Actions for current remote results; the historical local audit is not remote CI evidence.
 
@@ -26,7 +26,7 @@ Do not infer a current result from older v0.3.2/v0.3.3 run notes. Local gates an
 
 - Manual toolbar-triggered activeTab/permission checks with the unmodified Chrome and Firefox manifests.
 - Firefox ESR/minimum-version and macOS/Linux platform checks; real HiDPI/zoom and assistive-technology acceptance.
-- Store listing/account declarations and deployment-specific privacy/legal contact review. The v0.5.3 screenshots and submission texts are prepared in store-assets/.
+- Store listing/account declarations and deployment-specific privacy/legal contact review. The v0.5.4 screenshots and submission texts are prepared in store-assets/.
 - Deploy and verify the public landing routes, HTTPS and response headers. Configure official store URLs after approval.
 
 ## Product boundaries

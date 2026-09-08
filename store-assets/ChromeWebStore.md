@@ -1,6 +1,6 @@
 # Chrome Web Store submission
 
-Submission packet for KoalaShot v0.5.3. Use the matching verified GitHub release archives and these version-matched screenshots. No dashboard submission has been made; website and store uploads are performed only by the owner.
+Submission packet for KoalaShot v0.5.4. Use the matching verified GitHub release archives and these version-matched screenshots. No dashboard submission has been made; website and store uploads are performed only by the owner.
 
 ## Listing fields
 
@@ -12,7 +12,7 @@ Submission packet for KoalaShot v0.5.3. Use the matching verified GitHub release
 | Homepage | https://shot.koalastuff.net/ |
 | Support | https://github.com/Shik3i/KoalaShot/issues |
 | Privacy | https://shot.koalastuff.net/privacy/ |
-| Legal | https://koalastuff.net/imprint |
+| Legal | https://koalastuff.net/legal |
 | Price | Free |
 | Mature content | No; the product and supplied demo content are general-purpose |
 
@@ -78,7 +78,7 @@ Use `chrome/Screen_01.png` through `chrome/Screen_05.png` in numerical order. Th
 - `chrome/MarqueePromoTile.png`: optional 1400 × 560 promo tile.
 - `ReviewerNotes.txt`: test instructions, no account required.
 
-Upload koalashot-chrome-0.5.3.zip from the verified v0.5.3 release with these screenshots. Older extension ZIPs do not contain this branding and text.
+Upload koalashot-chrome-0.5.4.zip from the verified v0.5.4 release with these screenshots. Older extension ZIPs do not contain this branding and text.
 
 ## Account and final submission
 

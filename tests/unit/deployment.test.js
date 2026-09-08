@@ -13,7 +13,7 @@ function response(url, changes = {}) {
     "content-type": json ? "application/json" : "text/html",
     "cache-control": "no-store",
   };
-  return { status: url.pathname.startsWith("/__koalashot_missing__/") ? 404 : 200, headers: { get: key => values[key] }, json: async () => ({ version: "1.2.3" }), text: async () => 'KoalaShot >v1.2.3</span> <a href="https://koalastuff.net/imprint">Legal</a> Page not found <a href="/help/">Help</a>', ...changes };
+  return { status: url.pathname.startsWith("/__koalashot_missing__/") ? 404 : 200, headers: { get: key => values[key] }, json: async () => ({ version: "1.2.3" }), text: async () => 'KoalaShot >v1.2.3</span> <a href="https://koalastuff.net/legal">Legal</a> Page not found <a href="/help/">Help</a>', ...changes };
 }
 test("manual deployment probe verifies routes, headers, version and real 404 status", async () => {
   const visited = [];

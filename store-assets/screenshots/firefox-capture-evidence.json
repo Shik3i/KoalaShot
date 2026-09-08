@@ -1,7 +1,7 @@
 {
-  "version": "0.5.3",
+  "version": "0.5.4",
   "browser": "firefox",
-  "capturedAt": "2026-09-08T20:39:21.896Z",
+  "capturedAt": "2026-09-08T21:03:10.679Z",
   "fixture": "tests/fixtures/store-demo.html",
   "permissionModel": "Isolated test profile with expanded harness permissions; not proof of trusted toolbar activation.",
   "resourceCheck": "Resource Timing entries on the captured extension pages; not a complete browser or OS network trace.",
