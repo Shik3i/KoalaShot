@@ -36,6 +36,8 @@ All three ZIPs (Chrome, Firefox and static website) receive basename-only `SHA25
 
 The workflow does not rewrite source after the tag. A failing browser job prevents publication.
 
+The preflight checkout explicitly uses `github.ref` to preserve the annotated tag object; relying on the implicit event SHA can replace the local tag with its commit. Ordinary CI and CodeQL run on branch pushes and PRs, while tag pushes run the dedicated release verification. This prevents new tag checks from replacing completed main checks during preflight.
+
 ## After publication
 
 Verify the actual workflow run and tag SHA. Download all three archives and `SHA256SUMS` into the same directory, then run:

@@ -238,22 +238,24 @@ class ChromeBrowser {
     }
     writeFileSync(testManifestPath, `${JSON.stringify(testManifest, null, 2)}\n`);
     const executable = chromeExecutable();
-    const port = 9322 + Math.floor(Math.random() * 200);
-    this.debugPort = port;
+    let port;
     const headless = process.env.KOALASHOT_CHROME_HEADLESS !== "0";
     this.process = spawn(executable, [
       ...(headless ? ["--headless=new"] : []), "--no-sandbox", "--disable-gpu", "--no-first-run", "--no-default-browser-check",
       `--user-data-dir=${this.profile}`, `--load-extension=${this.extensionPath}`, `--disable-extensions-except=${this.extensionPath}`,
-      `--remote-debugging-port=${port}`, "--window-size=1280,900", `${this.baseUrl}${this.initialPath}`,
+      "--remote-debugging-port=0", "--window-size=1280,900", `${this.baseUrl}${this.initialPath}`,
     ], { stdio: ["ignore", "pipe", "pipe"] });
     await waitFor("Chrome DevTools endpoint", async () => {
       try {
+        port = Number(readFileSync(join(this.profile, "DevToolsActivePort"), "utf8").split(/\r?\n/)[0]);
+        if (!Number.isInteger(port) || port <= 0 || port > 65535) return null;
         const response = await fetch(`http://127.0.0.1:${port}/json/version`);
         return response.ok ? response.json() : null;
       } catch {
         return null;
       }
     });
+    this.debugPort = port;
     const version = await (await fetch(`http://127.0.0.1:${port}/json/version`)).json();
     this.socket = new JsonSocket(version.webSocketDebuggerUrl);
     await this.socket.connect();
@@ -262,6 +264,14 @@ class ChromeBrowser {
       origin: `chrome-extension://${this.extensionId}`,
       permissions: ["clipboardReadWrite", "clipboardSanitizedWrite"],
     });
+    // DevTools can accept connections before Chrome has opened its first window.
+    const initialUrl = `${this.baseUrl}${this.initialPath}`;
+    const initial = await waitFor("Chrome initial page", async () => {
+      const targets = await this.socket.request("Target.getTargets");
+      return targets.result.targetInfos.find(target => target.type === "page" && target.url === initialUrl);
+    });
+    const attached = await this.socket.request("Target.attachToTarget", { targetId: initial.targetId, flatten: true });
+    await this.waitForDocument({ targetId: initial.targetId, sessionId: attached.result.sessionId }, initialUrl);
   }
 
   async open(url, background = true, newWindow = false) {
