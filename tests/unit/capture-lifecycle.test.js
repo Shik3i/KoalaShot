@@ -8,15 +8,16 @@ async function fixture({ stuck = false, shrink = false } = {}) {
   const stitcherUrl = new URL("../../extension/popup/stitcher.js", import.meta.url).href;
   const stubs = `
     import {generateCapturePositions,getBoundedDocumentHeight,StitchingError} from ${JSON.stringify(stitcherUrl)};
-    export const hooks={requests:[],onEncode:null};
+    export const hooks={requests:[],onEncode:null,onCapture:null}; let actualY=0;
     const CAPTURE_INTERVAL_MS=0,CAPTURE_REQUEST_TIMEOUT_MS=500,MAX_DYNAMIC_GROWTH_RATIO=.25,USER_MESSAGES={};
     const makeFilename=()=> 'audit.png';
     const makeCaptureId=()=> 'audit-session-0000001';
     const queryActiveTab=async()=>[{id:1,windowId:1,url:'https://example.test/private?token=secret#fragment'}];
-    const injectCaptureScript=async()=>{}; const captureVisibleTab=async()=>'';
+    const injectCaptureScript=async()=>{}; const captureVisibleTab=async()=>{hooks.onCapture?.();return ''};
     function connectCapture(){let listener;return {onMessage:{addListener:f=>listener=f},onDisconnect:{addListener:()=>{}},disconnect(){},postMessage(m){
       hooks.requests.push(m.type);
-      globalThis.queueMicrotask(()=>listener({ok:true,sessionId:m.sessionId,type:{start:'ready',scroll:'scrolled',restore:'restored',ping:'pong'}[m.type],documentHeight:${shrink}&&m.requestedY>0?800:1600,viewportHeight:800,viewportWidth:1000,documentWidth:1200,actualY:${stuck}?0:m.requestedY||0,pageUrl:'https://example.test/private?token=secret#fragment'}));
+      if(m.type==='scroll')actualY=${stuck}?0:m.requestedY;
+      globalThis.queueMicrotask(()=>listener({ok:true,sessionId:m.sessionId,type:{start:'ready',scroll:'scrolled',restore:'restored',ping:'pong'}[m.type],documentHeight:${shrink}&&actualY>0?800:1600,viewportHeight:800,viewportWidth:1000,screenViewportWidth:1000,screenViewportHeight:800,captureRect:{left:0,top:0,width:1000,height:800},documentWidth:1200,actualX:0,actualY,pageUrl:'https://example.test/private?token=secret#fragment'}));
     }};}
     class PngStitcher{constructor(){this.outputWidth=1000;this.outputHeight=1600}updateDocumentHeight(){}async add(){}async toBlob(){hooks.onEncode?.();return new Blob(['png'])}clear(){}}
   `;

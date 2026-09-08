@@ -16,6 +16,7 @@ const checks = [
   ["dependency audit (including build tools)", "npm", ["audit"]],
   ["extension build", "npm", ["run", "build"]],
   ["source and archive validation", "npm", ["run", "validate"]],
+  ["release asset verification", process.execPath, ["scripts/run-python.cjs", "scripts/release_assets.py", "dist", version, "--write"]],
   ["archive validator negative tests", "npm", ["run", "test:archives"]],
   ["AMO validation (Firefox)", "npx", ["--yes", "addons-linter@10.10.0", "--warnings-as-errors", `dist/koalashot-firefox-${version}.zip`]],
 ];

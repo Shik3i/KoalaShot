@@ -121,3 +121,15 @@ details p { margin: 10px 0 0; color: var(--muted); }
 }
 
 [hidden] { display: none !important; }
+/* A compact, stable footer shared by product and legal pages. */
+.site-footer { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr) minmax(190px, 1fr); align-items: start; gap: 28px; }
+.footer-brand, .footer-links, .footer-reviews { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.footer-brand strong { color: var(--text); }
+.footer-brand span, .footer-brand small, .footer-reviews small { font-size: 12px; line-height: 1.5; }
+.footer-links a, .footer-reviews a { padding-block: 3px; }
+@media (max-width: 600px) { .site-footer { grid-template-columns: 1fr 1fr; gap: 24px 16px; } .footer-brand { grid-column: 1 / -1; } }
+
+.product-preview { margin: 28px 0 0; }
+.product-preview img { display: block; width: 100%; height: auto; border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); }
+.product-preview figcaption { margin-top: 14px; color: var(--muted); font-size: .9rem; }
+.legal-content code { overflow-wrap: anywhere; }

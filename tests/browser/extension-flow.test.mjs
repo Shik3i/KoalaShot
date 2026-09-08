@@ -307,12 +307,14 @@ class ChromeBrowser {
   }
 
   async captureScreenshot(page, outputPath) {
+    await this.activate(page);
+    await this.evaluate(page, "new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
     const socket = page.socket || this.socket;
     const result = await socket.request("Page.captureScreenshot", {
       format: "png",
       captureBeyondViewport: false,
       fromSurface: true,
-    }, page.socket ? undefined : page.sessionId);
+    }, page.socket ? undefined : page.sessionId).catch(error => { throw new Error(`${outputPath}: ${error.message}`, { cause: error }); });
     writeFileSync(outputPath, Buffer.from(result.result.data, "base64"));
   }
 
@@ -604,12 +606,12 @@ async function runFlow() {
     assert.equal(await browser.evaluate(fixture, "devicePixelRatio"), 2);
     await browser.activate(fixture);
     popup = browserName === "chrome" ? await browser.open(`chrome-extension://${browser.extensionId}/popup/popup.html`, false) : await browser.open(`${browser.extensionUrl}/popup/popup.html`);
-    await waitFor("extension popup page", () => browser.evaluate(popup, "({ href: location.href, readyState: document.readyState, body: document.body?.innerText || '', ready: document.documentElement.dataset.koalashotReady === 'true' })"), (state) => state?.body.includes("Capture this page") && state.ready);
+    await waitFor("extension popup page", () => browser.evaluate(popup, "({ href: location.href, readyState: document.readyState, body: document.body?.innerText || '', ready: document.documentElement.dataset.koalashotReady === 'true' })"), (state) => state?.body.includes("Full-page screenshot") && state.ready);
     popup.browser = browser;
     const popupState = await browser.evaluate(popup, "({ href: location.href, readyState: document.readyState, body: document.body?.innerText || '', markup: document.documentElement?.outerHTML.slice(0, 300) || '' })");
-    assert.ok(popupState?.body.includes("Capture this page"), `Popup did not load (extensionId=${browser.extensionId || "n/a"}): ${JSON.stringify(popupState)}`);
+    assert.ok(popupState?.body.includes("Full-page screenshot"), `Popup did not load (extensionId=${browser.extensionId || "n/a"}): ${JSON.stringify(popupState)}`);
     await browser.activate(fixture);
-    await browser.evaluate(popup, "document.querySelector('#open-editor').checked = false; document.querySelector('#open-editor').dispatchEvent(new Event('change', { bubbles: true }));");
+    await browser.evaluate(popup, "(globalThis.browser || chrome).storage.local.set({openEditorAfterCapture: true})");
     if (screenshotDir && browserName === "chrome") {
       await browser.setViewport(popup, 1280, 800);
       await browser.captureScreenshot(popup, join(screenshotDir, "chrome-popup-capture.png"));
@@ -619,13 +621,13 @@ async function runFlow() {
     const firstAction = clipboardDenialMode ? "copy-button" : browserName === "chrome" ? "save-button" : "copy-button";
     await browser.evaluate(popup, `document.querySelector('#${firstAction}').click()`);
     const firstCaptureStatus = await waitFor("popup capture status", () => browser.evaluate(popup, "document.querySelector('#status').textContent"), (value) => clipboardDenialMode
-      ? /Save the completed capture below/i.test(value)
+      ? /save the completed PNG/i.test(value)
       : browserName === "chrome" ? /PNG save started/i.test(value) : /Full-page screenshot copied/i.test(value));
     if (clipboardDenialMode) {
-      assert.match(firstCaptureStatus, /Save the completed capture below/i);
+      assert.match(firstCaptureStatus, /save the completed PNG/i);
       assert.equal(await browser.evaluate(popup, "!document.querySelector('#save-result-button').hidden"), true);
       await browser.evaluate(popup, "document.querySelector('#save-result-button').click()");
-      assert.match(await waitFor("completed capture fallback save", () => browser.evaluate(popup, "document.querySelector('#status').textContent"), (value) => /Captured PNG save started/i.test(value)), /Captured PNG save started/i);
+      assert.match(await waitFor("completed capture fallback save", () => browser.evaluate(popup, "document.querySelector('#status').textContent"), (value) => /PNG save started/i.test(value)), /PNG save started/i);
       await waitFor("page cleanup after fallback capture", () => browser.evaluate(fixture, "({ scrollY, className: document.documentElement.className, style: Boolean(document.querySelector('#koalashot-capture-styles')) })"), (state) => state?.scrollY === 0 && !state.className.includes("koalashot-capturing") && !state.style);
       result.downloads = await waitFor("fallback PNG download", () => readdirSync(downloads).filter((name) => name.endsWith(".png")), (files) => files.length >= 1);
       return result;
@@ -640,13 +642,13 @@ async function runFlow() {
     await browser.navigate(fixture, `${baseUrl}${VERY_TALL_FIXTURE}`);
     await browser.setViewport(fixture, 1262, 804, 1);
     await browser.activate(fixture);
-    await browser.evaluate(popup, "document.querySelector('#capture-target').value = 'page'; document.querySelector('#save-button').click()");
+    await browser.evaluate(popup, "document.querySelector('#capture-target').value = 'page'; document.querySelector('#capture-again-button')?.click(); document.querySelector('#save-button').click()");
     await waitFor("cancellable capture progress", () => browser.evaluate(popup, "document.querySelector('#status').textContent"), (value) => /Capturing section/i.test(value));
     await browser.evaluate(popup, "document.querySelector('#cancel-button').click()");
     assert.match(await waitFor("cancelled capture status", () => browser.evaluate(popup, "document.querySelector('#status').textContent"), (value) => /Capture cancelled/i.test(value)), /Capture cancelled/i);
     await waitFor("page cleanup after cancellation", () => browser.evaluate(fixture, "({ scrollY, className: document.documentElement.className, style: Boolean(document.querySelector('#koalashot-capture-styles')) })"), (state) => state?.scrollY === 0 && !state.className.includes("koalashot-capturing") && !state.style);
 
-    await browser.evaluate(popup, "document.querySelector('#save-button').click()");
+    await browser.evaluate(popup, "document.querySelector('#capture-again-button')?.click(); document.querySelector('#save-button').click()");
     await waitFor("navigation-abort capture progress", () => browser.evaluate(popup, "document.querySelector('#status').textContent"), (value) => /Capturing section/i.test(value));
     await browser.navigate(fixture, `${baseUrl}${FIXTURE}`);
     assert.match(await waitFor("navigation-abort status", () => browser.evaluate(popup, "document.querySelector('#status').textContent"), (value) => /navigated|connection closed|could not be captured|failed/i.test(value)), /navigated|connection closed|could not be captured|failed/i);
@@ -655,11 +657,11 @@ async function runFlow() {
     await browser.navigate(fixture, `${baseUrl}${INTERNAL_FIXTURE}`);
     await browser.setViewport(fixture, 1262, 804, 1);
     await browser.activate(fixture);
-    await browser.evaluate(popup, "document.querySelector('#capture-target').value = 'page'; document.querySelector('#capture-target').dispatchEvent(new Event('change', { bubbles: true })); document.querySelector('#save-button').click()");
+    await browser.evaluate(popup, "document.querySelector('#capture-target').value = 'page'; document.querySelector('#capture-target').dispatchEvent(new Event('change', { bubbles: true })); document.querySelector('#capture-again-button')?.click(); document.querySelector('#save-button').click()");
     const internalStatus = await waitFor("internal-scroll rejection", () => browser.evaluate(popup, "document.querySelector('#status').textContent"), (value) => /scrollable area inside|internal scroll area|not supported/i.test(value));
     assert.match(internalStatus, /scrollable area inside|internal scroll area|not supported/i);
     await waitFor("cleanup after unsupported capture", () => browser.evaluate(fixture, "!document.documentElement.className.includes('koalashot-capturing')"));
-    await browser.evaluate(popup, "document.querySelector('#capture-target').value = 'internal'; document.querySelector('#capture-target').dispatchEvent(new Event('change', { bubbles: true })); document.querySelector('#save-button').click()");
+    await browser.evaluate(popup, "document.querySelector('#capture-target').value = 'internal'; document.querySelector('#capture-target').dispatchEvent(new Event('change', { bubbles: true })); document.querySelector('#capture-again-button')?.click(); document.querySelector('#save-button').click()");
     const internalCaptureStatus = await waitFor("internal-scroll capture", () => browser.evaluate(popup, "document.querySelector('#status').textContent"), (value) => /PNG save started/i.test(value));
     assert.match(internalCaptureStatus, /PNG save started/i);
     await waitFor("internal area cleanup after capture", () => browser.evaluate(fixture, "({ scrollTop: document.querySelector('.scroll-root').scrollTop, className: document.documentElement.className, style: Boolean(document.querySelector('#koalashot-capture-styles')) })"), (state) => state?.scrollTop === 0 && !state.className.includes("koalashot-capturing") && !state.style);
@@ -667,7 +669,7 @@ async function runFlow() {
     await browser.navigate(fixture, `${baseUrl}${FIXTURE}`);
     await browser.setViewport(fixture, 1262, 804, 1);
     await browser.activate(fixture);
-    await browser.evaluate(popup, "document.querySelector('#capture-target').value = 'page'; document.querySelector('#capture-target').dispatchEvent(new Event('change', { bubbles: true })); document.querySelector('#open-editor').checked = true; document.querySelector('#open-editor').dispatchEvent(new Event('change', { bubbles: true })); document.querySelector('#save-button').click()");
+    await browser.evaluate(popup, "document.querySelector('#capture-target').value = 'page'; document.querySelector('#capture-target').dispatchEvent(new Event('change', { bubbles: true })); document.querySelector('#capture-again-button').click(); document.querySelector('#edit-button').click()");
     const editorTriggerStatus = await waitFor("editor trigger", () => browser.evaluate(popup, "document.querySelector('#status').textContent"), (value) => /Editor opened|save failed|could not|failed/i.test(value));
     assert.match(editorTriggerStatus, /Editor opened/i, `Editor trigger status: ${editorTriggerStatus}`);
     editor = await browser.findEditor();
@@ -749,7 +751,7 @@ async function runFlow() {
     assert.equal(keyboardAccessibility.afterDelete, 8);
     assert.equal(keyboardAccessibility.focused, true);
 
-    await browser.evaluate(editor, "document.querySelector('#save-button').click()");
+    await browser.evaluate(editor, "document.querySelector('#capture-again-button')?.click(); document.querySelector('#save-button').click()");
     const editorSaveStatus = await waitFor("edited PNG save", () => browser.evaluate(editor, "document.querySelector('#status').textContent"), (value) => /save started/i.test(value));
     assert.match(editorSaveStatus, /save started/i);
     await browser.evaluate(editor, "document.querySelector('#copy-button').click()");
@@ -777,7 +779,7 @@ async function runFlow() {
 
     const editorUrl = await browser.evaluate(editor, "location.href");
     await browser.setViewport(editor, 1280, 800);
-    await browser.wait(editor, "document.querySelector('#editor-keyboard-help').getBoundingClientRect().bottom <= innerHeight");
+    await browser.wait(editor, "document.querySelector('.keyboard-help summary').getBoundingClientRect().bottom <= innerHeight");
     assert.equal(await browser.evaluate(editor, "getComputedStyle(document.querySelector('.tool-sidebar')).overflowY"), "auto");
     await browser.navigate(editor, editorUrl);
     await browser.wait(editor, "document.querySelector('#stage-wrap') && !document.querySelector('#stage-wrap').hidden");
@@ -800,7 +802,7 @@ async function runFlow() {
     })`), (state) => state?.width === narrowWidth && state.scrollWidth <= narrowWidth && state.headerWidth <= narrowWidth && state.stageHeight >= 400);
     result.narrowEditorWidth = narrowWidth;
     assert.equal(narrowLayout.scrollWidth <= narrowLayout.width, true);
-    assert.match(narrowLayout.sidebarOverflow, /auto|scroll/);
+    assert.equal(narrowLayout.sidebarOverflow, "hidden");
 
     if (browserName === "chrome") {
     await browser.setViewport(editor, 900, 700, 2);

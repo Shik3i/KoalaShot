@@ -1,10 +1,10 @@
 export const APP_NAME = "KoalaShot";
 export const STORE_NAME = "KoalaShot – Full Page Screenshot";
-export const VERSION = "0.4.0";
+export const VERSION = "0.5.0";
 
 export const CAPTURE_INTERVAL_MS = 600;
 export const PAINT_SETTLE_MS = 120;
-export const WATCHDOG_TIMEOUT_MS = 15000;
+export const WATCHDOG_TIMEOUT_MS = 30000;
 export const CAPTURE_REQUEST_TIMEOUT_MS = 20000;
 export const MAX_DYNAMIC_GROWTH_RATIO = 0.25;
 export const MAX_RAW_CANVAS_BYTES = 512 * 1024 * 1024;

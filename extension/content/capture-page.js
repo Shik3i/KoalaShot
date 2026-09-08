@@ -6,9 +6,12 @@
 
   const api = globalThis.browser || globalThis.chrome;
   const CAPTURE_PORT_PREFIX = "koalashot-capture:";
-  const WATCHDOG_TIMEOUT_MS = 15_000;
+  const WATCHDOG_TIMEOUT_MS = 30_000;
   const PAINT_SETTLE_MS = 120;
   let activeSession = null;
+  const markFrameChange = () => { if (activeSession) activeSession.frameRevision++; };
+  document.addEventListener("scroll", markFrameChange, { capture: true, passive: true });
+  window.addEventListener("resize", markFrameChange, { passive: true });
 
   function send(port, message) {
     try {
@@ -358,6 +361,7 @@
       styleElement: null,
       cleaned: false,
       lastMessageAt: Date.now(),
+      frameRevision: 0,
     };
     activeSession = session;
 
@@ -437,6 +441,7 @@
         ok: true,
         sessionId: message.sessionId,
         type: "scrolled",
+        frameRevision: session.frameRevision,
         actualX: after.scrollX,
         actualY: after.scrollY,
         maxScrollY: Math.max(0, after.documentHeight - after.viewportHeight),
@@ -489,10 +494,19 @@
       } else if (message.type === "restore") {
         restoreSession(port, message);
       } else if (message.type === "ping") {
-        if (activeSession?.sessionId === message.sessionId) {
-          activeSession.lastMessageAt = Date.now();
+        const session = activeSession;
+        if (!session || !isCurrentSession(session, port, message.sessionId)) {
+          send(port, { ok: false, sessionId: message.sessionId, error: "stale-session", message: "The capture session ended. Capture the page again." });
+          return;
         }
-        send(port, { ok: true, sessionId: message.sessionId, type: "pong" });
+        session.lastMessageAt = Date.now();
+        try {
+          const measurement = measureSession(session);
+          send(port, { ok: true, sessionId: message.sessionId, type: "pong", ...measurement,
+            actualX: measurement.scrollX, actualY: measurement.scrollY, pageUrl: location.href, frameRevision: session.frameRevision });
+        } catch (error) {
+          send(port, { ok: false, sessionId: message.sessionId, error: "measurement-failed", message: error.message });
+        }
       }
     });
     port.onDisconnect.addListener(() => handleDisconnect(port));

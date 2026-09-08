@@ -1,10 +1,10 @@
 # KoalaShot
 
-[![Build](https://img.shields.io/badge/Build-v0.4.0-blue)](https://github.com/Shik3i/KoalaShot/releases)
+[![Build](https://img.shields.io/badge/Build-v0.5.0-blue)](https://github.com/Shik3i/KoalaShot/releases)
 
 KoalaShot – Full Page Screenshot is a privacy-first browser extension for capturing a complete vertical webpage as one PNG and annotating it locally. It is built from readable vanilla HTML, CSS, and JavaScript with no runtime dependencies.
 
-Current build: v0.4.0
+Current build: v0.5.0
 
 Publication is separate from this source version. See [release status](docs/STATUS.md) and the [audit fixes](docs/audits/2026-09-07/FIXES.md) before submission.
 
@@ -17,14 +17,18 @@ Implemented:
 - Measured CSS-to-bitmap scale detection, overlap-aware vertical stitching, conservative memory limits, and PNG output.
 - Copy original PNG, save original PNG, cancellation, progress, page-state restoration, and bounded dynamic-height handling.
 - Primary Capture & edit action, completed-capture preview, and reusable Copy/Save/Edit actions.
+- Direct Capture & copy and Capture & save actions never open an editor, including after migration from older settings.
 - Optional local editor handoff through temporary extension-local IndexedDB storage.
 - Optional capture target: the normal page or the largest fully visible scrollable area inside the page. The selected mode is persistent and can be switched off in the popup.
 - Non-destructive editor with Select, Pan, Pen, Highlighter, Arrow, Line, Rectangle, Ellipse, Text, secure opaque Redact, Pixelate, Blur, numbered Markers, Crop, Undo, Redo, Delete, Clear all, zoom, fit-to-width, actual size, Copy edited, Save edited PNG, and discard.
 - Original-pixel annotation model, viewport-sized interaction canvas, shared geometry/render primitives, bounded history, and debounced local draft restoration.
+- Shape resize handles, annotation duplication, marker size and effect strength, custom export filenames, and a persistent fit-to-width view.
+- Atomic draft revisions prevent silent overwrites between editor tabs; pending text/crop and damaged drafts cannot silently disappear from exports.
+- Shared extension footer with Privacy, Legal, Help and browser-specific review links from the packaged `landing/version.json` store configuration.
 - Static local landing page at `landing/` with `/`, `/privacy/`, and `/legal/`.
 - Dependency-free Python build/validation scripts and Node built-in unit tests.
 
-Not implemented: resize handles, image insertion, cloud sharing, horizontal stitching, store publishing, and localization beyond the English catalog. The landing output is deployable as a static site; deployment operations and DNS remain outside this repository.
+Not implemented: image insertion, cloud sharing, horizontal stitching, store publishing, and localization beyond the English catalog. The landing output is deployable as a static site; deployment operations and DNS remain outside this repository.
 
 ## Privacy principles
 
@@ -71,8 +75,8 @@ Build output:
 ```text
 dist/chrome/
 dist/firefox/
-dist/koalashot-chrome-0.4.0.zip
-dist/koalashot-firefox-0.4.0.zip
+dist/koalashot-chrome-0.5.0.zip
+dist/koalashot-firefox-0.5.0.zip
 dist/landing/
 ```
 

@@ -68,3 +68,6 @@ jobs:
       - name: Run capture and redaction regressions
         if: matrix.browser == 'chrome'
         run: node tests/browser/audit-regressions.test.mjs
+      - name: Verify website routes and store availability in Chrome
+        if: matrix.browser == 'chrome'
+        run: npm run test:website

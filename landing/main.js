@@ -1,40 +1,40 @@
 const year = document.querySelector("[data-current-year]");
-if (year) {
-  year.textContent = String(new Date().getFullYear());
-}
+if (year) year.textContent = String(new Date().getFullYear());
 
 const versionTarget = document.querySelector("[data-app-version]");
 if (versionTarget) {
-  const versionUrl = versionTarget.dataset.versionUrl || "version.json";
-  fetch(versionUrl, { cache: "no-store" })
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(`version request failed: ${response.status}`);
-      }
-      return response.json();
-    })
-    .then((metadata) => {
-      for (const link of document.querySelectorAll("[data-store]")) {
-        const raw = metadata.stores?.[link.dataset.store];
-        if (!raw) continue;
+  fetch(versionTarget.dataset.versionUrl || "version.json", { cache: "no-store" })
+    .then(response => { if (!response.ok) throw new Error("Metadata unavailable"); return response.json(); })
+    .then(metadata => {
+      for (const browser of ["chrome", "firefox"]) {
+        const raw = metadata.stores?.[browser];
+        let valid = false;
+        let url;
         try {
-          const url = new URL(raw);
-          const valid = url.protocol === "https:" && (link.dataset.store === "chrome"
-            ? url.hostname === "chromewebstore.google.com" && url.pathname.startsWith("/detail/")
-            : url.hostname === "addons.mozilla.org" && /\/firefox\/addon\//.test(url.pathname));
-          if (valid) { link.href = url.href; link.hidden = false; }
-        } catch { /* Keep unpublished store links hidden. */ }
+          url = new URL(raw);
+          valid = url.protocol === "https:" && !url.username && !url.password && !url.port && (browser === "chrome"
+            ? url.hostname === "chromewebstore.google.com" && /^\/detail\/[^/]+\/[a-p]{32}\/?$/.test(url.pathname)
+            : url.hostname === "addons.mozilla.org" && /^\/(?:[a-z]{2}(?:-[A-Z]{2})?\/)?firefox\/addon\/[^/]+\/?$/.test(url.pathname));
+        } catch { /* Missing listing. Keep the packaged availability state. */ }
+        if (!valid) continue;
+        url.search = ""; url.hash = "";
+        for (const link of document.querySelectorAll(`[data-store="${browser}"]`)) {
+          link.href = link.hasAttribute("data-review") ? `${url.href.replace(/\/$/, "")}/reviews${browser === "firefox" ? "/" : ""}` : url.href;
+          link.hidden = false;
+        }
+        const status = document.querySelector(`[data-store-status="${browser}"]`);
+        if (status) {
+          const link = document.createElement("a"); link.href = url.href;
+          link.textContent = browser === "chrome" ? "Get KoalaShot on Chrome Web Store" : "Get KoalaShot on Firefox Add-ons";
+          status.replaceChildren(link);
+        }
       }
-      if ([...document.querySelectorAll("[data-store]")].some(link => !link.hidden)) {
-        const pending = document.querySelector("[data-store-pending]");
-        if (pending) pending.hidden = true;
+      if ([...document.querySelectorAll("[data-review]")].some(link => !link.hidden)) {
+        document.querySelector("[data-review-pending]")?.setAttribute("hidden", "");
       }
       if (typeof metadata.version === "string" && metadata.version) {
-        versionTarget.textContent = `v${metadata.version}`;
-        versionTarget.hidden = false;
+        versionTarget.textContent = `v${metadata.version}`; versionTarget.hidden = false;
       }
     })
-    .catch(() => {
-      versionTarget.hidden = true;
-    });
+    .catch(() => { /* Build-time links and version remain usable offline. */ });
 }

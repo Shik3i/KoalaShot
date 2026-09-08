@@ -1,5 +1,6 @@
 const sharedGlobals = Object.fromEntries([
   "AbortController",
+  "AbortSignal",
   "Buffer",
   "ClipboardItem",
   "Blob",
@@ -51,7 +52,7 @@ export default [
     ignores: ["dist/**", "node_modules/**"],
   },
   {
-    files: ["extension/**/*.js", "scripts/**/*.cjs", "scripts/**/*.mjs", "tests/**/*.js", "tests/**/*.mjs"],
+    files: ["extension/**/*.js", "landing/**/*.js", "scripts/**/*.cjs", "scripts/**/*.mjs", "tests/**/*.js", "tests/**/*.mjs"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",

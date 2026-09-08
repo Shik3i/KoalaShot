@@ -1,0 +1,365 @@
+{
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Chrome/153.0.8010.12",
+    "revision": "@971a7443b0c9b0a9b2860529b33331b76077ec62",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+    "jsVersion": "15.3.76.4"
+  },
+  "popupReadyLayout": {
+    "height": 717,
+    "footer": {
+      "x": 18,
+      "y": 635.640625,
+      "width": 309,
+      "height": 35.4375,
+      "top": 635.640625,
+      "right": 327,
+      "bottom": 671.078125,
+      "left": 18
+    },
+    "links": {
+      "x": 18,
+      "y": 671.078125,
+      "width": 309,
+      "height": 16,
+      "top": 671.078125,
+      "right": 327,
+      "bottom": 687.078125,
+      "left": 18
+    }
+  },
+  "action_copy_false_false": {
+    "effects": [
+      "copy"
+    ],
+    "status": "Full-page screenshot copied.",
+    "height": 986,
+    "copyResultBottom": 888.640625
+  },
+  "action_copy_true_false": {
+    "effects": [
+      "copy",
+      "editor"
+    ],
+    "status": "Editor opened with the original PNG.",
+    "height": 986,
+    "copyResultBottom": 888.640625
+  },
+  "action_edit_false_false": {
+    "effects": [
+      "editor"
+    ],
+    "status": "Editor opened with the original PNG.",
+    "height": 986,
+    "copyResultBottom": 888.640625
+  },
+  "action_save_false_false": {
+    "effects": [
+      "download"
+    ],
+    "status": "PNG save started.",
+    "height": 986,
+    "copyResultBottom": 888.640625
+  },
+  "action_save_true_false": {
+    "effects": [
+      "download",
+      "editor"
+    ],
+    "status": "Editor opened with the original PNG.",
+    "height": 986,
+    "copyResultBottom": 888.640625
+  },
+  "action_copy_true_true": {
+    "effects": [
+      "copy",
+      "editor"
+    ],
+    "status": "Editor opened with the original PNG.",
+    "height": 986,
+    "copyResultBottom": 888.640625
+  },
+  "failedRecaptureDiscardsResult": {
+    "priorPreview": true,
+    "previewHidden": true,
+    "resultHidden": true,
+    "status": "No scrollable internal area was found on this page."
+  },
+  "unappliedCropExport": {
+    "output": {
+      "width": 800,
+      "height": 2400,
+      "pixel": [
+        255,
+        255,
+        255,
+        255
+      ]
+    },
+    "applyEnabled": true,
+    "status": "Edited PNG save started."
+  },
+  "cropUndoPending": {
+    "metadata": "800 × 2400px",
+    "applyEnabled": true,
+    "resetEnabled": true
+  },
+  "unappliedTextExport": {
+    "output": {
+      "width": 800,
+      "height": 2400,
+      "pixel": [
+        255,
+        255,
+        255,
+        255
+      ]
+    },
+    "textOpen": true,
+    "annotations": 0,
+    "status": "Edited PNG save started."
+  },
+  "toolStyleChangesPrevious": {
+    "tool": "Pen",
+    "annotations": [
+      {
+        "id": "ee21eaeb-ab33-484d-b53a-8db4879bac89",
+        "type": "rectangle",
+        "x": 54.159292035398224,
+        "y": 55.22123893805309,
+        "width": 141.59292035398232,
+        "height": 141.5929203539823,
+        "color": "#e53935",
+        "strokeWidth": 6
+      }
+    ]
+  },
+  "panArrowMovesAnnotation": {
+    "tool": "Pan",
+    "annotation": {
+      "id": "ee21eaeb-ab33-484d-b53a-8db4879bac89",
+      "type": "rectangle",
+      "x": 55.159292035398224,
+      "y": 55.22123893805309,
+      "width": 141.59292035398232,
+      "height": 141.5929203539823,
+      "color": "#e53935",
+      "strokeWidth": 6
+    },
+    "status": "Selected annotation moved 1 pixel."
+  },
+  "undoFromToolbarFocus": {
+    "before": 2,
+    "after": 2,
+    "undoAvailable": true,
+    "focus": "pen"
+  },
+  "undoFromToolbarStoredState": {
+    "id": "ee21eaeb-ab33-484d-b53a-8db4879bac89",
+    "type": "rectangle",
+    "x": 55.159292035398224,
+    "y": 55.22123893805309,
+    "width": 141.59292035398232,
+    "height": 141.5929203539823,
+    "color": "#e53935",
+    "strokeWidth": 6
+  },
+  "twoTabFirstWrite": [
+    "rectangle",
+    "redact"
+  ],
+  "twoTabDraftOverwrite": {
+    "stored": [
+      "rectangle",
+      "marker"
+    ],
+    "status": "Ready. Original screenshot is immutable; annotations are stored locally as a draft."
+  },
+  "editorMidWidthLayout": [
+    {
+      "width": 1120,
+      "height": 600,
+      "header": 66,
+      "helpBottom": 600,
+      "bodyOverflow": "hidden"
+    },
+    {
+      "width": 1000,
+      "height": 600,
+      "header": 66,
+      "helpBottom": 600,
+      "bodyOverflow": "hidden"
+    },
+    {
+      "width": 960,
+      "height": 600,
+      "header": 97,
+      "helpBottom": 631,
+      "bodyOverflow": "hidden"
+    },
+    {
+      "width": 901,
+      "height": 600,
+      "header": 97,
+      "helpBottom": 631,
+      "bodyOverflow": "hidden"
+    }
+  ],
+  "editorNarrow": {
+    "viewport": 390,
+    "actions": {
+      "client": 353,
+      "scroll": 657
+    },
+    "save": {
+      "x": 419.8125,
+      "y": 51,
+      "width": 118.96875,
+      "height": 36,
+      "top": 51,
+      "right": 538.78125,
+      "bottom": 87,
+      "left": 419.8125
+    },
+    "hint": {
+      "client": 375,
+      "scroll": 591
+    },
+    "height": 830
+  },
+  "brandNavigation": {
+    "url": "chrome-extension://oelbbnjhecaddlionaeofmpdekkhmpco/editor/editor.html",
+    "error": "No temporary capture was specified."
+  },
+  "scaledInternal": {
+    "ready": {
+      "ok": false,
+      "sessionId": "98fb1828-76dd-42a9-87c7-8f95b07f0a56",
+      "error": "internal-scroll",
+      "message": "No scrollable internal area was found on this page."
+    },
+    "actual": {
+      "rect": {
+        "bottom": 250,
+        "height": 250,
+        "left": 0,
+        "right": 400,
+        "top": 0,
+        "width": 400,
+        "x": 0,
+        "y": 0
+      }
+    }
+  },
+  "stalePing": {
+    "ready": "ready",
+    "ok": true,
+    "sessionId": "3933ca69-6691-4973-a85d-51344242d3ab",
+    "type": "pong"
+  },
+  "postMeasureScrollRace": {
+    "outcome": "resolved",
+    "calls": 5,
+    "warning": "",
+    "width": 1262,
+    "height": 3000
+  },
+  "watchdogDuringScreenshot": {
+    "outcome": "resolved",
+    "cleanedBeforeScreenshot": true,
+    "warning": ""
+  },
+  "invalidDraftRestoration": {
+    "annotationCount": 0,
+    "warning": "",
+    "available": true
+  },
+  "fixture_fixed-and-sticky": {
+    "outcome": "resolved",
+    "width": 1262,
+    "height": 2788,
+    "warning": "",
+    "bytes": 104385,
+    "restored": {
+      "scrollY": 0,
+      "captureClass": false,
+      "captureStyle": false
+    }
+  },
+  "fixture_horizontal-overflow": {
+    "outcome": "resolved",
+    "width": 1262,
+    "height": 2074,
+    "warning": "Vertical capture only: content beyond the right edge of the capture area is not included.",
+    "bytes": 61509,
+    "restored": {
+      "scrollY": 0,
+      "captureClass": false,
+      "captureStyle": false
+    }
+  },
+  "fixture_scrollbar-layout": {
+    "outcome": "resolved",
+    "width": 1262,
+    "height": 2418,
+    "warning": "",
+    "bytes": 73306,
+    "restored": {
+      "scrollY": 0,
+      "captureClass": false,
+      "captureStyle": false
+    }
+  },
+  "fixture_dynamic-height": {
+    "outcome": "resolved",
+    "width": 1262,
+    "height": 2786,
+    "warning": "",
+    "bytes": 77605,
+    "restored": {
+      "scrollY": 0,
+      "captureClass": false,
+      "captureStyle": false
+    }
+  },
+  "fixture_lazy-loaded-content": {
+    "outcome": "resolved",
+    "width": 1262,
+    "height": 2386,
+    "warning": "",
+    "bytes": 74256,
+    "restored": {
+      "scrollY": 0,
+      "captureClass": false,
+      "captureStyle": false
+    }
+  },
+  "landingLinks": [
+    {
+      "text": "Get KoalaShot for Chrome",
+      "href": null,
+      "hidden": true
+    },
+    {
+      "text": "Get KoalaShot for Firefox",
+      "href": null,
+      "hidden": true
+    },
+    {
+      "text": "Privacy",
+      "href": "privacy/",
+      "hidden": false
+    },
+    {
+      "text": "Legal",
+      "href": "legal/",
+      "hidden": false
+    },
+    {
+      "text": "GitHub",
+      "href": "https://github.com/Shik3i/KoalaShot",
+      "hidden": false
+    }
+  ]
+}

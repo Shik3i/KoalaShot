@@ -2,6 +2,21 @@
 
 All notable user-visible changes are documented here. KoalaShot uses semantic versioning.
 
+## [Unreleased]
+
+## [0.5.0] - 2026-09-08
+
+- Require annotated release tags on verified main, publish only after downloading and verifying draft assets and provenance, and include a portable static-website ZIP and checksums.
+- Add website help, a custom 404, actual editor imagery, store-state browser tests, and a read-only acceptance probe for manual deployments. Refresh Chrome/Firefox store screenshots and listing text.
+
+- Separate capture-and-copy, capture-and-save and capture-and-edit. Migrate the legacy automatic-editor option, preserve completed captures on failure, and show cancellation only during capture.
+- Coordinate screenshot rate limits across extension pages; verify live frame geometry, scroll revisions and session liveness around every screenshot. Keep the page watchdog beyond the screenshot timeout.
+- Save drafts with atomic revisions. Pause conflicting editors, offer separate copies without extending retention, and refuse damaged drafts instead of silently removing annotations.
+- Require applying or discarding pending text/crop before export. Make Undo discard a pending edit first; preserve native control keys and enable command shortcuts from the toolbar.
+- Add shape resize handles, duplication, custom PNG filenames, marker size and effect strength. Keep Fit active across resizing and limit style edits to the selected annotation in Select.
+- Rework popup, editor and landing footers, responsive toolbars and keyboard help. Correct privacy/storage explanations and link the central KoalaStuff legal notice.
+- Share official store metadata between extension packages and landing output. Generate per-browser review links and static install links that survive a failed metadata fetch.
+
 ## [0.4.0] - 2026-09-07
 
 - Add Capture & edit as the primary action, a completed capture preview, reusable output actions, and direct Help/Privacy links.

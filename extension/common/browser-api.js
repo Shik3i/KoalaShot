@@ -77,10 +77,39 @@ export function connectCapture(tabId, sessionId) {
   return browserNamespace.tabs.connect(tabId, { name: `koalashot-capture:${sessionId}` });
 }
 
-export async function captureVisibleTab(windowId) {
-  return invoke(browserNamespace.tabs.captureVisibleTab, browserNamespace.tabs, [windowId, {
-    format: "png",
-  }]);
+let lastScreenshotAt = 0;
+export async function captureVisibleTab(windowId, { beforeCapture, signal } = {}) {
+  const capture = async () => {
+    const session = browserNamespace.storage?.session;
+    let previous = lastScreenshotAt;
+    if (session) {
+      try {
+        const values = await invoke(session.get, session, ["lastScreenshotAt"]);
+        previous = Math.max(previous, Number(values?.lastScreenshotAt) || 0);
+      } catch { /* Per-context timing and quota handling remain available. */ }
+    }
+    const pause = Math.min(1100, Math.max(0, 650 - (Date.now() - previous)));
+    if (pause) await new Promise((resolve) => setTimeout(resolve, pause));
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        if (signal?.aborted) throw new Error("Capture cancelled.");
+        await beforeCapture?.();
+        return await invoke(browserNamespace.tabs.captureVisibleTab, browserNamespace.tabs, [windowId, { format: "png" }]);
+      } catch (error) {
+        if (attempt || !/MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND/.test(error.message)) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 1100));
+      } finally {
+        lastScreenshotAt = Date.now();
+        if (session) {
+          try { await invoke(session.set, session, [{ lastScreenshotAt }]); }
+          catch { /* A bookkeeping failure must not replace the screenshot result. */ }
+        }
+      }
+    }
+  };
+  return globalThis.navigator?.locks
+    ? navigator.locks.request("koalashot-screenshot", capture)
+    : capture();
 }
 
 export async function createTab(url) {

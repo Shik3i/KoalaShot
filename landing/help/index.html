@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Capture, clipboard, editor and installation help for KoalaShot.">
+    <meta property="og:title" content="KoalaShot Help">
+    <meta property="og:description" content="Capture, clipboard, editor and installation help.">
+    <meta property="og:image" content="https://shot.koalastuff.net/assets/og-card.png">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; font-src 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests">
+    <link rel="canonical" href="https://shot.koalastuff.net/help/">
+    <title>Help · KoalaShot</title>
+    <link rel="icon" href="../assets/favicon.png" type="image/png">
+    <link rel="stylesheet" href="../styles.css">
+  </head>
+  <body>
+    <header class="site-shell site-header"><a class="brand" href="../"><img src="../assets/favicon.png" alt="" width="34" height="34"><span>KoalaShot</span></a><nav class="site-nav" aria-label="Primary navigation"><a href="../">Home</a><a href="../privacy/">Privacy</a></nav></header>
+    <main class="site-shell legal-content"><p class="eyebrow">Help</p><h1>From page to PNG.</h1><p class="lede">Capture, edit and export locally. Start with the action that matches your next step.</p>
+<h2 id="capture">Choose a capture action</h2><ul><li><strong>Capture &amp; copy:</strong> capture the page and copy the original PNG. The editor stays closed.</li><li><strong>Capture &amp; save:</strong> capture the page and download the original PNG.</li><li><strong>Capture &amp; edit:</strong> open the local editor. No file or clipboard copy is created until you choose an export action.</li></ul><p>Keep the popup open until capture finishes. Choose the page or its largest fully visible vertical scroll area. A completed preview lets you copy, save or edit the same capture without capturing again.</p>
+<h2 id="install">Install and open</h2><p>Use an official store link on the <a href="/">home page</a> when available. For local testing, download the matching archive from <a href="https://github.com/Shik3i/KoalaShot/releases">GitHub Releases</a>. Chrome: extract the Chrome ZIP, open <code>chrome://extensions</code>, enable Developer mode and select Load unpacked. Firefox: extract the Firefox ZIP, open <code>about:debugging#/runtime/this-firefox</code>, select Load Temporary Add-on and choose <code>manifest.json</code>. Temporary Firefox installations end when the browser closes.</p><p>Open a normal webpage and select KoalaShot from your browser's extensions menu. Pin its button for easier access.</p>
+<h2 id="clipboard">Copy did not work</h2><p>Allow the optional clipboard permission when prompted. If the browser or operating system blocks copying, the result remains available: choose Copy again or Save to download it. KoalaShot never needs to read your clipboard.</p>
+<h2 id="capture-errors">A page cannot be captured</h2><p>Browser settings, extension stores, built-in PDF viewers and other protected pages may block access. Use a normal webpage. Keep its tab active and avoid scrolling or resizing during capture. Wait for loading to finish before retrying a dynamic page. Extremely large pages may exceed safe canvas limits; horizontal stitching and partially visible internal scroll areas are unsupported.</p>
+<h2 id="editor">Edit and export</h2><p>Select an annotation to move it, duplicate it or change its style. Rectangular annotations have resize handles. Apply or cancel pending text and crop changes before exporting. Undo cancels an unfinished crop first. Use Fit after changing the window size, and open Keyboard shortcuts in the editor for the complete key list. Set a filename before saving.</p>
+<h2 id="privacy">Hide sensitive content</h2><p>Use <strong>Redact</strong> for an opaque mask in the exported PNG. Blur and pixelation are cosmetic effects. The original stays unchanged in local temporary storage until you discard it or it expires. Files and clipboard copies already exported are outside automatic cleanup. See the <a href="/privacy/">privacy policy</a>.</p>
+<h2 id="drafts">Draft conflict, damage or expiry</h2><p>Two tabs editing the same capture can conflict. Load the latest draft, or keep your edits as a separate copy. Export pauses until the conflict is resolved. A damaged draft blocks export; recover an unedited original only if you intend to remove all annotations. Captures expire after 24 hours, including separate copies. An open editor deletes expired data; otherwise cleanup runs when KoalaShot next opens.</p>
+<h2 id="feedback">Still stuck?</h2><p><a href="https://github.com/Shik3i/KoalaShot/issues">Report a problem</a> with the browser version, KoalaShot version, steps and exact error. Share a public example page when possible. Remove private page content from screenshots before attaching them.</p></main>
+    <footer class="site-shell site-footer">
+      <div class="footer-brand"><strong>KoalaShot <span data-app-version data-version-url="../version.json" hidden></span></strong><span>Local capture. No uploads.</span><small>© <span data-current-year>2026</span> Shik3i</small></div>
+      <nav class="footer-links" aria-label="Support and legal"><a href="../">Home</a><a href="../privacy/">Privacy</a><a href="https://koalastuff.net/imprint">Legal</a><a href="/help/">Help</a><a href="https://github.com/Shik3i/KoalaShot/issues">Feedback</a><a href="https://github.com/Shik3i/KoalaShot">Source</a><a href="https://github.com/Shik3i/KoalaShot/blob/main/CHANGELOG.md">Changelog</a></nav>
+      <nav class="footer-reviews" aria-label="Rate KoalaShot"><span>Enjoy KoalaShot?</span><a data-store="chrome" data-review hidden>Rate on Chrome Web Store</a><a data-store="firefox" data-review hidden>Rate on Firefox Add-ons</a><small data-review-pending>Review links appear after store launch.</small></nav>
+    </footer>
+    <script src="../main.js"></script>
+  </body>
+</html>

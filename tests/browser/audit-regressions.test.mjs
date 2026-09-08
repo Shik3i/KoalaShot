@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { createServer } from 'node:http';
 import assert from 'node:assert/strict';
+import { runWorkflowRegressions } from './workflow-regressions.mjs';
 
 const root = resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const version = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
@@ -154,9 +155,9 @@ try {
     return record.annotations.length===1 && sessionStorage.getItem('koalashot-editor-draft:'+id)===null;
   })()`);
   await browser.evaluate(editor, `(async()=>{
-    const {saveCaptureDraft}=await import('../common/capture-store.js');
+    const {saveCaptureDraft,getCapture}=await import('../common/capture-store.js');
     const annotations=Array.from({length:5000},(_,i)=>({id:'limit-annotation-'+i,type:'redact',color:'#000000',x:10,y:10,width:5,height:5}));
-    await saveCaptureDraft(new URLSearchParams(location.search).get('capture'),annotations,null);
+    const id=new URLSearchParams(location.search).get('capture'); await saveCaptureDraft(id,annotations,null,(await getCapture(id)).revision);
   })()`);
   await browser.navigate(editor,editorUrl);
   await browser.wait(editor,'document.querySelector("#annotation-list").options.length === 5001');
@@ -215,9 +216,15 @@ try {
         const a=lum(s.color),b=lum(s.backgroundColor);
         return {width:innerWidth,theme:matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light',scrollWidth:document.documentElement.scrollWidth,foreground:s.color,background:s.backgroundColor,contrast:(Math.max(a,b)+.05)/(Math.min(a,b)+.05),heroLeft:document.querySelector('.hero').getBoundingClientRect().left,firstTextLeft:document.querySelector('h1').getBoundingClientRect().left,resources:performance.getEntriesByType('resource').map(r=>({name:r.name.split('/').pop(),bytes:r.decodedBodySize}))};
       })()`));
-      if (width===390 || width===1440) await browser.captureScreenshot(landing,join(output,`landing-${width}-${theme}.png`));
+      if (width===390 || width===1440) {
+        await browser.captureScreenshot(landing,join(output,`landing-${width}-${theme}.png`));
+        await browser.evaluate(landing, 'window.scrollTo(0,document.documentElement.scrollHeight)');
+        await browser.captureScreenshot(landing,join(output,`landing-footer-${width}-${theme}.png`));
+        await browser.evaluate(landing, 'window.scrollTo(0,0)');
+      }
     }
   }
+  results.workflows = await runWorkflowRegressions(browser, fixture, popup, output);
   writeFileSync(join(output,'browser-results.json'),JSON.stringify(results,null,2));
   for (const row of results.landing) { assert.ok(row.contrast >= 4.5, JSON.stringify(row)); assert.ok(row.firstTextLeft > 0); assert.ok(row.scrollWidth <= row.width); }
   console.log(JSON.stringify(results,null,2));
