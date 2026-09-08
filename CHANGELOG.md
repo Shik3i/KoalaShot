@@ -4,6 +4,11 @@ All notable user-visible changes are documented here. KoalaShot uses semantic ve
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-09-08
+
+- Preserve the annotated tag object during release checkout and run ordinary CI/CodeQL on branches and PRs, avoiding duplicate tag jobs racing the release preflight. Tag releases still run their own complete browser and package verification.
+- Includes the v0.5.0 changes below. The v0.5.0 tag was not published as a GitHub release because its preflight stopped before creating assets.
+
 ## [0.5.0] - 2026-09-08
 
 - Require annotated release tags on verified main, publish only after downloading and verifying draft assets and provenance, and include a portable static-website ZIP and checksums.
