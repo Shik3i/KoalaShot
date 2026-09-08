@@ -120,7 +120,7 @@ export async function runWorkflowRegressions(browser, fixture, existingPopup, ou
   assert.equal((await stored(editor)).annotations.at(-1).effectStrength, 22);
   assert.equal(await evaluate(editor, "document.querySelector('#color-controls').hidden"), true);
   const shape = (await stored(editor)).annotations.at(-1);
-  await evaluate(editor, `(()=>{const shape=${JSON.stringify(shape)},canvas=document.querySelector('#interaction-canvas'),image=document.querySelector('#capture-image'),rect=image.getBoundingClientRect(),scale=rect.width/image.naturalWidth;
+  await evaluate(editor, `(async()=>{const {getCapture}=await import('../common/capture-store.js');const shape=(await getCapture(new URLSearchParams(location.search).get('capture'))).annotations.at(-1),canvas=document.querySelector('#interaction-canvas'),image=document.querySelector('#capture-image'),rect=image.getBoundingClientRect(),scale=rect.width/image.naturalWidth;
     const pointer=(x,y)=>({clientX:rect.left+x*scale,clientY:rect.top+y*scale,bubbles:true,button:0,pointerId:1,pointerType:'mouse',isPrimary:true});
     canvas.dispatchEvent(new PointerEvent('pointerdown',pointer(shape.x+shape.width,shape.y+shape.height)));
     canvas.dispatchEvent(new PointerEvent('pointermove',pointer(shape.x+shape.width+60,shape.y+shape.height+40)));
