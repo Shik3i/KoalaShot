@@ -106,7 +106,7 @@ export async function saveCapture(record) {
   await runTransaction("readwrite", (store) => store.put(record));
 }
 
-export async function saveCaptureDraft(id, annotations, crop) {
+export async function saveCaptureDraft(id, annotations, crop, expectedRevision = 0, writer = "") {
   if (typeof id !== "string" || !/^[A-Za-z0-9-]{16,128}$/.test(id)) {
     throw new Error("Invalid temporary capture draft ID.");
   }
@@ -118,13 +118,24 @@ export async function saveCaptureDraft(id, annotations, crop) {
   if (!cropValidation.valid) {
     throw new Error("Invalid temporary crop selection.");
   }
+  if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0) throw new Error("Invalid draft revision.");
   const saved = await runTransaction("readwrite", (stores) => new Promise((resolve, reject) => {
     const request = stores[STORAGE_OBJECT_STORE].get(id);
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
-      if (isCaptureExpired(request.result)) { resolve(false); return; }
-      stores[STORAGE_DRAFT_STORE].put({ id, annotations: annotationValidation.annotations, crop: cropValidation.crop, updatedAt: Date.now() });
-      resolve(true);
+      if (isCaptureExpired(request.result)) { resolve(null); return; }
+      const draftRequest = stores[STORAGE_DRAFT_STORE].get(id);
+      draftRequest.onerror = () => reject(draftRequest.error);
+      draftRequest.onsuccess = () => {
+        const revision = draftRequest.result?.revision || 0;
+        if (revision !== expectedRevision) {
+          const error = new Error("This screenshot changed in another tab. Load the latest draft or keep your edits as a separate copy.");
+          error.code = "draft-conflict"; reject(error); return;
+        }
+        const nextRevision = revision + 1;
+        stores[STORAGE_DRAFT_STORE].put({ id, annotations: annotationValidation.annotations, crop: cropValidation.crop, revision: nextRevision, updatedAt: Date.now() });
+        resolve(nextRevision);
+      };
     };
   }), [STORAGE_OBJECT_STORE, STORAGE_DRAFT_STORE]);
   if (!saved) {
@@ -132,9 +143,11 @@ export async function saveCaptureDraft(id, annotations, crop) {
     error.code = "capture-unavailable";
     throw error;
   }
+  notifyDraft({ id, revision: saved, writer });
+  return saved;
 }
 
-export async function getCapture(id) {
+export async function getCapture(id, { allowInvalidDraft = false } = {}) {
   if (typeof id !== "string" || !/^[A-Za-z0-9-]{16,128}$/.test(id)) {
     return null;
   }
@@ -154,13 +167,35 @@ export async function getCapture(id) {
     await deleteCapture(id);
     return null;
   }
-  const validation = tryValidateAnnotations(draft?.annotations ?? record.annotations ?? []);
-  const cropValidation = tryValidateCrop(draft?.crop ?? record.crop ?? null);
+  const validation = tryValidateAnnotations(draft ? draft.annotations : record.annotations === undefined ? [] : record.annotations);
+  const cropValidation = tryValidateCrop(draft ? draft.crop : record.crop ?? null);
+  const revision = draft?.revision ?? 0;
+  if ((!validation.valid || !cropValidation.valid || !Number.isSafeInteger(revision) || revision < 0) && !allowInvalidDraft) {
+    const error = new Error("The saved draft is damaged. Export is disabled to avoid losing redactions. You can open the unedited original as a separate copy.");
+    error.code = "draft-invalid";
+    throw error;
+  }
   return {
     ...record,
     annotations: validation.valid ? validation.annotations : [],
     crop: cropValidation.valid ? cropValidation.crop : null,
+    revision,
   };
+}
+
+function notifyDraft(message) {
+  if (typeof BroadcastChannel !== "function") return;
+  const channel = new globalThis.BroadcastChannel("koalashot-draft-updates");
+  channel.postMessage(message); channel.close();
+}
+
+export function subscribeCaptureUpdates(listener) {
+  if (typeof BroadcastChannel !== "function") return () => {};
+  const channel = new globalThis.BroadcastChannel("koalashot-draft-updates");
+  channel.onmessage = ({ data }) => {
+    if (typeof data?.id === "string" && Number.isSafeInteger(data.revision)) listener(data);
+  };
+  return () => channel.close();
 }
 
 export async function deleteCapture(id) {

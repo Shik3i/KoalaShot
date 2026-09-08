@@ -1,6 +1,6 @@
 // Real packaged editor screenshots using repository-owned page content.
 import { createServer } from "node:http";
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, copyFileSync } from "node:fs";
 import { resolve, join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -51,7 +51,7 @@ try {
   await browser.wait(editor, "document.querySelector('#capture-image').naturalWidth > 0 && !document.querySelector('#stage-wrap').hidden");
   await browser.setViewport(editor, 1280, 800, 1);
   await browser.evaluate(editor, "document.querySelector('#fit-button').click(); for(let i=0;i<3;i++) document.querySelector('#zoom-out-button').click(); document.querySelector('#stage-scroll').scrollTo(0,0)");
-  await browser.wait(editor, "document.querySelector('#editor-keyboard-help').getBoundingClientRect().bottom <= innerHeight");
+  await browser.wait(editor, "document.querySelector('.keyboard-help summary').getBoundingClientRect().bottom <= innerHeight");
   await screenshot(editor, "editor-clean");
   const geometry = await browser.evaluate(editor, "(() => { const image=document.querySelector('#capture-image').getBoundingClientRect(),overlay=document.querySelector('#interaction-canvas').getBoundingClientRect();return {left:image.left-overlay.left,top:image.top-overlay.top,width:image.width};})()");
   const scale = geometry.width / layout.width;
@@ -61,9 +61,13 @@ try {
   await browser.draw(editor, "arrow", point(card.right+190,card.top-85), point(card.right+15,card.top+15));
   await browser.draw(editor, "marker", point(card.left-25,card.top-25), point(card.left-25,card.top-25));
   await browser.evaluate(editor, "document.querySelector('[data-tool=select]').click(); window.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})); document.querySelector('#interaction-canvas').blur()");
+  await browser.wait(editor, "document.querySelector('#draft-status').textContent === 'Draft saved locally'");
   await screenshot(editor, "editor-annotated");
-  await browser.setViewport(popup, 1280, 800, 1);
-  await screenshot(popup, "popup-capture");
+  if (name === "firefox") copyFileSync(join(output, "firefox-editor-annotated.png"), join(root, "landing/assets/editor-preview.png"));
+  const readyPopup = await browser.open(`${extensionUrl}/popup/popup.html`);
+  await browser.wait(readyPopup, "document.documentElement.dataset.koalashotReady === 'true'");
+  await browser.setViewport(readyPopup, 1280, 800, 1);
+  await screenshot(readyPopup, "popup-capture");
   const count = await browser.evaluate(editor, "document.querySelector('#annotation-list').options.length-1");
   assert.equal(count, 3);
 } finally {

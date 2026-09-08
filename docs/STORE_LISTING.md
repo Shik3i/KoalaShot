@@ -1,6 +1,6 @@
 # Store listing packet
 
-Listing draft for the local v0.4.0 candidate. Review the actual store dashboard declarations before submitting. Publication and account actions are separate owner-controlled steps.
+Listing draft for the v0.5.0 candidate. Review the actual store dashboard declarations before submitting. Publication and account actions are separate owner-controlled steps.
 
 ## Name
 
@@ -12,9 +12,9 @@ Capture a complete webpage, copy or save the PNG, and annotate it locally.
 
 ## Detailed description
 
-KoalaShot captures the vertical length of the page you choose, stitches it into one PNG, and lets you edit the result before copying or saving it. Capture & edit opens the local editor without creating an original download or clipboard copy. Completed captures can be reused from the popup preview.
+KoalaShot captures the vertical length of the page you choose, stitches it into one PNG, and lets you edit the result before copying or saving it. Capture & copy copies the original PNG without opening the editor. Capture & save downloads the original PNG. Capture & edit opens the local editor without creating an original download or clipboard copy. Completed captures can be reused from the popup preview.
 
-The local editor includes pen, highlighter, arrows, lines, rectangles, ellipses, multiline text, opaque redaction, cosmetic pixelation and blur, numbered markers, crop, selection, movement, undo/redo, zoom, and pan. The original capture stays immutable while edited exports are rendered at full resolution.
+The local editor includes pen, highlighter, arrows, lines, rectangles, ellipses, multiline text, opaque redaction, cosmetic pixelation and blur, numbered markers, crop, selection, movement, rectangular resize handles, duplication, custom PNG filenames, undo/redo, zoom, and pan. The original capture stays immutable while edited exports are rendered at full resolution.
 
 Privacy is a product constraint: no account, uploads, analytics, telemetry, tracking, remote code, remote configuration, or screenshot-history service. Temporary editor data stays in extension-local storage, becomes unavailable after 24 hours, and is deleted at that deadline by an open editor or on the next popup/editor start. It can be discarded immediately.
 

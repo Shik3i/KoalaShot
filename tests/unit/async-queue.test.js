@@ -30,7 +30,7 @@ test("serialized writer continues after a failed write", async () => {
     }
   });
 
-  await queue("bad");
+  await assert.rejects(queue("bad"), /expected test failure/);
   await queue("good");
 
   assert.deepEqual(values, ["bad", "good"]);

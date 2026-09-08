@@ -132,7 +132,7 @@ def validate_landing_version() -> None:
 
 def validate_archives() -> None:
     version = project_version()
-    expected_archives = {f"koalashot-{browser}-{version}.zip" for browser in ("chrome", "firefox")}
+    expected_archives = {f"koalashot-{browser}-{version}.zip" for browser in ("chrome", "firefox", "landing")}
     actual_archives = {path.name for path in DIST.glob("*.zip")} if DIST.exists() else set()
     if actual_archives != expected_archives:
         fail(f"expected exactly {sorted(expected_archives)}, found {sorted(actual_archives)}; run npm run build")
@@ -143,6 +143,7 @@ def validate_archives() -> None:
         and path.relative_to(EXTENSION).parts[0] != "manifests"
         and path.relative_to(EXTENSION).as_posix() != "icons/icon-master.png"
     }
+    sources["common/product.json"] = LANDING / "version.json"
     expected_files = set(sources) | {"manifest.json"}
     for browser in ("chrome", "firefox"):
         archive = DIST / f"koalashot-{browser}-{version}.zip"
@@ -159,6 +160,13 @@ def validate_archives() -> None:
             if handle.testzip() is not None:
                 fail(f"corrupt ZIP: {archive.name}")
     print("Validated both extension ZIP archives against their complete source inventory.")
+    with zipfile.ZipFile(DIST / f"koalashot-landing-{version}.zip") as handle:
+        files = {path.relative_to(DIST / "landing").as_posix(): path for path in (DIST / "landing").rglob("*") if path.is_file()}
+        if len(handle.namelist()) != len(files) or set(handle.namelist()) != set(files):
+            fail("landing ZIP inventory differs from built website")
+        for name, path in files.items():
+            if handle.read(name) != path.read_bytes():
+                fail(f"landing ZIP content mismatch: {name}")
 
 
 def main() -> None:

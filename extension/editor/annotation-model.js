@@ -120,6 +120,10 @@ export function validateAnnotation(annotation) {
       throw new Error("Invalid annotation bounds.");
     }
     assertColor(annotation.color);
+    if (["pixelate", "blur"].includes(annotation.type) && annotation.effectStrength !== undefined
+      && (!Number.isFinite(annotation.effectStrength) || annotation.effectStrength < 2 || annotation.effectStrength > 40)) {
+      throw new Error("Invalid effect strength.");
+    }
     if (["rectangle", "ellipse"].includes(annotation.type)) {
       assertStrokeWidth(annotation.strokeWidth);
     }
@@ -223,6 +227,8 @@ export function moveAnnotation(annotation, deltaX, deltaY) {
 
 export function updateAnnotationStyle(annotation, changes) {
   const updated = cloneAnnotation(annotation);
+  if (changes.radius !== undefined && updated.type === "marker") updated.radius = changes.radius;
+  if (changes.effectStrength !== undefined && ["pixelate", "blur"].includes(updated.type)) updated.effectStrength = changes.effectStrength;
   if (changes.color !== undefined) {
     assertColor(changes.color);
     updated.color = changes.color;

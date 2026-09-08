@@ -1,6 +1,6 @@
-# Status — v0.4.0
+# Status — v0.5.0
 
-Updated 2026-09-07. This source version is not a claim of GitHub publication, Chrome Web Store approval, Firefox Add-ons approval, or website deployment.
+Updated 2026-09-08. This source version is not a claim of GitHub publication, Chrome Web Store approval, Firefox Add-ons approval, or website deployment.
 
 ## Implemented
 
@@ -10,12 +10,15 @@ Updated 2026-09-07. This source version is not a claim of GitHub publication, Ch
 - Atomic draft writes only for live captures; cross-tab discard invalidation; local expiry and journal cleanup.
 - Responsive landing, optimized local hero, social card, full local-data disclosure and configurable official store links.
 - Exact source-to-ZIP validation and negative packaging tests; tag release depends on both browser jobs.
+- Distinct direct copy/save capture flows; revision conflict recovery, resize handles, duplication and custom export filenames.
+- Website help, custom 404, real editor imagery, per-browser store-state tests and a read-only manual-deployment acceptance probe.
+- Annotated-tag/main/CI preflight; draft download, checksum and provenance verification before release publication, including a static website ZIP.
 
 ## Verification record
 
-Final local release checks and repository cleanup: [v0.4.0 validation](releases/0.4.0.md).
+Historical local release checks: [v0.4.0 validation](releases/0.4.0.md).
 
-Current command outputs, browser versions, screenshots and limitations are consolidated in [audit fix status](audits/2026-09-07/FIXES.md). The original [audit](audits/2026-09-07/AUDIT.md) describes the pre-fix commit and remains historical evidence.
+Earlier command outputs, browser versions, screenshots and limitations are consolidated in [audit fix status](audits/2026-09-07/FIXES.md). The original [audit](audits/2026-09-07/AUDIT.md) describes the pre-fix commit and remains historical evidence. Use the v0.5.0 release commit's CI and release workflow for its verification record.
 
 Do not infer a current result from older v0.3.2/v0.3.3 run notes. Local gates and remote CI are separate. Check the exact release commit on GitHub Actions for current remote results; the historical local audit is not remote CI evidence.
 
@@ -32,4 +35,4 @@ One vertical root, no horizontal stitching, no nested root traversal, no protect
 
 Blur and pixelation are cosmetic. Opaque redaction protects the edited PNG; the temporary original remains available until discard/expiry. Files already saved and clipboard contents are outside automatic deletion.
 
-Future optional work: annotation resize handles, richer text/arrow styling, image insertion, localization, user-selected scroll roots, tiled/PDF export. These features are not required for the currently advertised vertical-PNG scope.
+Future optional work: richer text/arrow styling, image insertion, localization, user-selected scroll roots, tiled/PDF export. These features are not required for the currently advertised vertical-PNG scope.

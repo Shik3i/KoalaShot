@@ -5,14 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>KoalaShot Editor</title>
     <link rel="stylesheet" href="editor.css">
+    <link rel="stylesheet" href="../common/footer.css">
   </head>
   <body>
     <header class="editor-header">
       <div class="identity-block">
-        <a class="brand" href="editor.html" aria-label="KoalaShot Editor home">
+        <span class="brand" aria-label="KoalaShot Editor">
           <img src="../icons/icon-32.png" alt="" width="30" height="30">
           <span>KoalaShot</span>
-        </a>
+        </span>
         <div class="source-summary">
           <strong id="source-hostname">Loading screenshot…</strong>
           <span id="capture-meta"></span>
@@ -21,16 +22,16 @@
       <div class="top-actions" aria-label="Document actions">
         <button id="undo-button" class="icon-button" type="button" title="Undo (Ctrl/Cmd+Z)" aria-label="Undo" disabled>↶</button>
         <button id="redo-button" class="icon-button" type="button" title="Redo (Ctrl+Y or Cmd+Shift+Z)" aria-label="Redo" disabled>↷</button>
-        <span class="action-divider" aria-hidden="true"></span>
+        <details class="view-options"><summary class="text-button">View</summary><div class="view-controls">
         <button id="zoom-out-button" class="icon-button" type="button" title="Zoom out (Ctrl/Cmd+-)" aria-label="Zoom out">−</button>
         <output id="zoom-value" class="zoom-value" aria-live="polite">100%</output>
         <button id="zoom-in-button" class="icon-button" type="button" title="Zoom in (Ctrl/Cmd++)" aria-label="Zoom in">+</button>
         <button id="fit-button" class="text-button" type="button" title="Fit to width (Ctrl/Cmd+0)">Fit</button>
         <button id="actual-size-button" class="text-button" type="button" title="Actual size / 100%">100%</button>
-        <span class="action-divider" aria-hidden="true"></span>
+        </div></details>
         <button id="copy-button" class="button button-primary" type="button" disabled>Copy edited</button>
         <button id="save-button" class="button button-secondary" type="button" disabled>Save edited PNG</button>
-        <button id="discard-button" class="button button-quiet" type="button" disabled>Close and discard</button>
+        <details class="document-options"><summary class="text-button">More</summary><div class="document-controls"><label for="export-filename">PNG filename</label><input id="export-filename" type="text" maxlength="128" autocomplete="off"><button id="discard-button" class="button button-quiet" type="button" disabled>Close and discard</button><p>Removes the local original and draft. Existing downloads and clipboard copies remain.</p></div></details>
       </div>
     </header>
 
@@ -66,16 +67,22 @@
             <div class="control-group" id="color-controls"><span class="control-label">Color</span><div class="palette" role="group" aria-label="Annotation color"><button class="swatch is-selected" data-color="#287a4a" type="button" aria-label="Koala green" aria-pressed="true" title="Koala green"></button><button class="swatch" data-color="#e53935" type="button" aria-label="Red" aria-pressed="false" title="Red"></button><button class="swatch" data-color="#1565c0" type="button" aria-label="Blue" aria-pressed="false" title="Blue"></button><button class="swatch" data-color="#f9a825" type="button" aria-label="Yellow" aria-pressed="false" title="Yellow"></button><button class="swatch" data-color="#111111" type="button" aria-label="Black" aria-pressed="false" title="Black"></button><input id="custom-color" type="color" value="#287a4a" aria-label="Custom annotation color"></div></div>
             <label class="control-group compact-control" for="stroke-width"><span class="control-label">Width <output id="stroke-width-value">6</output></span><input id="stroke-width" type="range" min="1" max="40" step="1" value="6"></label>
             <label class="control-group compact-control" id="font-size-control" for="font-size"><span class="control-label">Text size <output id="font-size-value">32</output></span><input id="font-size" type="range" min="8" max="120" step="1" value="32"></label>
+            <label class="control-group compact-control" id="marker-size-control" for="marker-size" hidden><span class="control-label">Marker size <output id="marker-size-value">18</output></span><input id="marker-size" type="range" min="4" max="100" step="1" value="18"></label>
+            <label class="control-group compact-control" id="effect-strength-control" for="effect-strength" hidden><span class="control-label">Effect strength <output id="effect-strength-value">10</output></span><input id="effect-strength" type="range" min="2" max="40" step="1" value="10"></label>
             <label class="control-group" for="annotation-list"><span class="control-label">Annotations</span><select id="annotation-list" class="annotation-select"><option value="">None selected</option></select></label>
             <button id="edit-text-button" class="text-button" type="button" hidden>Edit text</button>
+            <button id="duplicate-button" class="text-button" type="button" disabled>Duplicate</button>
             <div id="crop-controls" class="crop-controls" hidden><button id="apply-crop-button" class="text-button" type="button" disabled>Apply crop</button><button id="reset-crop-button" class="text-button" type="button" disabled>Reset crop</button></div>
           </div>
         </section>
 
+        <div id="pending-edits" class="document-notice" role="status" hidden><span>Pending text or crop — apply before exporting.</span><div><button id="apply-pending-button" class="text-button" type="button">Apply</button><button id="discard-pending-button" class="text-button" type="button">Discard pending</button></div></div>
+        <div id="draft-conflict" class="document-notice conflict-notice" role="alert" hidden><strong>Changed in another tab. Export is paused.</strong><p>Load the latest saved draft, or keep this tab’s edits as a separate copy.</p><div><button id="load-latest-button" class="text-button" type="button">Load latest draft</button><button id="keep-copy-button" class="text-button" type="button">Keep my edits as a copy</button></div></div>
+
         <section class="stage-panel" aria-label="Screenshot workspace">
           <p id="capture-warning" class="capture-warning" role="status" hidden></p>
           <div id="loading-state" class="message-card" role="status" aria-live="polite"><h1>Loading screenshot…</h1><p>The temporary local capture is being opened.</p></div>
-          <div id="error-state" class="message-card" hidden><h1>Screenshot unavailable</h1><p id="error-message">This temporary capture may have expired.</p></div>
+          <div id="error-state" class="message-card" hidden><h1>Screenshot unavailable</h1><p id="error-message">This temporary capture may have expired.</p><button id="recover-original-button" class="button button-secondary" type="button" hidden>Open unedited original as a new copy</button><p class="recovery-help">For a new screenshot, open KoalaShot from the browser toolbar on the page you want to capture.</p></div>
           <div id="stage-wrap" class="stage-wrap" hidden>
             <div id="stage-scroll" class="stage-scroll" tabindex="0" aria-label="Scrollable screenshot canvas">
               <div id="stage" class="stage"><img id="capture-image" alt="Original screenshot"><div id="image-spacer" aria-hidden="true"></div></div>
@@ -85,10 +92,10 @@
           </div>
         </section>
         <p id="status" class="status-line" role="status" aria-live="polite">Loading local screenshot…</p>
-        <p class="editor-hint">Redact protects exported pixels; the local original remains until discarded. Blur and Pixelate are cosmetic. <a href="https://shot.koalastuff.net/privacy/" target="_blank" rel="noopener">Privacy</a> · <a href="https://github.com/Shik3i/KoalaShot/issues" target="_blank" rel="noopener">Help</a></p>
-        <p id="editor-keyboard-help" class="editor-hint">Keyboard: choose a tool, focus the annotation overlay, and press <kbd>Enter</kbd> to add at the visible center. Use the Annotations list to select; arrow keys move the selection, <kbd>Shift</kbd> moves 10px, and <kbd>Delete</kbd> removes it. Shortcuts: <kbd>V</kbd> select · <kbd>Space</kbd> temporary pan · <kbd>Ctrl/Cmd+Z</kbd> undo · <kbd>Ctrl/Cmd+0</kbd> fit width.</p>
+        <div class="editor-summary"><span id="draft-status" role="status">Loading draft…</span><details class="keyboard-help"><summary>Keyboard &amp; privacy</summary><div><p id="editor-keyboard-help">Choose a tool, focus the annotation overlay, and press <kbd>Enter</kbd> to add at the visible center. In Select, arrow keys move the selection; <kbd>Shift</kbd> moves 10px. In Pan, arrows scroll. <kbd>Delete</kbd> removes, <kbd>Ctrl/Cmd+D</kbd> duplicates, <kbd>Ctrl/Cmd+Z</kbd> undoes, <kbd>Ctrl/Cmd+0</kbd> fits width.</p><p class="editor-hint">Redact protects exported pixels. The local original remains until discarded or expired after 24 hours. Blur and Pixelate are cosmetic. Closing the tab keeps the saved draft until expiry.</p></div></details></div>
       </main>
     </div>
+    <footer class="product-footer" data-product-footer></footer>
     <script type="module" src="editor.js"></script>
   </body>
 </html>

@@ -37,3 +37,12 @@ export function makeEditedFilename(filename) {
     : "KoalaShot_screenshot";
   return `${safe.slice(0, 120)}_edited.png`;
 }
+
+export function normalizePngFilename(value, fallback = "KoalaShot_edited.png") {
+  const clean = String(value || "").replace(INVALID_FILENAME_CHARACTERS, "_").trim().replace(/[. ]+$/g, "");
+  if (!clean) return fallback;
+  let stem = clean.replace(/\.png$/i, "").replace(/[. ]+$/g, "").slice(0, 120);
+  if (!stem) return fallback;
+  if (/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(stem)) stem = `_${stem}`;
+  return `${stem}.png`;
+}

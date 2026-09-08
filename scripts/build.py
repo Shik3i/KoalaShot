@@ -4,9 +4,12 @@
 from __future__ import annotations
 
 import json
+import html
+import re
 import shutil
 import zipfile
 from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -86,6 +89,7 @@ def build_extension(browser: str, version: str) -> Path:
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(path, target)
     (output / "manifest.json").write_bytes((json.dumps(manifest, indent=2) + "\n").encode("utf-8"))
+    shutil.copy2(LANDING / "version.json", output / "common" / "product.json")
     return output
 
 
@@ -102,6 +106,34 @@ def zip_directory(directory: Path, archive: Path) -> None:
             handle.writestr(info, path.read_bytes())
 
 
+def build_landing() -> None:
+    copy_tree(LANDING, DIST / "landing")
+    metadata = json.loads((LANDING / "version.json").read_text(encoding="utf-8"))
+    stores = {}
+    for browser, raw in metadata.get("stores", {}).items():
+        if not raw:
+            continue
+        url = urlsplit(raw)
+        pattern = r"/detail/[^/]+/[a-p]{32}/?" if browser == "chrome" else r"/(?:[a-z]{2}(?:-[A-Z]{2})?/)?firefox/addon/[^/]+/?"
+        host = "chromewebstore.google.com" if browser == "chrome" else "addons.mozilla.org"
+        if browser not in ("chrome", "firefox") or url.scheme != "https" or url.netloc != host or not re.fullmatch(pattern, url.path):
+            fail(f"invalid official {browser} store URL")
+        stores[browser] = urlunsplit((url.scheme, url.netloc, url.path, "", ""))
+    for path in (DIST / "landing").rglob("*.html"):
+        source = path.read_text(encoding="utf-8")
+        for browser, url in stores.items():
+            def link(match):
+                tag = match[0].replace(" hidden", "")
+                target = url.rstrip("/") + "/reviews" + ("/" if browser == "firefox" else "") if "data-review" in tag else url
+                return tag[:-1] + f' href="{html.escape(target, quote=True)}">'
+            source = re.sub(rf'<a\b[^>]*data-store="{browser}"[^>]*>', link, source)
+            source = re.sub(rf'<p data-store-status="{browser}">.*?</p>', f'<p data-store-status="{browser}"><a href="{html.escape(url, quote=True)}">Get KoalaShot for {browser.title()}</a></p>', source)
+        if stores:
+            source = source.replace("data-review-pending>", "data-review-pending hidden>")
+        source = re.sub(r'(<span data-app-version[^>]*?) hidden></span>', rf'\1>v{html.escape(metadata["version"])}</span>', source)
+        path.write_text(source, encoding="utf-8")
+
+
 def main() -> None:
     version = project_version()
     missing = [str(path.relative_to(ROOT)) for path in required_files() if not path.is_file()]
@@ -116,7 +148,8 @@ def main() -> None:
     for browser in ("chrome", "firefox"):
         output = build_extension(browser, version)
         zip_directory(output, DIST / f"koalashot-{browser}-{version}.zip")
-    copy_tree(LANDING, DIST / "landing")
+    build_landing()
+    zip_directory(DIST / "landing", DIST / f"koalashot-landing-{version}.zip")
     print("Built dist/chrome/")
     print("Built dist/firefox/")
     print(f"Built dist/koalashot-chrome-{version}.zip")

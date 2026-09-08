@@ -145,6 +145,7 @@ function createPortChannel(port, sessionId, signal) {
           // Already disconnected.
         }
       }
+      closed = true;
     },
   };
 }
@@ -188,6 +189,15 @@ function isSameCaptureRect(expected, actual) {
       && Number.isFinite(actual[key])
       && Math.abs(expected[key] - actual[key]) < 1
   ));
+}
+
+function verifyFrame(expected, actual) {
+  const keys = ["actualX", "actualY", "viewportWidth", "viewportHeight", "screenViewportWidth", "screenViewportHeight", "documentHeight", "documentWidth"];
+  if (keys.some((key) => !Number.isFinite(actual[key]) || Math.abs(expected[key] - actual[key]) > 0.5)
+    || expected.frameRevision !== actual.frameRevision
+    || expected.pageUrl !== actual.pageUrl || !isSameCaptureRect(expected.captureRect, actual.captureRect)) {
+    throw new CaptureError("The page moved or changed during the screenshot. Wait for the page to settle and capture again.", "frame-changed");
+  }
 }
 
 async function captureFullPage(tab, { signal, onProgress, target = "page" }) {
@@ -300,17 +310,24 @@ async function captureFullPage(tab, { signal, onProgress, target = "page" }) {
       }
       await verifyCaptureTab(initialTab);
       ensureNotCancelled(signal);
+      const beforeFrame = await channel.request({ type: "ping" });
+      verifyFrame(scrolled, beforeFrame);
       onProgress?.({ phase: "capturing", message: `Capturing section ${index + 1} of ${positions.length}…`, current: index + 1, total: positions.length });
       let dataUrl;
       try {
-        dataUrl = await withTimeout(captureVisibleTab(tab.windowId), CAPTURE_REQUEST_TIMEOUT_MS,
+        dataUrl = await withTimeout(captureVisibleTab(tab.windowId, { signal, beforeCapture: async () => {
+          ensureNotCancelled(signal);
+          await verifyCaptureTab(initialTab);
+          verifyFrame(scrolled, await channel.request({ type: "ping" }));
+        } }), CAPTURE_REQUEST_TIMEOUT_MS,
           new CaptureError("The browser screenshot request timed out.", "capture-timeout"));
       } catch (error) {
         throw normalizeCaptureError(error);
       }
       ensureNotCancelled(signal);
       await verifyCaptureTab(initialTab);
-      await channel.request({ type: "ping" });
+      const afterFrame = await channel.request({ type: "ping" });
+      verifyFrame(beforeFrame, afterFrame);
       await stitcher.add(dataUrl, scrolled.actualY);
       ensureNotCancelled(signal);
       lastCaptureAt = Date.now();
@@ -425,7 +442,7 @@ export async function loadSettings() {
 
 export async function saveSettings(settings) {
   await storageSet({
-    openEditorAfterCapture: Boolean(settings.openEditorAfterCapture),
+    openEditorAfterCapture: false,
     captureTarget: settings.captureTarget === "internal" ? "internal" : "page",
   });
 }

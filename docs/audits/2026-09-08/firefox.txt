@@ -1,0 +1,40 @@
+
+> koalashot@0.4.0 test:browser:firefox
+> node scripts/run-browser-matrix.mjs firefox
+
+
+==> firefox full flow
+{
+  "browser": "firefox",
+  "clipboard": [
+    "popup: Full-page screenshot copied.",
+    "editor: Edited screenshot copied."
+  ],
+  "downloads": [
+    "KoalaShot_127.0.0.1_2026-09-08_18-32-34.png",
+    "KoalaShot_127.0.0.1_2026-09-08_18-32-40.png",
+    "KoalaShot_127.0.0.1_2026-09-08_18-32-40_edited.png"
+  ],
+  "limitations": [
+    "Editor pointer events are synthetic; privileged-scope BiDi input is unsupported.",
+    "Editor DPR emulation is Chrome-only; Firefox fixtures still use real BiDi DPR emulation."
+  ],
+  "version": "155.0.1",
+  "narrowEditorWidth": 500
+}
+
+==> firefox permission denial
+{
+  "browser": "firefox",
+  "clipboard": [],
+  "downloads": [
+    "KoalaShot_127.0.0.1_2026-09-08_18-32-56.png"
+  ],
+  "limitations": [
+    "Editor pointer events are synthetic; privileged-scope BiDi input is unsupported.",
+    "Editor DPR emulation is Chrome-only; Firefox fixtures still use real BiDi DPR emulation."
+  ],
+  "version": "155.0.1"
+}
+
+Browser matrix passed

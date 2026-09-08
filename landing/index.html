@@ -2,6 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
+    <meta name="twitter:card" content="summary_large_image">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="KoalaShot captures an entire webpage to your clipboard or as a PNG, entirely on your device.">
     <meta property="og:title" content="KoalaShot – Full Page Screenshot">
@@ -18,7 +19,7 @@
   <body>
     <header class="site-shell site-header">
       <a class="brand" href="./"><img src="assets/favicon.png" alt="" width="34" height="34"><span>KoalaShot</span></a>
-      <nav class="site-nav" aria-label="Primary navigation"><a href="#workflow">Workflow</a><a href="#privacy">Privacy</a><a href="privacy/">Privacy page</a></nav>
+      <nav class="site-nav" aria-label="Primary navigation"><a href="#workflow">Workflow</a><a href="#privacy">Privacy</a><a href="help/">Help</a></nav>
     </header>
 
     <main>
@@ -40,12 +41,20 @@
         <div class="site-shell">
           <p class="eyebrow">Simple by design</p>
           <h2>Capture, edit, and keep it local.</h2>
-          <p class="section-intro">KoalaShot scrolls through the current page, captures each viewport, and stitches the sections into one vertical image. The original capture stays available for your next step.</p>
+          <p class="section-intro">KoalaShot scrolls through the current page, captures each viewport, and stitches the sections into one vertical image. Choose your output before capture. A completed original remains available while the popup stays open.</p>
           <div class="grid-3">
             <article class="card"><span class="number">1</span><h3>Capture</h3><p>Open KoalaShot and capture the complete vertical page, not just the visible viewport.</p></article>
-            <article class="card"><span class="number">2</span><h3>Copy or save</h3><p>Copy the original PNG directly to the clipboard or start a normal local file download.</p></article>
-            <article class="card"><span class="number">3</span><h3>Edit locally</h3><p>Choose Capture &amp; edit to crop, annotate, and redact before any copy or download. Blur and pixelation are cosmetic; use Redact for sensitive details.</p></article>
+            <article class="card"><span class="number">2</span><h3>Edit if needed</h3><p>Capture &amp; edit opens the local editor before any export. Crop, annotate, and use opaque Redact for sensitive details. Blur and pixelation are cosmetic.</p></article>
+            <article class="card"><span class="number">3</span><h3>Copy or save</h3><p>Export your edited PNG. Need the untouched original? Capture &amp; copy and Capture &amp; save go directly to their destination without opening an editor.</p></article>
           </div>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="editor-preview-title">
+        <div class="site-shell">
+          <p class="eyebrow">Inside the editor</p><h2 id="editor-preview-title">Make your point clear.</h2>
+          <p class="section-intro">Add arrows, highlight a detail, crop the page and export your PNG. Every edit stays in your browser.</p>
+          <figure class="product-preview"><a href="assets/editor-preview.png" aria-label="Open the full-size KoalaShot editor screenshot"><img src="assets/editor-preview.png" alt="KoalaShot editor in Firefox showing a captured example page with an arrow, numbered marker and rectangle annotation" width="1280" height="800" loading="lazy" decoding="async"></a><figcaption>Actual Firefox editor, using an example page included with KoalaShot. <a href="help/#editor">Explore the editor tools</a>.</figcaption></figure>
         </div>
       </section>
 
@@ -62,7 +71,7 @@
           <article class="card"><h3>Firefox</h3><p>Separate desktop build for Firefox 142 or later. Store availability is shown here when the listing is approved.</p></article>
           <article class="card"><h3>Open source</h3><p>Readable vanilla HTML, CSS, JavaScript, and Python build tooling live in the <a href="https://github.com/Shik3i/KoalaShot">public repository</a>.</p></article>
         </div>
-        <div class="site-shell"><div class="card store-placeholder" data-store-pending><h3>Preparing for the browser stores</h3><p>KoalaShot is not yet available from the stores. Follow <a href="https://github.com/Shik3i/KoalaShot/releases">releases on GitHub</a> for published builds and <a href="https://github.com/Shik3i/KoalaShot#readme">installation instructions</a>.</p></div></div>
+        <div class="site-shell"><div class="card store-placeholder"><h3>Browser store availability</h3><p data-store-status="chrome">Chrome: official listing link not yet configured.</p><p data-store-status="firefox">Firefox: official listing link not yet configured.</p><p> Follow <a href="https://github.com/Shik3i/KoalaShot/releases">releases on GitHub</a> for published builds and <a href="https://github.com/Shik3i/KoalaShot#readme">installation instructions</a>.</p></div></div>
       </section>
 
       <section class="section">
@@ -70,12 +79,16 @@
           <details><summary>Does KoalaShot upload screenshots?</summary><p>No. Capture, stitching, clipboard operations, and temporary editor storage are local browser operations.</p></details>
           <details><summary>Can it capture every page?</summary><p>Normal document scrolling is supported by default. The popup can also capture the largest fully visible vertical scroll area inside a page. Browser-protected pages, partially off-screen roots, and horizontal stitching remain unsupported.</p></details>
           <details><summary>What can the editor do?</summary><p>The local editor supports pen, highlighter, arrows, lines, rectangles, ellipses, multiline text, secure opaque redaction, cosmetic pixelation and blur, numbered markers, crop, selection, movement, undo/redo, zoom, pan, and edited PNG copy/save.</p></details>
-          <details><summary>Where are store links?</summary><p>Store publishing is planned for a later phase. This site does not show fake or inactive store badges.</p></details>
+          <details><summary>Where are store links?</summary><p>Official installation and review links appear separately for each browser when its listing is configured. See Browser store availability above for the current links. GitHub provides builds and installation instructions in the meantime.</p></details>
         </div></div>
       </section>
     </main>
 
-    <footer class="site-shell site-footer"><span>© <span data-current-year>2026</span> Shik3i · KoalaShot · <span data-app-version data-version-url="version.json" hidden></span></span><span class="footer-links"><a href="privacy/">Privacy</a><a href="legal/">Legal</a><a href="https://github.com/Shik3i/KoalaShot">GitHub</a></span></footer>
+    <footer class="site-shell site-footer">
+      <div class="footer-brand"><strong>KoalaShot <span data-app-version data-version-url="version.json" hidden></span></strong><span>Local capture. No uploads.</span><small>© <span data-current-year>2026</span> Shik3i</small></div>
+      <nav class="footer-links" aria-label="Support and legal"><a href="./">Home</a><a href="privacy/">Privacy</a><a href="https://koalastuff.net/imprint">Legal</a><a href="/help/">Help</a><a href="https://github.com/Shik3i/KoalaShot/issues">Feedback</a><a href="https://github.com/Shik3i/KoalaShot">Source</a><a href="https://github.com/Shik3i/KoalaShot/blob/main/CHANGELOG.md">Changelog</a></nav>
+      <nav class="footer-reviews" aria-label="Rate KoalaShot"><span>Enjoy KoalaShot?</span><a data-store="chrome" data-review hidden>Rate on Chrome Web Store</a><a data-store="firefox" data-review hidden>Rate on Firefox Add-ons</a><small data-review-pending>Review links appear after store launch.</small></nav>
+    </footer>
     <script src="main.js"></script>
   </body>
 </html>

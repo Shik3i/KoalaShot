@@ -1,8 +1,9 @@
 import { getApi, ensureClipboardPermission } from "../common/browser-api.js";
 import { copyPngBlob } from "../common/clipboard.js";
-import { deleteCapture, getCapture, pruneExpiredCaptures, saveCaptureDraft, subscribeCaptureDeletion } from "../common/capture-store.js";
+import { deleteCapture, getCapture, makeCaptureId, saveCapture, pruneExpiredCaptures, saveCaptureDraft, subscribeCaptureDeletion, subscribeCaptureUpdates } from "../common/capture-store.js";
+import { initializeFooter } from "../common/product-links.js";
 import { downloadBlob } from "../popup/capture-controller.js";
-import { makeEditedFilename } from "../common/filename.js";
+import { makeEditedFilename, normalizePngFilename } from "../common/filename.js";
 import { TEMP_CAPTURE_TTL_MS } from "../common/constants.js";
 import {
   createAnnotation,
@@ -23,6 +24,7 @@ import {
   reducePoints,
 } from "./geometry.js";
 import { DocumentHistory } from "./history.js";
+import { resizeHandles, resizeAnnotation } from "./resize.js";
 import { renderEditorResultBlob, drawEditorAnnotations, clearEffectCache } from "./editor-export.js";
 
 const MIN_ZOOM = 0.1;
@@ -104,6 +106,15 @@ let devicePixelRatioValue = globalThis.devicePixelRatio || 1;
 let annotationColor = "#287a4a";
 let strokeWidth = 6;
 let fontSize = 32;
+let markerRadius = 18;
+let effectStrength = 10;
+let draftRevision = 0;
+let draftConflict = false;
+let fitMode = false;
+const writerId = makeCaptureId();
+const draftStatus = document.querySelector("#draft-status");
+const pendingNotice = document.querySelector("#pending-edits");
+const conflictNotice = document.querySelector("#draft-conflict");
 
 function setStatus(message) {
   status.textContent = message;
@@ -121,8 +132,8 @@ function showError(message) {
 
 function setExportBusy(value) {
   exportInProgress = value;
-  copyButton.disabled = value || !capture;
-  saveButton.disabled = value || !capture;
+  copyButton.disabled = value || !capture || draftConflict || !errorState.hidden;
+  saveButton.disabled = value || !capture || draftConflict || !errorState.hidden;
   discardButton.disabled = value || !capture;
   if (!value && capture && !discardInProgress
     && Date.now() >= capture.createdAt + TEMP_CAPTURE_TTL_MS) {
@@ -161,7 +172,7 @@ function draftJournalKey() {
 }
 
 function writeDraftJournal(state) {
-  const serialized = JSON.stringify(state);
+  const serialized = JSON.stringify({ ...state, baseRevision: draftRevision });
   try {
     globalThis.sessionStorage.setItem(draftJournalKey(), serialized);
   } catch {
@@ -179,16 +190,17 @@ function queueDraftWrite() {
 }
 
 function scheduleDraftSave() {
-  if (!capture || discardInProgress) {
+  if (!capture || discardInProgress || draftConflict) {
     return;
   }
   const state = { annotations: currentAnnotations(), crop: currentCrop() };
   pendingDraft = { record: { ...capture, ...state }, journal: writeDraftJournal(state) };
+  draftStatus.textContent = "Saving draft…";
   queueDraftWrite();
 }
 
 function startDraftSave() {
-  if (draftSaveRunning || !pendingDraft || discardInProgress) {
+  if (draftSaveRunning || !pendingDraft || discardInProgress || draftConflict) {
     return;
   }
   const draft = pendingDraft;
@@ -196,20 +208,20 @@ function startDraftSave() {
   draftSaveRunning = true;
   draftSaveChain = persistDraft(draft).finally(() => {
     draftSaveRunning = false;
-    if (pendingDraft && !discardInProgress) {
+    if (pendingDraft && !discardInProgress && !draftConflict) {
       queueDraftWrite();
     }
   });
 }
 
-function flushDraftSave() {
-  if (!capture || discardInProgress) {
-    return draftSaveChain;
-  }
+async function flushDraftSave() {
+  if (!capture || discardInProgress || draftConflict) return draftSaveChain;
   window.clearTimeout(draftTimer);
   draftTimer = null;
-  startDraftSave();
-  return draftSaveChain;
+  while ((pendingDraft || draftSaveRunning) && !discardInProgress && !draftConflict) {
+    if (!draftSaveRunning) startDraftSave();
+    await draftSaveChain;
+  }
 }
 
 async function persistDraft(draft) {
@@ -218,12 +230,17 @@ async function persistDraft(draft) {
   }
   try {
     validateAnnotations(draft.record.annotations);
-    await saveCaptureDraft(draft.record.id, draft.record.annotations, draft.record.crop);
+    draftRevision = await saveCaptureDraft(draft.record.id, draft.record.annotations, draft.record.crop, draftRevision, writerId);
+    if (capture) capture.revision = draftRevision;
     if (globalThis.sessionStorage.getItem(draftJournalKey()) === draft.journal) {
       globalThis.sessionStorage.removeItem(draftJournalKey());
     }
+    if (pendingDraft) pendingDraft.journal = writeDraftJournal({ annotations: pendingDraft.record.annotations, crop: pendingDraft.record.crop });
+    draftStatus.textContent = pendingDraft ? "Saving draft…" : "Draft saved locally";
   } catch (error) {
     if (error?.code === "capture-unavailable") { invalidateCapture(error.message); return; }
+    if (error?.code === "draft-conflict") { showDraftConflict(); return; }
+    draftStatus.textContent = "Draft not saved — keep this tab open";
     const detail = error instanceof Error ? error.message : "Local storage failed.";
     setStatus(`Draft could not be saved locally: ${detail} Your current editor state remains available.`);
   }
@@ -276,11 +293,12 @@ function updateAnnotationList() {
 
 function updateHistoryButtons() {
   updateAnnotationList();
-  undoButton.disabled = !history.canUndo;
-  redoButton.disabled = !history.canRedo;
+  undoButton.disabled = draftConflict || !history.canUndo;
+  redoButton.disabled = draftConflict || !history.canRedo;
   const hasAnnotations = currentAnnotations().length > 0;
   clearButton.disabled = !hasAnnotations;
   deleteButton.disabled = !selectedId || !currentAnnotations().some((annotation) => annotation.id === selectedId);
+  document.querySelector("#duplicate-button").disabled = deleteButton.disabled || currentAnnotations().length >= 5000;
 }
 
 function updateColorButtonState() {
@@ -296,14 +314,21 @@ function selectedAnnotation() {
 }
 
 function updateContextControls() {
-  const selected = selectedAnnotation();
-  const toolHasColor = ["pen", "highlighter", "arrow", "line", "rectangle", "ellipse", "text", "redact", "pixelate", "blur", "marker"].includes(activeTool);
-  colorControls.hidden = !toolHasColor && !selected;
+  const selected = activeTool === "select" ? selectedAnnotation() : null;
   const styleTarget = selected || { type: activeTool };
-  const hasStroke = ["pen", "highlighter", "arrow", "line", "rectangle", "ellipse", "marker"].includes(styleTarget.type);
+  colorControls.hidden = !["pen", "highlighter", "arrow", "line", "rectangle", "ellipse", "text", "redact", "marker"].includes(styleTarget.type);
+  const hasStroke = ["pen", "highlighter", "arrow", "line", "rectangle", "ellipse"].includes(styleTarget.type);
   const hasFont = styleTarget.type === "text";
   strokeControl.parentElement.hidden = !hasStroke;
   fontControl.parentElement.hidden = !hasFont;
+  document.querySelector("#marker-size-control").hidden = styleTarget.type !== "marker";
+  document.querySelector("#effect-strength-control").hidden = !["pixelate", "blur"].includes(styleTarget.type);
+  if (selected?.radius) markerRadius = selected.radius;
+  if (selected?.effectStrength) effectStrength = selected.effectStrength;
+  document.querySelector("#marker-size").value = String(markerRadius);
+  document.querySelector("#marker-size-value").textContent = String(markerRadius);
+  document.querySelector("#effect-strength").value = String(effectStrength);
+  document.querySelector("#effect-strength-value").textContent = String(effectStrength);
   editTextButton.hidden = !(selected?.type === "text");
   if (selected) {
     if (selected.color) {
@@ -332,6 +357,8 @@ function selectTool(tool) {
   if (!TOOL_LABELS[tool]) {
     return;
   }
+  if (tool !== activeTool && hasPendingEdits()) { requireAppliedEdits(); return; }
+  if (tool !== activeTool && tool !== "select") selectedId = "";
   activeTool = tool;
   document.querySelectorAll("[data-tool]").forEach((button) => {
     const active = button.dataset.tool === tool;
@@ -348,7 +375,17 @@ function selectTool(tool) {
     updateColorButtonState();
   }
   updateContextControls();
+  updateHistoryButtons();
   drawOverlay();
+}
+
+function duplicateSelected() {
+  const selected = selectedAnnotation();
+  if (!selected || draftConflict || currentAnnotations().length >= 5000 || !requireAppliedEdits()) return;
+  const copy = { ...moveAnnotation(selected, 16, 16), id: makeCaptureId() };
+  if (copy.type === "marker") copy.number = nextMarkerNumber();
+  history.apply("Duplicate annotation", documentState([...currentAnnotations(), copy]));
+  selectedId = copy.id; selectTool("select"); updateHistoryButtons(); drawOverlay();
 }
 
 function getStageImageRect() {
@@ -400,10 +437,20 @@ function drawOverlay() {
   const viewport = getViewportImageBounds();
   context.setTransform(devicePixelRatioValue * zoom, 0, 0, devicePixelRatioValue * zoom, devicePixelRatioValue * offsetX, devicePixelRatioValue * offsetY);
   context.clearRect(-offsetX / zoom, -offsetY / zoom, overlayRect.width / zoom, overlayRect.height / zoom);
-  const visible = currentAnnotations().filter((annotation) => boundsIntersectViewport(annotationBounds(annotation), viewport, 50));
+  const previewAnnotations = currentAnnotations().map(annotation => transientAnnotation?.id === annotation.id ? transientAnnotation : annotation);
+  const visible = previewAnnotations.filter((annotation) => boundsIntersectViewport(annotationBounds(annotation), viewport, 50));
   drawEditorAnnotations(context, visible, image);
-  drawSelection(context, visible.find((annotation) => annotation.id === selectedId));
-  if (transientAnnotation) {
+  const selected = visible.find((annotation) => annotation.id === selectedId);
+  drawSelection(context, selected);
+  if (activeTool === "select") {
+    context.save(); context.fillStyle = "#fff"; context.strokeStyle = "#287a4a"; context.lineWidth = 1.5 / zoom;
+    for (const handle of resizeHandles(selected)) {
+      context.fillRect(handle.x - 4 / zoom, handle.y - 4 / zoom, 8 / zoom, 8 / zoom);
+      context.strokeRect(handle.x - 4 / zoom, handle.y - 4 / zoom, 8 / zoom, 8 / zoom);
+    }
+    context.restore();
+  }
+  if (transientAnnotation && !currentAnnotations().some(annotation => annotation.id === transientAnnotation.id)) {
     drawAnnotation(context, transientAnnotation);
   }
   const visibleCrop = transientCrop || cropSelection || currentCrop();
@@ -421,6 +468,7 @@ function drawOverlay() {
 }
 
 function setZoom(nextZoom, anchorEvent = null) {
+  fitMode = false;
   const target = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, nextZoom));
   if (!capture || target === zoom) {
     return;
@@ -461,6 +509,7 @@ function fitToWidth() {
   }
   const availableWidth = Math.max(1, stageScroll.clientWidth - 44);
   setZoom(availableWidth / capture.width);
+  fitMode = true;
 }
 
 function createCurrentAnnotation(start, end) {
@@ -477,7 +526,8 @@ function createCurrentAnnotation(start, end) {
     if (rectangle.width < 2 || rectangle.height < 2) {
       return null;
     }
-    return createAnnotation(activeTool, rectangle, { color: activeTool === "redact" ? "#111111" : annotationColor, strokeWidth });
+    return createAnnotation(activeTool, rectangle, { color: activeTool === "redact" ? "#111111" : annotationColor, strokeWidth,
+      ...(["pixelate", "blur"].includes(activeTool) ? { effectStrength } : {}) });
   }
   return null;
 }
@@ -499,7 +549,7 @@ function nextMarkerNumber() {
 }
 
 function createMarker(point) {
-  const marker = createAnnotation("marker", { x: point.x, y: point.y, radius: 18 }, {
+  const marker = createAnnotation("marker", { x: point.x, y: point.y, radius: markerRadius }, {
     color: annotationColor,
     strokeWidth: Math.max(2, Math.min(12, strokeWidth)),
     number: nextMarkerNumber(),
@@ -550,6 +600,12 @@ function startDrawing(event) {
 
 function startSelection(event) {
   const point = getImagePoint(event);
+  const selected = selectedAnnotation();
+  const handle = resizeHandles(selected).find(item => Math.hypot(item.x - point.x, item.y - point.y) <= 9 / zoom);
+  if (handle) {
+    pointerOperation = { kind: "resize", handle: handle.name, pointerId: event.pointerId, before: cloneAnnotation(selected) };
+    overlay.setPointerCapture?.(event.pointerId); return;
+  }
   const annotations = currentAnnotations();
   const hit = [...annotations].reverse().find((annotation) => hitTestAnnotation(annotation, point, 10 / zoom));
   selectedId = hit?.id || "";
@@ -579,7 +635,7 @@ function selectRelativeAnnotation(direction) {
 }
 
 function pointerDown(event) {
-  if (!capture) return;
+  if (!capture || draftConflict || discardInProgress) return;
   if (event.button !== 0 && event.pointerType === "mouse") {
     return;
   }
@@ -606,6 +662,8 @@ function pointerMove(event) {
   const point = getImagePoint(event);
   if (pointerOperation.kind === "move") {
     transientAnnotation = moveAnnotation(pointerOperation.before, point.x - pointerOperation.start.x, point.y - pointerOperation.start.y);
+  } else if (pointerOperation.kind === "resize") {
+    transientAnnotation = resizeAnnotation(pointerOperation.before, pointerOperation.handle, point);
   } else if (pointerOperation.kind === "crop") {
     transientCrop = clampCropToImage(normalizeRectangle(pointerOperation.start, point));
   } else if (pointerOperation.kind === "draw") {
@@ -628,8 +686,8 @@ function pointerUp(event) {
     return;
   }
   overlay.releasePointerCapture?.(event.pointerId);
-  if (pointerOperation.kind === "move" && transientAnnotation) {
-    history.apply("Move annotation", documentState(currentAnnotations().map((annotation) => annotation.id === selectedId ? transientAnnotation : annotation)));
+  if (["move", "resize"].includes(pointerOperation.kind) && transientAnnotation) {
+    history.apply(pointerOperation.kind === "resize" ? "Resize annotation" : "Move annotation", documentState(currentAnnotations().map((annotation) => annotation.id === selectedId ? transientAnnotation : annotation)));
   } else if (pointerOperation.kind === "draw" && transientAnnotation) {
     if ((activeTool === "pen" || activeTool === "highlighter") && transientAnnotation.points.length < 2) {
       // A click is not a stroke.
@@ -648,6 +706,7 @@ function pointerUp(event) {
   transientCrop = null;
   updateHistoryButtons();
   updateContextControls();
+  updatePendingNotice();
   drawOverlay();
 }
 
@@ -686,6 +745,7 @@ function clearAnnotations() {
 }
 
 function applySelectedStyle(changes) {
+  if (activeTool !== "select" || draftConflict) return;
   const selected = selectedAnnotation();
   if (!selected) {
     return;
@@ -700,6 +760,9 @@ function applyCrop() {
   }
   history.apply("Apply crop", documentState(currentAnnotations(), cropSelection));
   cropSelection = null;
+  updatePendingNotice();
+  updateContextControls();
+  drawOverlay();
   captureMeta.textContent = formatMetadata(capture, currentCrop());
   setStatus("Crop applied to edited PNG exports.");
 }
@@ -711,6 +774,7 @@ function resetCrop() {
     captureMeta.textContent = formatMetadata(capture);
   }
   setStatus("Crop reset; exports use the full screenshot.");
+  updatePendingNotice(); updateContextControls(); drawOverlay();
 }
 
 function openTextEditor(point, existing, event = null) {
@@ -723,6 +787,7 @@ function openTextEditor(point, existing, event = null) {
   textEditor.style.left = `${left}px`;
   textEditor.style.top = `${top}px`;
   textInput.focus();
+  updatePendingNotice();
 }
 
 function commitText() {
@@ -754,6 +819,7 @@ function commitText() {
   }
   textOperation = null;
   textEditor.hidden = true;
+  updatePendingNotice();
   updateHistoryButtons();
   drawOverlay();
 }
@@ -761,6 +827,40 @@ function commitText() {
 function cancelText() {
   textOperation = null;
   textEditor.hidden = true;
+  updatePendingNotice();
+}
+
+function hasPendingEdits() {
+  return Boolean(textOperation || pointerOperation || (cropSelection && JSON.stringify(cropSelection) !== JSON.stringify(currentCrop())));
+}
+
+function updatePendingNotice() {
+  pendingNotice.hidden = !hasPendingEdits();
+}
+
+function requireAppliedEdits() {
+  if (!hasPendingEdits()) return true;
+  updatePendingNotice();
+  setStatus("Apply or discard the pending text or crop before changing tools or exporting.");
+  if (textOperation) textInput.focus();
+  return false;
+}
+
+function discardPendingEdits() {
+  if (pointerOperation) {
+    try { overlay.releasePointerCapture?.(pointerOperation.pointerId); } catch { /* Pointer may have ended. */ }
+  }
+  pointerOperation = null; transientAnnotation = null; transientCrop = null; cropSelection = null;
+  textOperation = null; textEditor.hidden = true;
+  updatePendingNotice(); updateContextControls(); drawOverlay();
+}
+
+function changeHistory(action) {
+  if (draftConflict || !capture) return;
+  const pending = hasPendingEdits();
+  discardPendingEdits();
+  if (pending) { setStatus("Pending edit discarded. Saved edits are unchanged."); return; }
+  history[action]();
 }
 
 function editSelectedText() {
@@ -782,16 +882,17 @@ function handleDoubleClick(event) {
 }
 
 async function copyEdited() {
-  if (!capture || exportInProgress) {
+  if (!capture || !errorState.hidden || exportInProgress || draftConflict || !requireAppliedEdits()) {
     return;
   }
   const permissionRequest = ensureClipboardPermission();
   const exportCapture = { ...capture, crop: currentCrop() };
   const exportAnnotations = currentAnnotations();
-  const exportFilename = makeEditedFilename(capture.filename);
+  const exportFilename = normalizePngFilename(document.querySelector("#export-filename").value, makeEditedFilename(capture.filename));
   const exportRevision = history.revision;
   setExportBusy(true);
   try {
+    await flushDraftSave();
     await requireCurrentCapture();
     if (!(await permissionRequest)) {
       throw new Error("Clipboard permission was not granted.");
@@ -812,15 +913,16 @@ async function copyEdited() {
 }
 
 async function saveEdited() {
-  if (!capture || exportInProgress) {
+  if (!capture || !errorState.hidden || exportInProgress || draftConflict || !requireAppliedEdits()) {
     return;
   }
   const exportCapture = { ...capture, crop: currentCrop() };
   const exportAnnotations = currentAnnotations();
-  const exportFilename = makeEditedFilename(capture.filename);
+  const exportFilename = normalizePngFilename(document.querySelector("#export-filename").value, makeEditedFilename(capture.filename));
   const exportRevision = history.revision;
   setExportBusy(true);
   try {
+    await flushDraftSave();
     await requireCurrentCapture();
     let result = lastRenderedExport?.revision === exportRevision ? lastRenderedExport : null;
     if (!result) {
@@ -831,7 +933,7 @@ async function saveEdited() {
     await requireCurrentCapture();
     if (history.revision !== exportRevision) throw new Error("The image changed during export. Save again to include your latest edits.");
     lastRenderedExport = result;
-    downloadBlob(result.blob, result.filename);
+    downloadBlob(result.blob, exportFilename);
     setStatus("Edited PNG save started.");
   } catch (error) {
     setStatus(`Save failed: ${error instanceof Error ? error.message : "The edited PNG could not be saved."}`);
@@ -858,6 +960,8 @@ async function discardCapture() {
   } catch {
     discardInProgress = false;
     discardButton.disabled = false;
+    scheduleOpenCaptureExpiry();
+    scheduleDraftSave();
     setStatus("Screenshot could not be discarded locally; try again.");
     return;
   }
@@ -881,6 +985,7 @@ async function expireOpenCapture() {
   } catch {
     discardInProgress = false;
     setStatus("Expired screenshot cleanup failed; reopen KoalaShot to retry local cleanup.");
+    expiryTimer = window.setTimeout(() => void expireOpenCapture(), 30_000);
     return;
   }
   invalidateCapture("This temporary screenshot reached its 24-hour retention limit and was deleted locally.");
@@ -942,6 +1047,7 @@ function createKeyboardAnnotation() {
     updateContextControls();
     drawOverlay();
     setStatus("Keyboard crop prepared. Use Apply crop to confirm it.");
+    updatePendingNotice();
     return;
   }
   if (activeTool === "marker") {
@@ -999,31 +1105,28 @@ function moveSelectedWithKeyboard(key, largeStep) {
 
 function handleKeyboard(event) {
   const target = event.target;
-  const typing = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target?.isContentEditable
-    || target?.closest?.("button, select, a");
+  const typing = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target?.isContentEditable;
   if (event.key === "Escape") {
-    if (!textEditor.hidden) {
-      cancelText();
-    } else if (pointerOperation) {
-      pointerOperation = null;
-      transientAnnotation = null;
-      drawOverlay();
-    } else {
-      selectedId = "";
-      updateHistoryButtons();
-      drawOverlay();
-    }
+    discardPendingEdits(); selectedId = "";
+    updateHistoryButtons(); updateContextControls(); drawOverlay();
     return;
   }
-  if (typing || !capture) {
+  if (typing || !capture || !errorState.hidden || draftConflict || discardInProgress) {
     return;
+  }
+  if (target?.closest?.("button, select, a, summary") && !event.ctrlKey && !event.metaKey) return;
+  if ((activeTool === "pan" || temporaryPan) && event.key.startsWith("Arrow")) {
+    const step = event.shiftKey ? 200 : 50;
+    stageScroll.scrollBy({ left: event.key === "ArrowLeft" ? -step : event.key === "ArrowRight" ? step : 0,
+      top: event.key === "ArrowUp" ? -step : event.key === "ArrowDown" ? step : 0 });
+    event.preventDefault(); return;
   }
   if (event.target === overlay && event.key === "Enter") {
     event.preventDefault();
     createKeyboardAnnotation();
     return;
   }
-  if (event.target === overlay && moveSelectedWithKeyboard(event.key, event.shiftKey)) {
+  if (activeTool === "select" && event.target === overlay && moveSelectedWithKeyboard(event.key, event.shiftKey)) {
     event.preventDefault();
     return;
   }
@@ -1048,18 +1151,20 @@ function handleKeyboard(event) {
     return;
   }
   const modifier = event.ctrlKey || event.metaKey;
-  if (modifier && key === "z") {
+  if (modifier && key === "d") {
+    event.preventDefault(); duplicateSelected();
+  } else if (modifier && key === "z") {
     event.preventDefault();
     if (event.shiftKey && event.metaKey) {
-      history.redo();
+      changeHistory("redo");
     } else if (event.shiftKey && !event.metaKey) {
-      history.redo();
+      changeHistory("redo");
     } else {
-      history.undo();
+      changeHistory("undo");
     }
   } else if (modifier && key === "y") {
     event.preventDefault();
-    history.redo();
+    changeHistory("redo");
   } else if (modifier && key === "+") {
     event.preventDefault();
     setZoom(zoom + ZOOM_STEP);
@@ -1109,8 +1214,8 @@ fontControl.addEventListener("input", (event) => {
   fontValue.textContent = String(fontSize);
   applySelectedStyle({ fontSize });
 });
-undoButton.addEventListener("click", () => history.undo());
-redoButton.addEventListener("click", () => history.redo());
+undoButton.addEventListener("click", () => changeHistory("undo"));
+redoButton.addEventListener("click", () => changeHistory("redo"));
 deleteButton.addEventListener("click", deleteSelected);
 clearButton.addEventListener("click", clearAnnotations);
 editTextButton.addEventListener("click", editSelectedText);
@@ -1162,10 +1267,11 @@ window.addEventListener("keyup", (event) => {
     finishTemporaryPan();
   }
 });
-window.addEventListener("resize", resizeOverlay);
+window.addEventListener("resize", () => { if (fitMode) fitToWidth(); resizeOverlay(); });
 window.addEventListener("blur", finishTemporaryPan);
 window.addEventListener("pagehide", () => {
   unsubscribeDeletion();
+  unsubscribeUpdates();
   window.clearTimeout(expiryTimer);
   void flushDraftSave();
   if (imageUrl) {
@@ -1176,17 +1282,66 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") {
     void flushDraftSave();
   } else if (capture) {
-    void requireCurrentCapture().catch(() => {});
+    void flushDraftSave().then(requireCurrentCapture).catch(() => {});
   }
 });
 
 image.addEventListener("load", () => {
   updateStageSize();
-  setStatus("Ready. Original screenshot is immutable; annotations are stored locally as a draft.");
+  if (!draftConflict) setStatus("Ready. Edit locally, then copy or save your PNG.");
 });
 const unsubscribeDeletion = subscribeCaptureDeletion((ids) => {
   if (capture && ids.includes(capture.id) && !discardInProgress) invalidateCapture("This screenshot was deleted in another KoalaShot tab.");
 });
+const unsubscribeUpdates = subscribeCaptureUpdates(({ id, revision, writer }) => {
+  if (capture?.id === id && writer !== writerId && revision > draftRevision) showDraftConflict();
+});
+void initializeFooter();
+
+document.querySelector("#marker-size").addEventListener("input", (event) => {
+  markerRadius = Number(event.target.value); applySelectedStyle({ radius: markerRadius }); updateContextControls();
+});
+document.querySelector("#effect-strength").addEventListener("input", (event) => {
+  effectStrength = Number(event.target.value); applySelectedStyle({ effectStrength }); updateContextControls();
+});
+document.querySelector("#apply-pending-button").addEventListener("click", () => {
+  if (textOperation) commitText();
+  if (cropSelection) applyCrop();
+  updatePendingNotice();
+});
+document.querySelector("#discard-pending-button").addEventListener("click", discardPendingEdits);
+document.querySelector("#load-latest-button").addEventListener("click", () => {
+  globalThis.sessionStorage.removeItem(draftJournalKey()); location.reload();
+});
+document.querySelector("#keep-copy-button").addEventListener("click", () => void keepSeparateCopy(false));
+document.querySelector("#duplicate-button").addEventListener("click", duplicateSelected);
+document.querySelector("#recover-original-button").addEventListener("click", () => void keepSeparateCopy(true));
+
+function showDraftConflict() {
+  if (!capture || discardInProgress) return;
+  draftConflict = true;
+  window.clearTimeout(draftTimer); pendingDraft = null;
+  conflictNotice.hidden = false;
+  stageWrap.inert = true;
+  document.querySelector(".tool-sidebar").inert = true;
+  document.querySelector(".context-bar").inert = true;
+  copyButton.disabled = true; saveButton.disabled = true;
+  undoButton.disabled = true; redoButton.disabled = true;
+  draftStatus.textContent = "Draft conflict — export paused";
+  setStatus("Changed in another tab. Load the latest draft or keep your edits as a separate copy.");
+}
+
+async function keepSeparateCopy(originalOnly) {
+  if (!originalOnly && !requireAppliedEdits()) return;
+  try {
+    const source = originalOnly ? await getCapture(captureId, { allowInvalidDraft: true }) : capture;
+    if (!source || Date.now() >= source.createdAt + TEMP_CAPTURE_TTL_MS) throw new Error("The capture is unavailable or expired.");
+    const id = makeCaptureId();
+    await saveCapture({ ...source, id, annotations: originalOnly ? [] : currentAnnotations(), crop: originalOnly ? null : currentCrop() });
+    globalThis.sessionStorage.removeItem(draftJournalKey());
+    location.replace(`editor.html?capture=${encodeURIComponent(id)}`);
+  } catch (error) { setStatus(error.message); }
+}
 image.addEventListener("error", () => showError("The original PNG could not be decoded. Capture the page again."));
 
 function invalidateCapture(message) {
@@ -1203,9 +1358,22 @@ function invalidateCapture(message) {
 }
 
 async function requireCurrentCapture() {
-  if (!capture || Date.now() >= capture.createdAt + TEMP_CAPTURE_TTL_MS || !(await getCapture(capture.id))) {
+  let current;
+  try { current = capture ? await getCapture(capture.id) : null; }
+  catch (error) {
+    if (error?.code === "draft-invalid") {
+      showError(error.message);
+      document.querySelector("#recover-original-button").hidden = false;
+    }
+    throw error;
+  }
+  if (!capture || Date.now() >= capture.createdAt + TEMP_CAPTURE_TTL_MS || !current) {
     invalidateCapture("This screenshot was deleted or expired. Capture the page again.");
     throw new Error("The temporary screenshot was deleted or expired.");
+  }
+  if (draftConflict || current.revision !== draftRevision) {
+    showDraftConflict();
+    throw new Error("The draft changed in another tab. Resolve the draft conflict before exporting.");
   }
 }
 
@@ -1223,6 +1391,9 @@ void (async () => {
       return;
     }
     scheduleOpenCaptureExpiry();
+    draftRevision = capture.revision;
+    let journalConflict = false;
+    let restoredJournal = false;
     const storedAnnotations = tryValidateAnnotations(capture.annotations || []);
     const storedCrop = tryValidateCrop(capture.crop || null);
     let state = {
@@ -1235,11 +1406,14 @@ void (async () => {
       const journalCrop = tryValidateCrop(journal?.crop);
       if (journalAnnotations.valid && journalCrop.valid) {
         state = { annotations: journalAnnotations.annotations, crop: journalCrop.crop };
+        restoredJournal = true;
+        journalConflict = (journal.baseRevision ?? 0) !== draftRevision;
       } else if (journal) {
-        globalThis.sessionStorage.removeItem(draftJournalKey());
+        throw new Error("The tab-local draft is damaged. Export is disabled; recover the original separately if needed.");
       }
     } catch {
-      globalThis.sessionStorage.removeItem(draftJournalKey());
+      const error = new Error("The tab-local draft is damaged. Export is disabled; recover the original separately if needed.");
+      error.code = "draft-invalid"; throw error;
     }
     history.setCurrent(state, { notify: false });
     cropSelection = null;
@@ -1248,6 +1422,7 @@ void (async () => {
     image.alt = capture.sourceTitle ? `Original full-page screenshot of ${capture.sourceTitle}` : "Original full-page screenshot";
     sourceHostname.textContent = hostnameFromUrl(capture.sourceUrl);
     captureMeta.textContent = formatMetadata(capture, currentCrop());
+    document.querySelector("#export-filename").value = makeEditedFilename(capture.filename);
     const notice = document.querySelector("#capture-warning");
     notice.textContent = capture.warning || "";
     notice.hidden = !capture.warning;
@@ -1261,7 +1436,11 @@ void (async () => {
     updateContextControls();
     resizeOverlay();
     fitToWidth();
+    draftStatus.textContent = "Draft saved locally";
+    if (journalConflict) showDraftConflict();
+    else if (restoredJournal) scheduleDraftSave();
   } catch (error) {
     showError(error instanceof Error ? error.message : "The temporary screenshot could not be loaded.");
+    document.querySelector("#recover-original-button").hidden = error?.code !== "draft-invalid";
   }
 })();

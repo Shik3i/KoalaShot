@@ -27,6 +27,7 @@ class ArchiveValidation(unittest.TestCase):
         validator.DIST = Path(self.temp.name)
         for source in self.original_dist.glob("*.zip"):
             shutil.copy2(source, validator.DIST / source.name)
+        shutil.copytree(self.original_dist / "landing", validator.DIST / "landing")
         self.archive = validator.DIST / f"koalashot-chrome-{validator.project_version()}.zip"
 
     def tearDown(self):

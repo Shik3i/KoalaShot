@@ -5,7 +5,8 @@ export const DEFAULT_SETTINGS = Object.freeze({
 
 export function normalizeSettings(values = {}) {
   return {
-    openEditorAfterCapture: Boolean(values.openEditorAfterCapture),
+    // Migrate the former combined action: Copy/Save never open the editor.
+    openEditorAfterCapture: false,
     captureTarget: values.captureTarget === "internal" ? "internal" : "page",
   };
 }

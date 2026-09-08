@@ -73,12 +73,13 @@ function applyImageEffect(context, annotation, sourceImage) {
     return;
   }
   const maximumPreviewDimension = 640;
+  const strength = annotation.effectStrength ?? (annotation.type === "pixelate" ? 10 : 8);
   const scale = annotation.type === "pixelate"
-    ? Math.min(1 / 10, maximumPreviewDimension / Math.max(source.width, source.height))
+    ? Math.min(1 / strength, maximumPreviewDimension / Math.max(source.width, source.height))
     : Math.min(1, maximumPreviewDimension / Math.max(source.width, source.height));
   let cache = effectCache.get(sourceImage);
   if (!cache) { cache = new Map(); effectCache.set(sourceImage, cache); }
-  const key = JSON.stringify([annotation.type, source.x, source.y, source.width, source.height]);
+  const key = JSON.stringify([annotation.type, source.x, source.y, source.width, source.height, strength]);
   let preview = cache.get(key);
   if (!preview) {
     preview = document.createElement("canvas");
@@ -90,7 +91,7 @@ function applyImageEffect(context, annotation, sourceImage) {
     }
     previewContext.imageSmoothingEnabled = annotation.type !== "pixelate";
     if (annotation.type === "blur") {
-      previewContext.filter = `blur(${Math.max(3, Math.min(18, 8 * scale))}px)`;
+      previewContext.filter = `blur(${Math.max(0.5, strength * scale)}px)`;
     }
     previewContext.drawImage(sourceImage, source.x, source.y, source.width, source.height, 0, 0, preview.width, preview.height);
     if (cache.size >= 8) {

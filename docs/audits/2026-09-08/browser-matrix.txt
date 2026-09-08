@@ -1,0 +1,55 @@
+
+> koalashot@0.4.0 test:browser:matrix
+> node scripts/run-browser-matrix.mjs
+
+
+==> chrome full flow
+{
+  "browser": "chrome",
+  "clipboard": [
+    "editor: Edited screenshot copied."
+  ],
+  "downloads": [
+    "KoalaShot_127.0.0.1_2026-09-08_18-29-33.png",
+    "KoalaShot_127.0.0.1_2026-09-08_18-29-36.png",
+    "KoalaShot_127.0.0.1_2026-09-08_18-29-42.png",
+    "KoalaShot_127.0.0.1_2026-09-08_18-29-42_edited.png"
+  ],
+  "limitations": [],
+  "version": "Chrome/153.0.8010.12",
+  "narrowEditorWidth": 390
+}
+
+==> chrome permission denial
+{
+  "browser": "chrome",
+  "clipboard": [],
+  "downloads": [
+    "KoalaShot_127.0.0.1_2026-09-08_18-30-02.png"
+  ],
+  "limitations": [],
+  "version": "Chrome/153.0.8010.12"
+}
+
+==> firefox full flow
+file:///C:/Users/s3ish/Documents/Workspace/KoalaShot/tests/browser/extension-flow.test.mjs:43
+  throw new Error(`${description} timed out${lastError ? `: ${lastError.message}` : ""}${observed}`);
+        ^
+
+Error: Firefox BiDi endpoint timed out; last value: false
+    at waitFor (file:///C:/Users/s3ish/Documents/Workspace/KoalaShot/tests/browser/extension-flow.test.mjs:43:9)
+    at async FirefoxBrowser.start (file:///C:/Users/s3ish/Documents/Workspace/KoalaShot/tests/browser/extension-flow.test.mjs:430:5)
+    at async runFlow (file:///C:/Users/s3ish/Documents/Workspace/KoalaShot/tests/browser/extension-flow.test.mjs:600:5)
+    at async file:///C:/Users/s3ish/Documents/Workspace/KoalaShot/tests/browser/extension-flow.test.mjs:878:18
+
+Node.js v25.2.1
+file:///C:/Users/s3ish/Documents/Workspace/KoalaShot/scripts/run-browser-matrix.mjs:28
+    child.on("exit", (code) => code === 0 ? resolve() : reject(new Error(`${label} failed with exit code ${code}`)));
+                                                               ^
+
+Error: firefox full flow failed with exit code 1
+    at ChildProcess.<anonymous> (file:///C:/Users/s3ish/Documents/Workspace/KoalaShot/scripts/run-browser-matrix.mjs:28:64)
+    at ChildProcess.emit (node:events:508:28)
+    at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+
+Node.js v25.2.1

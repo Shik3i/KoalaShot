@@ -1,0 +1,8 @@
+.product-footer { padding: 10px 14px; border-top: 1px solid var(--border); color: var(--muted); font-size: 11px; background: var(--surface); }
+.footer-identity { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; margin-bottom: 4px; }
+.footer-identity strong { color: var(--text); }
+.footer-identity > :last-child { margin-left: auto; }
+.product-footer nav { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 14px; }
+.product-footer a { color: var(--text); text-underline-offset: 3px; padding-block: 4px; }
+.product-footer a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+.review-pending { margin-left: auto; font-size: 10px; }

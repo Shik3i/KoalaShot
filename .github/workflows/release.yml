@@ -11,8 +11,34 @@ concurrency:
   group: release-${{ github.ref_name }}
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
 jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: read
+    outputs:
+      version: ${{ steps.preflight.outputs.version }}
+      commit: ${{ steps.preflight.outputs.commit }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - name: Require annotated tag, exact main and successful CI/CodeQL
+        id: preflight
+        run: node scripts/release-preflight.mjs
+
   browser-checks:
+    needs: preflight
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -21,6 +47,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.preflight.outputs.commit }}
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -49,12 +77,16 @@ jobs:
       - name: Run capture and redaction regressions
         if: matrix.browser == 'chrome'
         run: node tests/browser/audit-regressions.test.mjs
+      - name: Verify website routes and store availability in Chrome
+        if: matrix.browser == 'chrome'
+        run: npm run test:website
 
   release-extension:
-    needs: browser-checks
+    needs: [preflight, browser-checks]
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      checks: read
       id-token: write
       attestations: write
     steps:
@@ -62,6 +94,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+          ref: ${{ needs.preflight.outputs.commit }}
 
       - name: Set up Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
@@ -103,11 +136,14 @@ jobs:
       - name: Run full release verification
         run: npm test
 
-      - name: Generate extension checksums
+      - name: Recheck release eligibility before uploading
+        run: node scripts/release-preflight.mjs
+
+      - name: Generate and verify portable release checksums
         shell: bash
         run: |
           VERSION='${{ steps.version.outputs.VERSION }}'
-          sha256sum "dist/koalashot-chrome-$VERSION.zip" "dist/koalashot-firefox-$VERSION.zip" > dist/SHA256SUMS
+          node scripts/run-python.cjs scripts/release_assets.py dist "$VERSION" --write
           cat dist/SHA256SUMS
 
       - name: Generate extension artifact attestation
@@ -122,16 +158,23 @@ jobs:
           path: dist/landing/
           if-no-files-found: error
 
-      - name: Create GitHub Release
+      - name: Create GitHub Release draft
         uses: softprops/action-gh-release@c12583777ecdfd3be55c69cf75464299dc01057e # v3
         with:
           files: |
             dist/koalashot-chrome-${{ steps.version.outputs.VERSION }}.zip
             dist/koalashot-firefox-${{ steps.version.outputs.VERSION }}.zip
+            dist/koalashot-landing-${{ steps.version.outputs.VERSION }}.zip
             dist/SHA256SUMS
           name: Release ${{ github.ref_name }}
           generate_release_notes: true
-          draft: false
+          draft: true
           prerelease: false
+          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download and verify draft bytes, manifests and provenance before publication
+        run: node scripts/verify-release.mjs
+        env:
+          RELEASE_COMMIT: ${{ needs.preflight.outputs.commit }}
