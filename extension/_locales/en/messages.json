@@ -4,7 +4,7 @@
     "description": "Store-facing extension name."
   },
   "extensionDescription": {
-    "message": "Capture an entire webpage locally as one PNG.",
+    "message": "Capture full-page screenshots, add annotations or redactions, and copy or save a PNG. No accounts, uploads or tracking.",
     "description": "Store-facing extension description."
   },
   "privacyNotice": {
