@@ -7,6 +7,7 @@ async function fixture({ stuck = false, shrink = false } = {}) {
     .replace(/^import[\s\S]*?;\r?\n/gm, "");
   const stitcherUrl = new URL("../../extension/popup/stitcher.js", import.meta.url).href;
   const stubs = `
+    import {t} from ${JSON.stringify(new URL("../../extension/common/i18n.js", import.meta.url).href)};
     import {generateCapturePositions,getBoundedDocumentHeight,StitchingError} from ${JSON.stringify(stitcherUrl)};
     export const hooks={requests:[],onEncode:null,onCapture:null}; let actualY=0;
     const CAPTURE_INTERVAL_MS=0,CAPTURE_REQUEST_TIMEOUT_MS=500,MAX_DYNAMIC_GROWTH_RATIO=.25,USER_MESSAGES={};

@@ -1,3 +1,4 @@
+import { t } from "./i18n.js";
 import {
   STORAGE_DATABASE_NAME,
   STORAGE_DATABASE_VERSION,
@@ -11,8 +12,8 @@ function openDatabase() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(STORAGE_DATABASE_NAME, STORAGE_DATABASE_VERSION);
     let expired = false;
-    const timer = setTimeout(() => { expired = true; reject(new Error("Temporary storage did not open in time. Close other KoalaShot tabs and retry.")); }, 10_000);
-    request.onerror = () => { clearTimeout(timer); reject(request.error || new Error("Could not open temporary capture storage.")); };
+    const timer = setTimeout(() => { expired = true; reject(new Error(t("ui_temporary_storage_did_not_open_in_time_close_other_koalashot_tabs_and_retry"))); }, 10_000);
+    request.onerror = () => { clearTimeout(timer); reject(request.error || new Error(t("ui_could_not_open_temporary_capture_storage"))); };
     request.onupgradeneeded = () => {
       if (!request.result.objectStoreNames.contains(STORAGE_OBJECT_STORE)) {
         request.result.createObjectStore(STORAGE_OBJECT_STORE, { keyPath: "id" });
@@ -39,7 +40,7 @@ function runTransaction(mode, operation, storeName = STORAGE_OBJECT_STORE) {
       : transaction.objectStore(storeName);
     let result;
     let operationError;
-    const timer = setTimeout(() => { operationError = new Error("Temporary storage timed out."); transaction.abort(); }, 15_000);
+    const timer = setTimeout(() => { operationError = new Error(t("ui_temporary_storage_timed_out")); transaction.abort(); }, 15_000);
     try {
       result = operation(store);
       if (result?.then) result.catch((error) => { operationError = error; try { transaction.abort(); } catch { /* Already completed. */ } });
@@ -53,7 +54,7 @@ function runTransaction(mode, operation, storeName = STORAGE_OBJECT_STORE) {
     transaction.onabort = transaction.onerror = () => {
       clearTimeout(timer);
       database.close();
-      reject(operationError || transaction.error || new Error("Temporary capture storage failed."));
+      reject(operationError || transaction.error || new Error(t("ui_temporary_capture_storage_failed")));
     };
     transaction.oncomplete = () => {
       clearTimeout(timer);
@@ -74,7 +75,7 @@ export function makeCaptureId() {
   }
 
   if (!globalThis.crypto?.getRandomValues) {
-    throw new Error("Secure capture ID generation is unavailable.");
+    throw new Error(t("ui_secure_capture_id_generation_is_unavailable"));
   }
 
   const bytes = new Uint8Array(16);
@@ -87,19 +88,19 @@ export function makeCaptureId() {
 
 export async function saveCapture(record) {
   if (!record?.id || !(record.blob instanceof Blob)) {
-    throw new Error("Invalid temporary capture record.");
+    throw new Error(t("ui_invalid_temporary_capture_record"));
   }
   if (record.annotations !== undefined) {
     const validation = tryValidateAnnotations(record.annotations);
     if (!validation.valid) {
-      throw new Error("Invalid temporary annotation draft.");
+      throw new Error(t("ui_invalid_temporary_annotation_draft"));
     }
     record = { ...record, annotations: validation.annotations };
   }
   if (record.crop !== undefined) {
     const validation = tryValidateCrop(record.crop);
     if (!validation.valid) {
-      throw new Error("Invalid temporary crop selection.");
+      throw new Error(t("ui_invalid_temporary_crop_selection"));
     }
     record = { ...record, crop: validation.crop };
   }
@@ -108,17 +109,17 @@ export async function saveCapture(record) {
 
 export async function saveCaptureDraft(id, annotations, crop, expectedRevision = 0, writer = "") {
   if (typeof id !== "string" || !/^[A-Za-z0-9-]{16,128}$/.test(id)) {
-    throw new Error("Invalid temporary capture draft ID.");
+    throw new Error(t("ui_invalid_temporary_capture_draft_id"));
   }
   const annotationValidation = tryValidateAnnotations(annotations);
   if (!annotationValidation.valid) {
-    throw new Error("Invalid temporary annotation draft.");
+    throw new Error(t("ui_invalid_temporary_annotation_draft"));
   }
   const cropValidation = tryValidateCrop(crop);
   if (!cropValidation.valid) {
-    throw new Error("Invalid temporary crop selection.");
+    throw new Error(t("ui_invalid_temporary_crop_selection"));
   }
-  if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0) throw new Error("Invalid draft revision.");
+  if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0) throw new Error(t("ui_invalid_draft_revision"));
   const saved = await runTransaction("readwrite", (stores) => new Promise((resolve, reject) => {
     const request = stores[STORAGE_OBJECT_STORE].get(id);
     request.onerror = () => reject(request.error);
@@ -129,7 +130,7 @@ export async function saveCaptureDraft(id, annotations, crop, expectedRevision =
       draftRequest.onsuccess = () => {
         const revision = draftRequest.result?.revision || 0;
         if (revision !== expectedRevision) {
-          const error = new Error("This screenshot changed in another tab. Load the latest draft or keep your edits as a separate copy.");
+          const error = new Error(t("ui_this_screenshot_changed_in_another_tab_load_the_latest_draft_or_keep_your_edits_as_a_"));
           error.code = "draft-conflict"; reject(error); return;
         }
         const nextRevision = revision + 1;
@@ -139,7 +140,7 @@ export async function saveCaptureDraft(id, annotations, crop, expectedRevision =
     };
   }), [STORAGE_OBJECT_STORE, STORAGE_DRAFT_STORE]);
   if (!saved) {
-    const error = new Error("This screenshot was deleted or expired. The draft was not saved.");
+    const error = new Error(t("ui_this_screenshot_was_deleted_or_expired_the_draft_was_not_saved"));
     error.code = "capture-unavailable";
     throw error;
   }
@@ -156,7 +157,7 @@ export async function getCapture(id, { allowInvalidDraft = false } = {}) {
   const [record, draft] = await runTransaction("readonly", (stores) => Promise.all(
     [STORAGE_OBJECT_STORE, STORAGE_DRAFT_STORE].map((name) => new Promise((resolve, reject) => {
       const request = stores[name].get(id);
-      request.onerror = () => reject(request.error || new Error("Could not read temporary capture."));
+      request.onerror = () => reject(request.error || new Error(t("ui_could_not_read_temporary_capture")));
       request.onsuccess = () => resolve(request.result || null);
     })),
   ), [STORAGE_OBJECT_STORE, STORAGE_DRAFT_STORE]);
@@ -171,7 +172,7 @@ export async function getCapture(id, { allowInvalidDraft = false } = {}) {
   const cropValidation = tryValidateCrop(draft ? draft.crop : record.crop ?? null);
   const revision = draft?.revision ?? 0;
   if ((!validation.valid || !cropValidation.valid || !Number.isSafeInteger(revision) || revision < 0) && !allowInvalidDraft) {
-    const error = new Error("The saved draft is damaged. Export is disabled to avoid losing redactions. You can open the unedited original as a separate copy.");
+    const error = new Error(t("ui_the_saved_draft_is_damaged_export_is_disabled_to_avoid_losing_redactions_you_can_open"));
     error.code = "draft-invalid";
     throw error;
   }
@@ -226,7 +227,7 @@ export async function pruneExpiredCaptures(now = Date.now()) {
   const removedIds = await runTransaction("readwrite", (stores) => new Promise((resolve, reject) => {
     const request = stores[STORAGE_OBJECT_STORE].openCursor();
     const removed = [];
-    request.onerror = () => reject(request.error || new Error("Could not prune temporary captures."));
+    request.onerror = () => reject(request.error || new Error(t("ui_could_not_prune_temporary_captures")));
     request.onsuccess = () => {
       const cursor = request.result;
       if (!cursor) {

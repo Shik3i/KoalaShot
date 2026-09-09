@@ -7,6 +7,10 @@
     "message": "Capture full-page screenshots, add annotations or redactions, and copy or save a PNG. No accounts, uploads or tracking.",
     "description": "Store-facing extension description."
   },
+  "actionTitle": {
+    "message": "Capture a screenshot with KoalaShot",
+    "description": "Browser toolbar tooltip."
+  },
   "privacyNotice": {
     "message": "Screenshots are processed entirely on your device.",
     "description": "Popup privacy notice."

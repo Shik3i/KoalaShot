@@ -1,7 +1,8 @@
+import { t } from "./i18n.js";
 const browserNamespace = globalThis.browser || globalThis.chrome;
 
 if (!browserNamespace) {
-  throw new Error("KoalaShot browser APIs are unavailable.");
+  throw new Error(t("ui_koalashot_browser_apis_are_unavailable"));
 }
 
 function getLastError() {
@@ -69,7 +70,7 @@ export async function getTab(tabId) {
 export async function injectCaptureScript(tabId) {
   return invoke(browserNamespace.scripting.executeScript, browserNamespace.scripting, [{
     target: { tabId },
-    files: ["/content/capture-page.js"],
+    files: ["/common/locale.js", "/content/capture-page.js"],
   }]);
 }
 
@@ -92,7 +93,7 @@ export async function captureVisibleTab(windowId, { beforeCapture, signal } = {}
     if (pause) await new Promise((resolve) => setTimeout(resolve, pause));
     for (let attempt = 0; attempt < 2; attempt += 1) {
       try {
-        if (signal?.aborted) throw new Error("Capture cancelled.");
+        if (signal?.aborted) throw new Error(t("ui_capture_cancelled"));
         await beforeCapture?.();
         return await invoke(browserNamespace.tabs.captureVisibleTab, browserNamespace.tabs, [windowId, { format: "png" }]);
       } catch (error) {

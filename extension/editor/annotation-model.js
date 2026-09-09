@@ -1,3 +1,4 @@
+import { t } from "../common/i18n.js";
 export const ANNOTATION_TYPES = Object.freeze([
   "pen",
   "highlighter",
@@ -24,26 +25,26 @@ function isFiniteNumber(value) {
 
 function assertFiniteNumber(value, field) {
   if (!isFiniteNumber(value)) {
-    throw new Error(`Invalid annotation ${field}.`);
+    throw new Error(t("ui_invalid_annotation_field", { field: field }));
   }
 }
 
 function assertColor(value, field = "color") {
   if (typeof value !== "string" || !COLOR_PATTERN.test(value)) {
-    throw new Error(`Invalid annotation ${field}.`);
+    throw new Error(t("ui_invalid_annotation_field", { field: field }));
   }
 }
 
 function assertStrokeWidth(value) {
   if (!Number.isFinite(value) || value < 1 || value > 200) {
-    throw new Error("Invalid annotation stroke width.");
+    throw new Error(t("ui_invalid_annotation_stroke_width"));
   }
 }
 
 function assertPositiveDimension(value, field) {
   assertFiniteNumber(value, field);
   if (value <= 0) {
-    throw new Error(`Invalid annotation ${field}.`);
+    throw new Error(t("ui_invalid_annotation_field", { field: field }));
   }
 }
 
@@ -52,12 +53,12 @@ export function validateCrop(crop) {
     return true;
   }
   if (!crop || typeof crop !== "object" || Array.isArray(crop)) {
-    throw new Error("Invalid crop selection.");
+    throw new Error(t("ui_invalid_crop_selection"));
   }
   ["x", "y"].forEach((field) => {
     assertFiniteNumber(crop[field], field);
     if (crop[field] < 0) {
-      throw new Error("Invalid crop origin.");
+      throw new Error(t("ui_invalid_crop_origin"));
     }
   });
   ["width", "height"].forEach((field) => assertPositiveDimension(crop[field], field));
@@ -69,13 +70,13 @@ export function tryValidateCrop(crop) {
     validateCrop(crop);
     return { valid: true, crop: crop ? { ...crop } : null, error: "" };
   } catch (error) {
-    return { valid: false, crop: null, error: error instanceof Error ? error.message : "Invalid crop selection." };
+    return { valid: false, crop: null, error: error instanceof Error ? error.message : t("ui_invalid_crop_selection") };
   }
 }
 
 function assertPoint(point) {
   if (!point || typeof point !== "object") {
-    throw new Error("Invalid freehand point.");
+    throw new Error(t("ui_invalid_freehand_point"));
   }
   assertFiniteNumber(point.x, "point");
   assertFiniteNumber(point.y, "point");
@@ -83,24 +84,24 @@ function assertPoint(point) {
 
 function assertPoints(points) {
   if (!Array.isArray(points) || points.length < 2 || points.length > MAX_POINTS) {
-    throw new Error("Invalid freehand points.");
+    throw new Error(t("ui_invalid_freehand_points"));
   }
   points.forEach(assertPoint);
 }
 
 function assertId(id) {
   if (typeof id !== "string" || !ID_PATTERN.test(id)) {
-    throw new Error("Invalid annotation ID.");
+    throw new Error(t("ui_invalid_annotation_id"));
   }
 }
 
 export function validateAnnotation(annotation) {
   if (!annotation || typeof annotation !== "object" || Array.isArray(annotation)) {
-    throw new Error("Invalid annotation object.");
+    throw new Error(t("ui_invalid_annotation_object"));
   }
   assertId(annotation.id);
   if (!ANNOTATION_TYPES.includes(annotation.type)) {
-    throw new Error("Invalid annotation type.");
+    throw new Error(t("ui_invalid_annotation_type"));
   }
 
   if (annotation.type === "pen" || annotation.type === "highlighter") {
@@ -108,7 +109,7 @@ export function validateAnnotation(annotation) {
     assertColor(annotation.color);
     assertStrokeWidth(annotation.strokeWidth);
     if (annotation.type === "highlighter" && (!Number.isFinite(annotation.opacity) || annotation.opacity <= 0 || annotation.opacity > 1)) {
-      throw new Error("Invalid highlighter opacity.");
+      throw new Error(t("ui_invalid_highlighter_opacity"));
     }
   } else if (["arrow", "line"].includes(annotation.type)) {
     ["startX", "startY", "endX", "endY"].forEach((field) => assertFiniteNumber(annotation[field], field));
@@ -117,12 +118,12 @@ export function validateAnnotation(annotation) {
   } else if (["rectangle", "ellipse", "redact", "pixelate", "blur"].includes(annotation.type)) {
     ["x", "y", "width", "height"].forEach((field) => assertFiniteNumber(annotation[field], field));
     if (annotation.width <= 0 || annotation.height <= 0) {
-      throw new Error("Invalid annotation bounds.");
+      throw new Error(t("ui_invalid_annotation_bounds"));
     }
     assertColor(annotation.color);
     if (["pixelate", "blur"].includes(annotation.type) && annotation.effectStrength !== undefined
       && (!Number.isFinite(annotation.effectStrength) || annotation.effectStrength < 2 || annotation.effectStrength > 40)) {
-      throw new Error("Invalid effect strength.");
+      throw new Error(t("ui_invalid_effect_strength"));
     }
     if (["rectangle", "ellipse"].includes(annotation.type)) {
       assertStrokeWidth(annotation.strokeWidth);
@@ -132,10 +133,10 @@ export function validateAnnotation(annotation) {
     assertFiniteNumber(annotation.y, "y");
     assertFiniteNumber(annotation.radius, "radius");
     if (annotation.radius < 4 || annotation.radius > 300) {
-      throw new Error("Invalid marker radius.");
+      throw new Error(t("ui_invalid_marker_radius"));
     }
     if (!Number.isInteger(annotation.number) || annotation.number < 1 || annotation.number > 9999) {
-      throw new Error("Invalid marker number.");
+      throw new Error(t("ui_invalid_marker_number"));
     }
     assertColor(annotation.color);
     assertStrokeWidth(annotation.strokeWidth);
@@ -143,11 +144,11 @@ export function validateAnnotation(annotation) {
     assertFiniteNumber(annotation.x, "x");
     assertFiniteNumber(annotation.y, "y");
     if (typeof annotation.text !== "string" || annotation.text.length > MAX_TEXT_LENGTH || !annotation.text.trim()) {
-      throw new Error("Invalid annotation text.");
+      throw new Error(t("ui_invalid_annotation_text"));
     }
     assertColor(annotation.color);
     if (!Number.isFinite(annotation.fontSize) || annotation.fontSize < 8 || annotation.fontSize > 300) {
-      throw new Error("Invalid annotation font size.");
+      throw new Error(t("ui_invalid_annotation_font_size"));
     }
   }
   return true;
@@ -155,7 +156,7 @@ export function validateAnnotation(annotation) {
 
 export function validateAnnotations(annotations) {
   if (!Array.isArray(annotations) || annotations.length > MAX_ANNOTATIONS) {
-    throw new Error("Invalid annotation draft.");
+    throw new Error(t("ui_invalid_annotation_draft"));
   }
   annotations.forEach(validateAnnotation);
   return true;
@@ -169,7 +170,7 @@ export function tryValidateAnnotations(annotations) {
     return {
       valid: false,
       annotations: [],
-      error: error instanceof Error ? error.message : "Invalid annotation draft.",
+      error: error instanceof Error ? error.message : t("ui_invalid_annotation_draft"),
     };
   }
 }
@@ -187,7 +188,7 @@ export function makeAnnotationId() {
     return globalThis.crypto.randomUUID();
   }
   if (!globalThis.crypto?.getRandomValues) {
-    throw new Error("Secure annotation ID generation is unavailable.");
+    throw new Error(t("ui_secure_annotation_id_generation_is_unavailable"));
   }
   const bytes = new Uint8Array(16);
   globalThis.crypto.getRandomValues(bytes);
@@ -199,7 +200,7 @@ export function makeAnnotationId() {
 
 export function createAnnotation(type, geometry, styles = {}) {
   if (!ANNOTATION_TYPES.includes(type)) {
-    throw new Error("Invalid annotation type.");
+    throw new Error(t("ui_invalid_annotation_type"));
   }
   const base = { id: makeAnnotationId(), type, ...geometry, ...styles };
   validateAnnotation(base);
@@ -239,7 +240,7 @@ export function updateAnnotationStyle(annotation, changes) {
   }
   if (changes.fontSize !== undefined && updated.type === "text") {
     if (!Number.isFinite(changes.fontSize) || changes.fontSize < 8 || changes.fontSize > 300) {
-      throw new Error("Invalid annotation font size.");
+      throw new Error(t("ui_invalid_annotation_font_size"));
     }
     updated.fontSize = changes.fontSize;
   }

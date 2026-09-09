@@ -1,6 +1,6 @@
 {
   "name": "koalashot",
-  "version": "0.5.4",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "description": "Privacy-first full-page screenshot extension foundation.",
@@ -11,6 +11,7 @@
     "test:unit": "node --test tests/unit/*.test.js",
     "test:archives": "node scripts/run-python.cjs tests/archive_validation_test.py",
     "test:regressions": "node tests/browser/audit-regressions.test.mjs",
+    "test:usability": "node tests/browser/usability.test.mjs",
     "test:website": "node tests/browser/landing.test.mjs",
     "test": "npm run verify",
     "test:browser": "node tests/browser/extension-flow.test.mjs",

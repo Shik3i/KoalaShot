@@ -27,7 +27,9 @@ button:focus-visible, select:focus-visible, a:focus-visible { outline: 3px solid
 .text-button { border: 0; background: transparent; color: var(--accent); padding: 9px 0 0; cursor: pointer; font-size: 12px; text-decoration: underline; text-underline-offset: 3px; }
 .capture-help { margin: 0; font-size: 11px; line-height: 1.45; color: var(--muted); }
 .settings-status:empty { display: none; }
-.settings-status, .capture-warning { font-size: 11px; line-height: 1.4; color: var(--danger); margin: 8px 0 0; }
+.settings-status, .capture-warning { font-size: 11px; line-height: 1.4; margin: 8px 0 0; }
+.settings-status { color: var(--danger); }
+.capture-warning { color: var(--text); background: var(--surface-muted); padding: 8px; border-radius: 6px; }
 .status-card { margin-top: 10px; }
 .status-line { margin: 0; font-size: 12px; line-height: 1.4; color: var(--text); overflow-wrap: anywhere; }
 .progress-track { height: 5px; margin-top: 8px; background: var(--surface-muted); border-radius: 4px; overflow: hidden; }

@@ -1,4 +1,5 @@
 (() => {
+  const { t } = globalThis.koalaShotLocale;
   if (globalThis.__koalaShotCaptureContentLoaded) {
     return;
   }
@@ -53,7 +54,7 @@
       return false;
     }
     if (message.type === "start") {
-      return message.target === undefined || message.target === "page" || message.target === "internal";
+      return message.target === undefined || ["page", "internal", "visible"].includes(message.target);
     }
     if (message.type !== "scroll") {
       return true;
@@ -135,6 +136,19 @@
   function measureSession(session) {
     const screenViewportWidth = window.innerWidth;
     const screenViewportHeight = window.innerHeight;
+    if (session.captureTarget === "visible") {
+      return {
+        documentHeight: screenViewportHeight,
+        documentWidth: screenViewportWidth,
+        viewportWidth: screenViewportWidth,
+        viewportHeight: screenViewportHeight,
+        screenViewportWidth,
+        screenViewportHeight,
+        captureRect: { left: 0, top: 0, width: screenViewportWidth, height: screenViewportHeight },
+        scrollX: 0,
+        scrollY: 0,
+      };
+    }
     if (session.captureTarget === "internal") {
       const target = session.targetElement;
       const rect = target.getBoundingClientRect();
@@ -151,7 +165,7 @@
         || captureRect.left + captureRect.width > screenViewportWidth + 1
         || captureRect.top + captureRect.height > screenViewportHeight + 1
         || captureRect.width <= 0 || captureRect.height <= 0) {
-        throw new Error("The internal scroll area must be fully visible in the browser viewport.");
+        throw new Error(t("ui_the_internal_scroll_area_must_be_fully_visible_in_the_browser_viewport"));
       }
       return {
         documentHeight: target.scrollHeight,
@@ -270,6 +284,7 @@
       return;
     }
     session.cleaned = true;
+    if (session.captureTarget === "visible") return;
     for (const item of session.positionedElements || []) {
       restoreStyle(item.visibility);
       item.layout.forEach(restoreStyle);
@@ -329,15 +344,14 @@
       clearActiveSession(activeSession);
     }
     const before = measurePage();
-    const captureTarget = message.target === "internal" ? "internal" : "page";
-    const candidate = findInternalScrollArea(before);
+    let captureTarget = ["internal", "visible"].includes(message.target) ? message.target : "page";
+    const candidate = captureTarget === "visible" ? null : findInternalScrollArea(before);
     const internalScrollArea = captureTarget === "internal" ? candidate : null;
     if (captureTarget === "page" && candidate && before.documentHeight <= before.viewportHeight + 2) {
-      send(port, { ok: false, sessionId: message.sessionId, error: "internal-scroll", message: "This page has a scrollable area inside the page. Select “Scrollable area inside the page” to capture it." });
-      return;
+      captureTarget = "visible";
     }
     if (captureTarget === "internal" && !internalScrollArea) {
-      send(port, { ok: false, sessionId: message.sessionId, error: "internal-scroll", message: "No scrollable internal area was found on this page." });
+      send(port, { ok: false, sessionId: message.sessionId, error: "internal-scroll", message: t("ui_no_scrollable_internal_area_was_found_on_this_page") });
       return;
     }
 
@@ -366,7 +380,7 @@
     activeSession = session;
 
     try {
-      if (root) {
+      if (root && captureTarget !== "visible") {
         root.classList.add("koalashot-capturing");
         root.style.setProperty("scroll-behavior", "auto", "important");
       }
@@ -375,7 +389,7 @@
         internalScrollArea.style.setProperty("scroll-behavior", "auto", "important");
         internalScrollArea.style.setProperty("scrollbar-width", "none", "important");
       }
-      if (body) {
+      if (body && captureTarget !== "visible") {
         body.style.setProperty("scroll-behavior", "auto", "important");
         if (captureTarget === "page") {
           const gutter = Math.max(0, window.innerWidth - root.clientWidth);
@@ -385,8 +399,10 @@
           }
         }
       }
-      session.styleElement = createCaptureStyles();
-      session.positionedElements = collectPositionedElements();
+      if (captureTarget !== "visible") {
+        session.styleElement = createCaptureStyles();
+        session.positionedElements = collectPositionedElements();
+      }
       const after = measureSession(session);
       send(port, {
         ok: true,
@@ -408,32 +424,32 @@
     } catch (error) {
       restorePage(session);
       clearActiveSession(session);
-      send(port, { ok: false, sessionId: message.sessionId, error: "start-failed", message: error instanceof Error ? error.message : "Capture setup failed." });
+      send(port, { ok: false, sessionId: message.sessionId, error: "start-failed", message: error instanceof Error ? error.message : t("ui_capture_setup_failed") });
     }
   }
 
   async function scrollSession(port, message) {
     const session = activeSession;
     if (!session || !isCurrentSession(session, port, message.sessionId)) {
-      send(port, { ok: false, sessionId: message.sessionId, error: "stale-session", message: "The capture session is no longer active." });
+      send(port, { ok: false, sessionId: message.sessionId, error: "stale-session", message: t("ui_the_capture_session_is_no_longer_active") });
       return;
     }
     session.lastMessageAt = Date.now();
     try {
       if (session.targetElement) {
         session.targetElement.scrollTo({ left: 0, top: message.requestedY, behavior: "auto" });
-      } else {
+      } else if (session.captureTarget !== "visible") {
         window.scrollTo({ left: 0, top: message.requestedY, behavior: "auto" });
       }
       await waitForPaint();
       if (!isCurrentSession(session, port, message.sessionId)) {
-        send(port, { ok: false, sessionId: message.sessionId, error: "stale-session", message: "The capture session is no longer active." });
+        send(port, { ok: false, sessionId: message.sessionId, error: "stale-session", message: t("ui_the_capture_session_is_no_longer_active") });
         return;
       }
       applySectionVisibility(session, message.sectionIndex, message.isFinal);
       await waitForPaint();
       if (!isCurrentSession(session, port, message.sessionId)) {
-        send(port, { ok: false, sessionId: message.sessionId, error: "stale-session", message: "The capture session is no longer active." });
+        send(port, { ok: false, sessionId: message.sessionId, error: "stale-session", message: t("ui_the_capture_session_is_no_longer_active") });
         return;
       }
       const after = measureSession(session);
@@ -455,7 +471,7 @@
         pageUrl: location.href,
       });
     } catch (error) {
-      send(port, { ok: false, sessionId: message.sessionId, error: "scroll-failed", message: error instanceof Error ? error.message : "Could not scroll the page." });
+      send(port, { ok: false, sessionId: message.sessionId, error: "scroll-failed", message: error instanceof Error ? error.message : t("ui_could_not_scroll_the_page") });
     }
   }
 
@@ -484,7 +500,7 @@
     }
     port.onMessage.addListener((message) => {
       if (!isValidMessage(message) || message.sessionId !== port.name.slice(CAPTURE_PORT_PREFIX.length)) {
-        send(port, { ok: false, error: "invalid-message", message: "Invalid capture message." });
+        send(port, { ok: false, error: "invalid-message", message: t("ui_invalid_capture_message") });
         return;
       }
       if (message.type === "start") {
@@ -496,7 +512,7 @@
       } else if (message.type === "ping") {
         const session = activeSession;
         if (!session || !isCurrentSession(session, port, message.sessionId)) {
-          send(port, { ok: false, sessionId: message.sessionId, error: "stale-session", message: "The capture session ended. Capture the page again." });
+          send(port, { ok: false, sessionId: message.sessionId, error: "stale-session", message: t("ui_the_capture_session_ended_capture_the_page_again") });
           return;
         }
         session.lastMessageAt = Date.now();

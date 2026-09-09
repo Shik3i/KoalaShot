@@ -4,6 +4,14 @@ All notable user-visible changes are documented here. KoalaShot uses semantic ve
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-09
+
+- Add a visible-area capture mode. When a page only scrolls inside an embedded area, Full page now captures the visible area without scrolling and offers a direct action to capture the full scrollable area.
+- Keep completed screenshots available when opening the editor fails, with clear recovery actions for editing, copying and saving. Explain capture modes and failures where users need them.
+- Apply pending text and crop edits when exporting or changing tools, preserve text while switching annotations, and allow conflicting drafts with pending text to be kept as separate copies.
+- Centralize extension interface and error messages in an English catalog prepared for future translations. Add keyboard-accessible tooltips throughout the popup and editor, and clarify the English help pages.
+- Add browser regression coverage for visible capture pixels, recovery actions, tooltips, popup layout, non-English browser settings and pending-edit workflows.
+
 ## [0.5.4] - 2026-09-08
 
 - Correct the Legal link to https://koalastuff.net/legal in the popup, editor, website and store submission instructions.

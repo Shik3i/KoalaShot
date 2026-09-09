@@ -1,3 +1,5 @@
+import { initializeUi } from "../common/ui.js";
+import { t } from "../common/i18n.js";
 import { getApi, ensureClipboardPermission } from "../common/browser-api.js";
 import { copyPngBlob } from "../common/clipboard.js";
 import { deleteCapture, getCapture, makeCaptureId, saveCapture, pruneExpiredCaptures, saveCaptureDraft, subscribeCaptureDeletion, subscribeCaptureUpdates } from "../common/capture-store.js";
@@ -31,20 +33,20 @@ const MIN_ZOOM = 0.1;
 const MAX_ZOOM = 4;
 const ZOOM_STEP = 0.1;
 const TOOL_LABELS = Object.freeze({
-  select: ["Select", "Select, move, or edit an annotation."],
-  pan: ["Pan", "Drag the screenshot to move around."],
-  pen: ["Pen", "Draw a rounded freehand stroke."],
-  highlighter: ["Highlighter", "Draw a broad translucent highlight."],
-  arrow: ["Arrow", "Drag to draw an arrow."],
-  line: ["Line", "Drag to draw a straight line."],
-  rectangle: ["Rectangle", "Drag to outline a rectangle."],
-  ellipse: ["Ellipse", "Drag to outline an ellipse."],
-  text: ["Text", "Click the image to add multiline text."],
-  redact: ["Redact", "Drag an opaque rectangle over sensitive pixels."],
-  pixelate: ["Pixelate", "Drag over pixels that should be visibly pixelated."],
-  blur: ["Blur", "Drag over pixels that should receive a cosmetic blur."],
-  marker: ["Marker", "Click to place the next numbered marker."],
-  crop: ["Crop", "Drag a crop area, then apply it to exports."],
+  select: [t("ui_select"), t("ui_select_move_or_edit_an_annotation")],
+  pan: [t("ui_pan"), t("ui_drag_the_screenshot_to_move_around")],
+  pen: [t("ui_pen"), t("ui_draw_a_rounded_freehand_stroke")],
+  highlighter: [t("ui_highlighter"), t("ui_draw_a_broad_translucent_highlight")],
+  arrow: [t("ui_arrow"), t("ui_drag_to_draw_an_arrow")],
+  line: [t("ui_line"), t("ui_drag_to_draw_a_straight_line")],
+  rectangle: [t("ui_rectangle"), t("ui_drag_to_outline_a_rectangle")],
+  ellipse: [t("ui_ellipse"), t("ui_drag_to_outline_an_ellipse")],
+  text: [t("ui_text"), t("ui_click_the_image_to_add_multiline_text")],
+  redact: [t("ui_redact"), t("ui_drag_an_opaque_rectangle_over_sensitive_pixels")],
+  pixelate: [t("ui_pixelate"), t("ui_drag_over_pixels_that_should_be_visibly_pixelated")],
+  blur: [t("ui_blur"), t("ui_drag_over_pixels_that_should_receive_a_cosmetic_blur")],
+  marker: [t("ui_marker"), t("ui_click_to_place_the_next_numbered_marker")],
+  crop: [t("ui_crop"), t("ui_drag_a_crop_area_then_apply_it_to_exports")],
 });
 const SHORTCUTS = Object.freeze({ v: "select", p: "pen", h: "highlighter", a: "arrow", l: "line", r: "rectangle", e: "ellipse", t: "text", x: "redact", i: "pixelate", b: "blur", m: "marker", c: "crop" });
 
@@ -143,16 +145,16 @@ function setExportBusy(value) {
 
 function hostnameFromUrl(sourceUrl) {
   try {
-    return new URL(sourceUrl).hostname || "Unknown source";
+    return new URL(sourceUrl).hostname || t("ui_unknown_source");
   } catch {
-    return "Unknown source";
+    return t("ui_unknown_source");
   }
 }
 
 function formatMetadata(record, crop = null) {
   const width = crop ? Math.round(crop.width) : record.width;
   const height = crop ? Math.round(crop.height) : record.height;
-  return `${width} × ${height}px${crop ? " · crop active" : ""}`;
+  return t(crop ? "ui_editor_crop_metadata" : "ui_editor_metadata", { width, height });
 }
 
 function currentAnnotations() {
@@ -176,7 +178,7 @@ function writeDraftJournal(state) {
   try {
     globalThis.sessionStorage.setItem(draftJournalKey(), serialized);
   } catch {
-    setStatus("The tab-local draft journal is full; save or copy the edited PNG now.");
+    setStatus(t("ui_the_tab_local_draft_journal_is_full_save_or_copy_the_edited_png_now"));
   }
   return serialized;
 }
@@ -195,7 +197,7 @@ function scheduleDraftSave() {
   }
   const state = { annotations: currentAnnotations(), crop: currentCrop() };
   pendingDraft = { record: { ...capture, ...state }, journal: writeDraftJournal(state) };
-  draftStatus.textContent = "Saving draft…";
+  draftStatus.textContent = t("ui_saving_draft");
   queueDraftWrite();
 }
 
@@ -236,13 +238,13 @@ async function persistDraft(draft) {
       globalThis.sessionStorage.removeItem(draftJournalKey());
     }
     if (pendingDraft) pendingDraft.journal = writeDraftJournal({ annotations: pendingDraft.record.annotations, crop: pendingDraft.record.crop });
-    draftStatus.textContent = pendingDraft ? "Saving draft…" : "Draft saved locally";
+    draftStatus.textContent = pendingDraft ? t("ui_saving_draft") : t("ui_draft_saved_locally");
   } catch (error) {
     if (error?.code === "capture-unavailable") { invalidateCapture(error.message); return; }
     if (error?.code === "draft-conflict") { showDraftConflict(); return; }
-    draftStatus.textContent = "Draft not saved — keep this tab open";
-    const detail = error instanceof Error ? error.message : "Local storage failed.";
-    setStatus(`Draft could not be saved locally: ${detail} Your current editor state remains available.`);
+    draftStatus.textContent = t("ui_draft_not_saved_keep_this_tab_open");
+    const detail = error instanceof Error ? error.message : t("ui_local_storage_failed");
+    setStatus(t("ui_draft_could_not_be_saved_locally_detail_your_current_editor_state_remains_available", { detail: detail }));
   }
 }
 
@@ -260,7 +262,7 @@ function historyChanged() {
 const history = new DocumentHistory({ annotations: [], crop: null }, { limit: 100, onChange: historyChanged });
 
 function annotationOptionLabel(annotation, index) {
-  const name = annotation.type.charAt(0).toUpperCase() + annotation.type.slice(1);
+  const name = TOOL_LABELS[annotation.type]?.[0] || t("ui_annotation");
   if (annotation.type === "text") {
     const text = annotation.text.replace(/\s+/g, " ").trim().slice(0, 32);
     return `${index + 1}. ${name}: ${text}`;
@@ -279,7 +281,7 @@ function updateAnnotationList() {
   annotationList.replaceChildren();
   const emptyOption = document.createElement("option");
   emptyOption.value = "";
-  emptyOption.textContent = annotations.length ? "None selected" : "No annotations";
+  emptyOption.textContent = annotations.length ? t("ui_none_selected") : t("ui_no_annotations");
   annotationList.appendChild(emptyOption);
   annotations.forEach((annotation, index) => {
     const option = document.createElement("option");
@@ -288,7 +290,8 @@ function updateAnnotationList() {
     annotationList.appendChild(option);
   });
   annotationList.value = selectedId;
-  overlay.setAttribute("aria-label", `Annotation overlay. ${annotations.length} annotation${annotations.length === 1 ? "" : "s"}.${selectedId ? ` ${annotationOptionLabel(selectedAnnotation(), annotations.findIndex((annotation) => annotation.id === selectedId))} selected.` : ""}`);
+  const selection = selectedId ? t("ui_value1_selected", { value1: annotationOptionLabel(selectedAnnotation(), annotations.findIndex(annotation => annotation.id === selectedId)) }) : "";
+  overlay.setAttribute("aria-label", t(annotations.length === 1 ? "ui_annotation_count_one" : "ui_annotation_count_other", { count: annotations.length, selection }));
 }
 
 function updateHistoryButtons() {
@@ -357,7 +360,7 @@ function selectTool(tool) {
   if (!TOOL_LABELS[tool]) {
     return;
   }
-  if (tool !== activeTool && hasPendingEdits()) { requireAppliedEdits(); return; }
+  if (tool !== activeTool && !applyPendingEdits()) return;
   if (tool !== activeTool && tool !== "select") selectedId = "";
   activeTool = tool;
   document.querySelectorAll("[data-tool]").forEach((button) => {
@@ -380,11 +383,12 @@ function selectTool(tool) {
 }
 
 function duplicateSelected() {
+  if (!applyPendingEdits()) return;
   const selected = selectedAnnotation();
-  if (!selected || draftConflict || currentAnnotations().length >= 5000 || !requireAppliedEdits()) return;
+  if (!selected || draftConflict || currentAnnotations().length >= 5000) return;
   const copy = { ...moveAnnotation(selected, 16, 16), id: makeCaptureId() };
   if (copy.type === "marker") copy.number = nextMarkerNumber();
-  history.apply("Duplicate annotation", documentState([...currentAnnotations(), copy]));
+  history.apply(t("ui_duplicate_annotation"), documentState([...currentAnnotations(), copy]));
   selectedId = copy.id; selectTool("select"); updateHistoryButtons(); drawOverlay();
 }
 
@@ -554,7 +558,7 @@ function createMarker(point) {
     strokeWidth: Math.max(2, Math.min(12, strokeWidth)),
     number: nextMarkerNumber(),
   });
-  history.apply("Create marker", documentState([...currentAnnotations(), marker]));
+  history.apply(t("ui_create_marker"), documentState([...currentAnnotations(), marker]));
   selectedId = marker.id;
   updateHistoryButtons();
   drawOverlay();
@@ -573,7 +577,7 @@ function startPan(event) {
 }
 
 function startDrawing(event) {
-  if (currentAnnotations().length >= 5000 && activeTool !== "crop") { setStatus("The editor supports at most 5000 annotations. Export or remove some annotations first."); return; }
+  if (currentAnnotations().length >= 5000 && activeTool !== "crop") { setStatus(t("ui_the_editor_supports_at_most_5000_annotations_export_or_remove_some_annotations_first")); return; }
   const start = getImagePoint(event);
   if (activeTool === "marker") {
     createMarker(start);
@@ -630,7 +634,7 @@ function selectRelativeAnnotation(direction) {
   selectedId = annotations[nextIndex].id;
   updateHistoryButtons();
   updateContextControls();
-  setStatus(`Selected ${TOOL_LABELS[annotations[nextIndex].type]?.[0] || "annotation"} ${nextIndex + 1} of ${annotations.length}.`);
+  setStatus(t("ui_selected_value1_value2_of_value3", { value1: TOOL_LABELS[annotations[nextIndex].type]?.[0] || t("ui_annotation"), value2: nextIndex + 1, value3: annotations.length }));
   drawOverlay();
 }
 
@@ -687,12 +691,12 @@ function pointerUp(event) {
   }
   overlay.releasePointerCapture?.(event.pointerId);
   if (["move", "resize"].includes(pointerOperation.kind) && transientAnnotation) {
-    history.apply(pointerOperation.kind === "resize" ? "Resize annotation" : "Move annotation", documentState(currentAnnotations().map((annotation) => annotation.id === selectedId ? transientAnnotation : annotation)));
+    history.apply(pointerOperation.kind === "resize" ? t("ui_resize_annotation") : t("ui_move_annotation"), documentState(currentAnnotations().map((annotation) => annotation.id === selectedId ? transientAnnotation : annotation)));
   } else if (pointerOperation.kind === "draw" && transientAnnotation) {
     if ((activeTool === "pen" || activeTool === "highlighter") && transientAnnotation.points.length < 2) {
       // A click is not a stroke.
     } else {
-      history.apply(`Create ${activeTool}`, documentState([...currentAnnotations(), transientAnnotation]));
+      history.apply(t("ui_create_activetool", { activeTool: activeTool }), documentState([...currentAnnotations(), transientAnnotation]));
       selectedId = transientAnnotation.id;
     }
   } else if (pointerOperation.kind === "crop") {
@@ -727,7 +731,7 @@ function deleteSelected() {
   }
   const next = currentAnnotations().filter((annotation) => annotation.id !== selectedId);
   if (next.length !== currentAnnotations().length) {
-    history.apply("Delete annotation", documentState(next));
+    history.apply(t("ui_delete_annotation"), documentState(next));
     selectedId = "";
     updateHistoryButtons();
     drawOverlay();
@@ -738,7 +742,7 @@ function clearAnnotations() {
   if (currentAnnotations().length === 0) {
     return;
   }
-  history.apply("Clear annotations", documentState([]));
+  history.apply(t("ui_clear_annotations"), documentState([]));
   selectedId = "";
   updateHistoryButtons();
   drawOverlay();
@@ -751,33 +755,35 @@ function applySelectedStyle(changes) {
     return;
   }
   const updated = updateAnnotationStyle(selected, changes);
-  history.apply("Change annotation style", documentState(currentAnnotations().map((annotation) => annotation.id === selected.id ? updated : annotation)));
+  history.apply(t("ui_change_annotation_style"), documentState(currentAnnotations().map((annotation) => annotation.id === selected.id ? updated : annotation)));
 }
 
 function applyCrop() {
   if (!cropSelection) {
     return;
   }
-  history.apply("Apply crop", documentState(currentAnnotations(), cropSelection));
+  history.apply(t("ui_apply_crop"), documentState(currentAnnotations(), cropSelection));
   cropSelection = null;
   updatePendingNotice();
   updateContextControls();
   drawOverlay();
   captureMeta.textContent = formatMetadata(capture, currentCrop());
-  setStatus("Crop applied to edited PNG exports.");
+  setStatus(t("ui_crop_applied_to_edited_png_exports"));
 }
 
 function resetCrop() {
   cropSelection = null;
-  history.apply("Reset crop", documentState(currentAnnotations(), null));
+  history.apply(t("ui_reset_crop"), documentState(currentAnnotations(), null));
   if (capture) {
     captureMeta.textContent = formatMetadata(capture);
   }
-  setStatus("Crop reset; exports use the full screenshot.");
+  setStatus(t("ui_crop_reset_exports_use_the_full_screenshot"));
   updatePendingNotice(); updateContextControls(); drawOverlay();
 }
 
 function openTextEditor(point, existing, event = null) {
+  if (textOperation && commitText() === false) return;
+  if (existing) existing = currentAnnotations().find(annotation => annotation.id === existing.id) || existing;
   textOperation = { point, existing: existing ? cloneAnnotation(existing) : null };
   textInput.value = existing?.text || "";
   textEditor.hidden = false;
@@ -803,18 +809,20 @@ function commitText() {
     const updated = { ...textOperation.existing, text };
     const next = currentAnnotations().map((annotation) => annotation.id === updated.id ? updated : annotation);
     try {
-      history.apply("Edit text", documentState(next));
+      history.apply(t("ui_edit_text"), documentState(next));
       selectedId = updated.id;
     } catch {
-      setStatus("That text annotation could not be saved.");
+      setStatus(t("ui_that_text_annotation_could_not_be_saved"));
+      return false;
     }
   } else {
     try {
       const annotation = createAnnotation("text", { x: textOperation.point.x, y: textOperation.point.y }, { text, color: annotationColor, fontSize });
-      history.apply("Create text", documentState([...currentAnnotations(), annotation]));
+      history.apply(t("ui_create_text"), documentState([...currentAnnotations(), annotation]));
       selectedId = annotation.id;
     } catch {
-      setStatus("That text annotation could not be created.");
+      setStatus(t("ui_that_text_annotation_could_not_be_created"));
+      return false;
     }
   }
   textOperation = null;
@@ -838,12 +846,14 @@ function updatePendingNotice() {
   pendingNotice.hidden = !hasPendingEdits();
 }
 
-function requireAppliedEdits() {
-  if (!hasPendingEdits()) return true;
-  updatePendingNotice();
-  setStatus("Apply or discard the pending text or crop before changing tools or exporting.");
-  if (textOperation) textInput.focus();
-  return false;
+function applyPendingEdits() {
+  if (pointerOperation) {
+    setStatus(t("ui_finish_drawing_before_continuing_or_press_escape_to_cancel_the_unfinished_shape"));
+    return false;
+  }
+  if (textOperation && commitText() === false) return false;
+  if (cropSelection) applyCrop();
+  return !hasPendingEdits();
 }
 
 function discardPendingEdits() {
@@ -859,7 +869,7 @@ function changeHistory(action) {
   if (draftConflict || !capture) return;
   const pending = hasPendingEdits();
   discardPendingEdits();
-  if (pending) { setStatus("Pending edit discarded. Saved edits are unchanged."); return; }
+  if (pending) { setStatus(t("ui_pending_edit_discarded_saved_edits_are_unchanged")); return; }
   history[action]();
 }
 
@@ -882,7 +892,7 @@ function handleDoubleClick(event) {
 }
 
 async function copyEdited() {
-  if (!capture || !errorState.hidden || exportInProgress || draftConflict || !requireAppliedEdits()) {
+  if (!capture || !errorState.hidden || exportInProgress || draftConflict || !applyPendingEdits()) {
     return;
   }
   const permissionRequest = ensureClipboardPermission();
@@ -895,25 +905,25 @@ async function copyEdited() {
     await flushDraftSave();
     await requireCurrentCapture();
     if (!(await permissionRequest)) {
-      throw new Error("Clipboard permission was not granted.");
+      throw new Error(t("ui_clipboard_permission_was_not_granted"));
     }
-    setStatus("Rendering edited PNG for clipboard…");
+    setStatus(t("ui_rendering_edited_png_for_clipboard"));
     const blob = await renderEditorResultBlob(exportCapture, exportAnnotations);
     await requireCurrentCapture();
-    if (history.revision !== exportRevision) throw new Error("The image changed during export. Copy again to include your latest edits.");
+    if (history.revision !== exportRevision) throw new Error(t("ui_the_image_changed_during_export_copy_again_to_include_your_latest_edits"));
     lastRenderedExport = { blob, filename: exportFilename, revision: exportRevision };
     await copyPngBlob(blob, getApi());
-    setStatus("Edited screenshot copied.");
+    setStatus(t("ui_edited_screenshot_copied"));
   } catch (error) {
-    const fallback = lastRenderedExport ? " The rendered PNG is ready; use Save edited PNG." : "";
-    setStatus(`Copy failed: ${error instanceof Error ? error.message : "The clipboard could not be updated."}${fallback}`);
+    const fallback = lastRenderedExport ? t("ui_rendered_png_ready") : "";
+    setStatus(t("ui_copy_failed_value1_fallback", { value1: error instanceof Error ? error.message : t("ui_clipboard_update_failed"), fallback: fallback }));
   } finally {
     setExportBusy(false);
   }
 }
 
 async function saveEdited() {
-  if (!capture || !errorState.hidden || exportInProgress || draftConflict || !requireAppliedEdits()) {
+  if (!capture || !errorState.hidden || exportInProgress || draftConflict || !applyPendingEdits()) {
     return;
   }
   const exportCapture = { ...capture, crop: currentCrop() };
@@ -926,17 +936,17 @@ async function saveEdited() {
     await requireCurrentCapture();
     let result = lastRenderedExport?.revision === exportRevision ? lastRenderedExport : null;
     if (!result) {
-      setStatus("Rendering edited PNG for saving…");
+      setStatus(t("ui_rendering_edited_png_for_saving"));
       const blob = await renderEditorResultBlob(exportCapture, exportAnnotations);
       result = { blob, filename: exportFilename, revision: exportRevision };
     }
     await requireCurrentCapture();
-    if (history.revision !== exportRevision) throw new Error("The image changed during export. Save again to include your latest edits.");
+    if (history.revision !== exportRevision) throw new Error(t("ui_the_image_changed_during_export_save_again_to_include_your_latest_edits"));
     lastRenderedExport = result;
     downloadBlob(result.blob, exportFilename);
-    setStatus("Edited PNG save started.");
+    setStatus(t("ui_edited_png_save_started"));
   } catch (error) {
-    setStatus(`Save failed: ${error instanceof Error ? error.message : "The edited PNG could not be saved."}`);
+    setStatus(t("ui_save_failed_value1", { value1: error instanceof Error ? error.message : t("ui_edited_save_failed") }));
   } finally {
     setExportBusy(false);
   }
@@ -962,11 +972,11 @@ async function discardCapture() {
     discardButton.disabled = false;
     scheduleOpenCaptureExpiry();
     scheduleDraftSave();
-    setStatus("Screenshot could not be discarded locally; try again.");
+    setStatus(t("ui_screenshot_could_not_be_discarded_locally_try_again"));
     return;
   }
-  invalidateCapture("The temporary screenshot and local annotation draft were discarded.");
-  setStatus("Screenshot discarded.");
+  invalidateCapture(t("ui_the_temporary_screenshot_and_local_annotation_draft_were_discarded"));
+  setStatus(t("ui_screenshot_discarded"));
   window.setTimeout(() => window.close(), 0);
 }
 
@@ -984,12 +994,12 @@ async function expireOpenCapture() {
     globalThis.sessionStorage.removeItem(draftJournalKey());
   } catch {
     discardInProgress = false;
-    setStatus("Expired screenshot cleanup failed; reopen KoalaShot to retry local cleanup.");
+    setStatus(t("ui_expired_screenshot_cleanup_failed_reopen_koalashot_to_retry_local_cleanup"));
     expiryTimer = window.setTimeout(() => void expireOpenCapture(), 30_000);
     return;
   }
-  invalidateCapture("This temporary screenshot reached its 24-hour retention limit and was deleted locally.");
-  setStatus("Temporary screenshot expired and was deleted.");
+  invalidateCapture(t("ui_this_temporary_screenshot_reached_its_24_hour_retention_limit_and_was_deleted_locally"));
+  setStatus(t("ui_temporary_screenshot_expired_and_was_deleted"));
 }
 
 function scheduleOpenCaptureExpiry() {
@@ -1009,7 +1019,7 @@ function visibleImageCenter() {
 function selectNextAnnotation() {
   const annotations = currentAnnotations();
   if (annotations.length === 0) {
-    setStatus("There are no annotations to select.");
+    setStatus(t("ui_there_are_no_annotations_to_select"));
     return;
   }
   const index = annotations.findIndex((annotation) => annotation.id === selectedId);
@@ -1018,16 +1028,16 @@ function selectNextAnnotation() {
   updateHistoryButtons();
   updateContextControls();
   drawOverlay();
-  setStatus(`${annotationOptionLabel(next, (index + 1) % annotations.length)} selected.`);
+  setStatus(t("ui_value1_selected", { value1: annotationOptionLabel(next, (index + 1) % annotations.length) }));
 }
 
 function createKeyboardAnnotation() {
-  if (currentAnnotations().length >= 5000 && !["select", "pan", "crop"].includes(activeTool)) { setStatus("The editor supports at most 5000 annotations. Export or remove some annotations first."); return; }
+  if (currentAnnotations().length >= 5000 && !["select", "pan", "crop"].includes(activeTool)) { setStatus(t("ui_the_editor_supports_at_most_5000_annotations_export_or_remove_some_annotations_first")); return; }
   if (!capture || ["select", "pan"].includes(activeTool)) {
     if (activeTool === "select") {
       selectNextAnnotation();
     } else {
-      setStatus("Pan the screenshot with the arrow keys or choose an annotation tool.");
+      setStatus(t("ui_pan_the_screenshot_with_the_arrow_keys_or_choose_an_annotation_tool"));
     }
     return;
   }
@@ -1046,13 +1056,13 @@ function createKeyboardAnnotation() {
     });
     updateContextControls();
     drawOverlay();
-    setStatus("Keyboard crop prepared. Use Apply crop to confirm it.");
+    setStatus(t("ui_keyboard_crop_prepared_use_apply_crop_to_confirm_it"));
     updatePendingNotice();
     return;
   }
   if (activeTool === "marker") {
     createMarker(center);
-    setStatus("Marker added at the visible center.");
+    setStatus(t("ui_marker_added_at_the_visible_center"));
     return;
   }
 
@@ -1071,15 +1081,15 @@ function createKeyboardAnnotation() {
     );
   }
   if (!annotation) {
-    setStatus("The annotation could not be created at the visible center.");
+    setStatus(t("ui_the_annotation_could_not_be_created_at_the_visible_center"));
     return;
   }
-  history.apply(`Create ${activeTool} with keyboard`, documentState([...currentAnnotations(), annotation]));
+  history.apply(t("ui_create_activetool_with_keyboard", { activeTool: activeTool }), documentState([...currentAnnotations(), annotation]));
   selectedId = annotation.id;
   updateHistoryButtons();
   updateContextControls();
   drawOverlay();
-  setStatus(`${annotationOptionLabel(annotation, currentAnnotations().length - 1)} added at the visible center.`);
+  setStatus(t("ui_value1_added_at_the_visible_center", { value1: annotationOptionLabel(annotation, currentAnnotations().length - 1) }));
 }
 
 function moveSelectedWithKeyboard(key, largeStep) {
@@ -1098,8 +1108,8 @@ function moveSelectedWithKeyboard(key, largeStep) {
     return false;
   }
   const moved = moveAnnotation(selected, delta[0], delta[1]);
-  history.apply("Move annotation with keyboard", documentState(currentAnnotations().map((annotation) => annotation.id === selected.id ? moved : annotation)));
-  setStatus(`Selected annotation moved ${step} pixel${step === 1 ? "" : "s"}.`);
+  history.apply(t("ui_move_annotation_with_keyboard"), documentState(currentAnnotations().map((annotation) => annotation.id === selected.id ? moved : annotation)));
+  setStatus(t(step === 1 ? "ui_annotation_moved_one" : "ui_annotation_moved_other", { count: step }));
   return true;
 }
 
@@ -1195,13 +1205,15 @@ document.querySelector("#custom-color").addEventListener("input", (event) => {
   applySelectedStyle({ color: annotationColor });
 });
 annotationList.addEventListener("change", () => {
-  selectedId = annotationList.value;
+  const requestedId = annotationList.value;
+  if (!applyPendingEdits()) return;
+  selectedId = requestedId;
   selectTool("select");
   updateHistoryButtons();
   updateContextControls();
   drawOverlay();
   const selected = selectedAnnotation();
-  setStatus(selected ? `${annotationOptionLabel(selected, currentAnnotations().findIndex((annotation) => annotation.id === selected.id))} selected.` : "Annotation selection cleared.");
+  setStatus(selected ? t("ui_value1_selected", { value1: annotationOptionLabel(selected, currentAnnotations().findIndex((annotation) => annotation.id === selected.id)) }) : t("ui_annotation_selection_cleared"));
   overlay.focus({ preventScroll: true });
 });
 strokeControl.addEventListener("input", (event) => {
@@ -1288,14 +1300,15 @@ document.addEventListener("visibilitychange", () => {
 
 image.addEventListener("load", () => {
   updateStageSize();
-  if (!draftConflict) setStatus("Ready. Edit locally, then copy or save your PNG.");
+  if (!draftConflict) setStatus(t("ui_ready_edit_locally_then_copy_or_save_your_png"));
 });
 const unsubscribeDeletion = subscribeCaptureDeletion((ids) => {
-  if (capture && ids.includes(capture.id) && !discardInProgress) invalidateCapture("This screenshot was deleted in another KoalaShot tab.");
+  if (capture && ids.includes(capture.id) && !discardInProgress) invalidateCapture(t("ui_this_screenshot_was_deleted_in_another_koalashot_tab"));
 });
 const unsubscribeUpdates = subscribeCaptureUpdates(({ id, revision, writer }) => {
   if (capture?.id === id && writer !== writerId && revision > draftRevision) showDraftConflict();
 });
+initializeUi();
 void initializeFooter();
 
 document.querySelector("#marker-size").addEventListener("input", (event) => {
@@ -1327,22 +1340,22 @@ function showDraftConflict() {
   document.querySelector(".context-bar").inert = true;
   copyButton.disabled = true; saveButton.disabled = true;
   undoButton.disabled = true; redoButton.disabled = true;
-  draftStatus.textContent = "Draft conflict — export paused";
-  setStatus("Changed in another tab. Load the latest draft or keep your edits as a separate copy.");
+  draftStatus.textContent = t("ui_draft_conflict_export_paused");
+  setStatus(t("ui_changed_in_another_tab_load_the_latest_draft_or_keep_your_edits_as_a_separate_copy"));
 }
 
 async function keepSeparateCopy(originalOnly) {
-  if (!originalOnly && !requireAppliedEdits()) return;
+  if (!originalOnly && !applyPendingEdits()) return;
   try {
     const source = originalOnly ? await getCapture(captureId, { allowInvalidDraft: true }) : capture;
-    if (!source || Date.now() >= source.createdAt + TEMP_CAPTURE_TTL_MS) throw new Error("The capture is unavailable or expired.");
+    if (!source || Date.now() >= source.createdAt + TEMP_CAPTURE_TTL_MS) throw new Error(t("ui_the_capture_is_unavailable_or_expired"));
     const id = makeCaptureId();
     await saveCapture({ ...source, id, annotations: originalOnly ? [] : currentAnnotations(), crop: originalOnly ? null : currentCrop() });
     globalThis.sessionStorage.removeItem(draftJournalKey());
     location.replace(`editor.html?capture=${encodeURIComponent(id)}`);
   } catch (error) { setStatus(error.message); }
 }
-image.addEventListener("error", () => showError("The original PNG could not be decoded. Capture the page again."));
+image.addEventListener("error", () => showError(t("ui_the_original_png_could_not_be_decoded_capture_the_page_again")));
 
 function invalidateCapture(message) {
   discardInProgress = true;
@@ -1368,12 +1381,12 @@ async function requireCurrentCapture() {
     throw error;
   }
   if (!capture || Date.now() >= capture.createdAt + TEMP_CAPTURE_TTL_MS || !current) {
-    invalidateCapture("This screenshot was deleted or expired. Capture the page again.");
-    throw new Error("The temporary screenshot was deleted or expired.");
+    invalidateCapture(t("ui_this_screenshot_was_deleted_or_expired_capture_the_page_again"));
+    throw new Error(t("ui_the_temporary_screenshot_was_deleted_or_expired"));
   }
   if (draftConflict || current.revision !== draftRevision) {
     showDraftConflict();
-    throw new Error("The draft changed in another tab. Resolve the draft conflict before exporting.");
+    throw new Error(t("ui_the_draft_changed_in_another_tab_resolve_the_draft_conflict_before_exporting"));
   }
 }
 
@@ -1381,13 +1394,13 @@ void (async () => {
   try {
     await pruneExpiredCaptures();
     if (!captureId) {
-      showError("No temporary capture was specified.");
+      showError(t("ui_no_temporary_capture_was_specified"));
       return;
     }
     capture = await getCapture(captureId);
     if (!capture) {
       globalThis.sessionStorage.removeItem(draftJournalKey());
-      showError("This temporary capture was not found or has expired.");
+      showError(t("ui_this_temporary_capture_was_not_found_or_has_expired"));
       return;
     }
     scheduleOpenCaptureExpiry();
@@ -1409,17 +1422,17 @@ void (async () => {
         restoredJournal = true;
         journalConflict = (journal.baseRevision ?? 0) !== draftRevision;
       } else if (journal) {
-        throw new Error("The tab-local draft is damaged. Export is disabled; recover the original separately if needed.");
+        throw new Error(t("ui_the_tab_local_draft_is_damaged_export_is_disabled_recover_the_original_separately_if_"));
       }
     } catch {
-      const error = new Error("The tab-local draft is damaged. Export is disabled; recover the original separately if needed.");
+      const error = new Error(t("ui_the_tab_local_draft_is_damaged_export_is_disabled_recover_the_original_separately_if_"));
       error.code = "draft-invalid"; throw error;
     }
     history.setCurrent(state, { notify: false });
     cropSelection = null;
     imageUrl = URL.createObjectURL(capture.blob);
     image.src = imageUrl;
-    image.alt = capture.sourceTitle ? `Original full-page screenshot of ${capture.sourceTitle}` : "Original full-page screenshot";
+    image.alt = capture.sourceTitle ? t("ui_original_screenshot_of_value1", { value1: capture.sourceTitle }) : t("ui_original_screenshot");
     sourceHostname.textContent = hostnameFromUrl(capture.sourceUrl);
     captureMeta.textContent = formatMetadata(capture, currentCrop());
     document.querySelector("#export-filename").value = makeEditedFilename(capture.filename);
@@ -1436,11 +1449,11 @@ void (async () => {
     updateContextControls();
     resizeOverlay();
     fitToWidth();
-    draftStatus.textContent = "Draft saved locally";
+    draftStatus.textContent = t("ui_draft_saved_locally");
     if (journalConflict) showDraftConflict();
     else if (restoredJournal) scheduleDraftSave();
   } catch (error) {
-    showError(error instanceof Error ? error.message : "The temporary screenshot could not be loaded.");
+    showError(error instanceof Error ? error.message : t("ui_the_temporary_screenshot_could_not_be_loaded"));
     document.querySelector("#recover-original-button").hidden = error?.code !== "draft-invalid";
   }
 })();

@@ -3,34 +3,38 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>KoalaShot</title>
+    <title data-i18n="ui_koalashot">KoalaShot</title>
     <link rel="stylesheet" href="popup.css">
     <link rel="stylesheet" href="../common/footer.css">
+    <link rel="stylesheet" href="../common/ui.css">
   </head>
   <body data-phase="idle">
     <main class="popup-shell">
-      <header class="brand-row"><img src="../icons/icon-32.png" alt="" width="32" height="32"><div><p class="eyebrow">KoalaShot</p><h1>Full-page screenshot</h1></div></header>
-      <section class="action-card" aria-label="Capture this page">
-        <label class="field-label" for="capture-target">Capture area</label>
-        <select id="capture-target" class="select-control" disabled><option value="page">Full page</option><option value="internal">Scrollable area inside the page</option></select>
+      <header class="brand-row"><img src="../icons/icon-32.png" alt="" width="32" height="32"><div><p class="eyebrow" data-i18n="ui_koalashot">KoalaShot</p><h1 data-i18n="ui_full_page_screenshot">Full-page screenshot</h1></div></header>
+      <section class="action-card" aria-label="Capture this page" data-i18n-aria-label="ui_capture_this_page">
+        <label class="field-label" for="capture-target" data-i18n="ui_capture_area">Capture area</label>
+        <select id="capture-target" class="select-control" aria-describedby="capture-area-help" disabled title="Choose the whole page, the current visible area, or the largest fully visible scrollable area." data-i18n-title="ui_choose_the_whole_page_the_current_visible_area_or_the_largest_fully_visible_scrollabl"><option value="page" data-i18n="ui_full_page">Full page</option><option value="visible" data-i18n="ui_visible_area_no_scrolling">Visible area (no scrolling)</option><option value="internal" data-i18n="ui_scrollable_area_inside_the_page">Scrollable area inside the page</option></select>
+        <p id="capture-area-help" class="capture-help" data-i18n="ui_captures_the_page_from_top_to_bottom_if_only_an_inner_area_scrolls_captures_the_visib">Captures the page from top to bottom. If only an inner area scrolls, captures the visible area instead.</p>
         <p id="settings-status" class="settings-status" role="status"></p>
         <div id="capture-actions" class="button-stack">
-          <button id="edit-button" class="button button-primary" type="button" disabled>Capture &amp; edit</button>
-          <div class="action-pair"><button id="copy-button" class="button button-secondary" type="button" disabled>Capture &amp; copy</button><button id="save-button" class="button button-secondary" type="button" disabled>Capture &amp; save</button></div>
-          <p class="capture-help">Edit to crop or redact first. Copy and Save export the original.</p>
+          <button id="edit-button" class="button button-primary" type="button" disabled title="Capture the selected area and open the editor to crop, annotate, or redact before exporting." data-i18n="ui_capture_edit" data-i18n-title="ui_capture_the_selected_area_and_open_the_editor_to_crop_annotate_or_redact_before_expor">Capture &amp; edit</button>
+          <div class="action-pair"><button id="copy-button" class="button button-secondary" type="button" disabled title="Capture the selected area and copy the original PNG. This does not open the editor." data-i18n="ui_capture_copy" data-i18n-title="ui_capture_the_selected_area_and_copy_the_original_png_this_does_not_open_the_editor">Capture &amp; copy</button><button id="save-button" class="button button-secondary" type="button" disabled title="Capture the selected area and download the original PNG. This does not open the editor." data-i18n="ui_capture_save" data-i18n-title="ui_capture_the_selected_area_and_download_the_original_png_this_does_not_open_the_editor">Capture &amp; save</button></div>
+          <p class="capture-help" data-i18n="ui_edit_to_crop_or_redact_first_copy_and_save_export_the_original">Edit to crop or redact first. Copy and Save export the original.</p>
         </div>
       </section>
-      <section id="result-card" class="result-card" aria-label="Completed capture" hidden>
-        <div class="result-overview"><img id="capture-preview" alt="Preview of the completed capture"><div><strong id="result-label">Completed capture</strong><p id="result-meta"></p></div></div>
+      <section id="result-card" class="result-card" aria-label="Completed capture" hidden data-i18n-aria-label="ui_completed_capture">
+        <div class="result-overview"><img id="capture-preview" alt="Preview of the completed capture" data-i18n-alt="ui_preview_of_the_completed_capture"><div><strong id="result-label" data-i18n="ui_completed_capture">Completed capture</strong><p id="result-meta"></p></div></div>
         <p id="capture-warning" class="capture-warning" role="status" hidden></p>
-        <div class="result-actions"><button id="copy-result-button" class="button button-secondary" type="button">Copy original</button><button id="save-result-button" class="button button-secondary" type="button">Save original</button><button id="edit-result-button" class="button button-primary" type="button">Edit</button></div>
-        <button id="capture-again-button" class="text-button" type="button">Capture again</button>
+        <button id="capture-internal-button" class="text-button" type="button" hidden title="Capture all content in the largest fully visible scrollable area, using your last capture action." data-i18n="ui_capture_the_full_scrollable_area" data-i18n-title="ui_capture_all_content_in_the_largest_fully_visible_scrollable_area_using_your_last_capt">Capture the full scrollable area</button>
+        <div class="result-actions"><button id="copy-result-button" class="button button-secondary" type="button" title="Copy this completed screenshot without capturing again. Editor changes are not included." data-i18n="ui_copy_original" data-i18n-title="ui_copy_this_completed_screenshot_without_capturing_again_editor_changes_are_not_include">Copy original</button><button id="save-result-button" class="button button-secondary" type="button" title="Download this completed screenshot without capturing again. Editor changes are not included." data-i18n="ui_save_original" data-i18n-title="ui_download_this_completed_screenshot_without_capturing_again_editor_changes_are_not_inc">Save original</button><button id="edit-result-button" class="button button-primary" type="button" title="Open this completed screenshot in the editor to crop, annotate, or redact it." data-i18n="ui_edit" data-i18n-title="ui_open_this_completed_screenshot_in_the_editor_to_crop_annotate_or_redact_it">Edit</button></div>
+        <button id="capture-again-button" class="text-button" type="button" title="Choose an action for a new screenshot. The previous screenshot stays available until the new one succeeds." data-i18n="ui_capture_again" data-i18n-title="ui_choose_an_action_for_a_new_screenshot_the_previous_screenshot_stays_available_until_t">Capture again</button>
       </section>
-      <section class="status-card" aria-label="Capture status">
-        <p id="status" class="status-line" role="status" aria-live="polite">Ready.</p>
+      <section class="status-card" aria-label="Capture status" data-i18n-aria-label="ui_capture_status">
+        <p id="status" class="status-line" role="status" aria-live="polite" data-i18n="ui_ready">Ready.</p>
+        <button id="capture-visible-button" class="button button-secondary" type="button" hidden title="Try a screenshot of what is visible now without scrolling, using your last capture action." data-i18n="ui_capture_visible_area_instead" data-i18n-title="ui_try_a_screenshot_of_what_is_visible_now_without_scrolling_using_your_last_capture_act">Capture visible area instead</button>
         <div id="progress-track" class="progress-track" hidden aria-hidden="true"><span id="progress-bar"></span></div>
-        <button id="cancel-button" class="button button-cancel" type="button" hidden>Cancel capture</button>
-        <p class="capture-help keep-open">Keep this popup open until capture finishes.</p>
+        <button id="cancel-button" class="button button-cancel" type="button" hidden title="Stop this capture and restore the page. Any previous completed screenshot remains available." data-i18n="ui_cancel_capture" data-i18n-title="ui_stop_this_capture_and_restore_the_page_any_previous_completed_screenshot_remains_avai">Cancel capture</button>
+        <p class="capture-help keep-open" data-i18n="ui_keep_this_popup_open_until_capture_finishes">Keep this popup open until capture finishes.</p>
       </section>
     </main>
     <footer class="product-footer" data-product-footer></footer>

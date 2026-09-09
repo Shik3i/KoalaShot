@@ -14,6 +14,9 @@ export function isValidCaptureMessage(message) {
   if (!MESSAGE_TYPES.has(message.type)) {
     return false;
   }
+  if (message.type === "start") {
+    return message.target === undefined || ["page", "internal", "visible"].includes(message.target);
+  }
 
   if (message.type !== "scroll") {
     return true;
