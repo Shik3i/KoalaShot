@@ -44,6 +44,8 @@ def validate_manifests() -> None:
     version = project_version()
     for browser in ("chrome", "firefox"):
         manifest = read_json(EXTENSION / "manifests" / f"{browser}.json")
+        if "key" in manifest:
+            fail(f"development-only manifest key must not ship in {browser}")
         permissions = set(manifest.get("permissions", []))
         optional = set(manifest.get("optional_permissions", []))
         if permissions - ALLOWED_PERMISSIONS:
@@ -152,6 +154,8 @@ def validate_archives() -> None:
             if len(names) != len(set(names)) or set(names) != expected_files:
                 fail(f"unexpected file inventory in {archive.name}")
             manifest = json.loads(handle.read("manifest.json"))
+            if "key" in manifest:
+                fail(f"development-only manifest key must not ship in {archive.name}")
             if manifest != read_json(EXTENSION / "manifests" / f"{browser}.json"):
                 fail(f"manifest differs from source in {archive.name}")
             for name, source in sources.items():
