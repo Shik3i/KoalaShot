@@ -59,7 +59,7 @@ class LandingMetadataTest(unittest.TestCase):
             build.build_landing()
             for path in (build.DIST / "landing").rglob("*.html"):
                 source = path.read_text(encoding="utf-8")
-                self.assertIn(f'data-review href="{chrome}/reviews"', source)
+                self.assertRegex(source, rf'data-review\s+title="[^"]+"\s+href="{chrome}/reviews"')
                 self.assertIn('data-store="firefox" data-review hidden', source)
                 self.assertIn('>v0.4.0</span>', source)
             index = (build.DIST / "landing/index.html").read_text(encoding="utf-8")

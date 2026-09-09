@@ -21,8 +21,9 @@ export async function runWorkflowRegressions(browser, fixture, existingPopup, ou
   await browser.captureScreenshot(popup, join(output, "popup-ready.png"));
   await evaluate(popup, "window.originalSet=chrome.storage.local.set;chrome.storage.local.set=()=>{throw new Error('Injected settings failure')};document.querySelector('#capture-target').value='internal';document.querySelector('#capture-target').dispatchEvent(new Event('change'))");
   await browser.wait(popup, "document.querySelector('#settings-status').textContent.includes('could not be saved')");
-  assert.equal(await evaluate(popup, "document.querySelector('#capture-target').value"), "page");
-  await evaluate(popup, "chrome.storage.local.set=window.originalSet");
+  assert.equal(await evaluate(popup, "document.querySelector('#capture-target').value"), "internal");
+  assert.match(await evaluate(popup, "document.querySelector('#settings-status').textContent"), /still capture/);
+  await evaluate(popup, "chrome.storage.local.set=window.originalSet;document.querySelector('#capture-target').value='page';document.querySelector('#capture-target').dispatchEvent(new Event('change'))");
 
   await browser.activate(fixture);
   await evaluate(fixture, "document.head.innerHTML='<title>Workflow regression</title>';document.body.style.cssText='margin:0';document.body.innerHTML='<div style=\"height:100px;background:orange\">One viewport</div>';window.scrollTo(0,0)");
@@ -59,7 +60,7 @@ export async function runWorkflowRegressions(browser, fixture, existingPopup, ou
   assert.ok(results.burst.every(size => size > 0));
   console.log("workflow: distinct capture actions, retained results, rate limits passed");
 
-  const protocol = `(async()=>{const [t]=await chrome.tabs.query({active:true,currentWindow:true});await chrome.scripting.executeScript({target:{tabId:t.id},files:['content/capture-page.js']});const id=crypto.randomUUID();const p=chrome.tabs.connect(t.id,{name:'koalashot-capture:'+id});const req=m=>new Promise(r=>{const f=x=>{p.onMessage.removeListener(f);r(x)};p.onMessage.addListener(f);p.postMessage({...m,sessionId:id})});`;
+  const protocol = `(async()=>{const [t]=await chrome.tabs.query({active:true,currentWindow:true});await chrome.scripting.executeScript({target:{tabId:t.id},files:['common/locale.js','content/capture-page.js']});const id=crypto.randomUUID();const p=chrome.tabs.connect(t.id,{name:'koalashot-capture:'+id});const req=m=>new Promise(r=>{const f=x=>{p.onMessage.removeListener(f);r(x)};p.onMessage.addListener(f);p.postMessage({...m,sessionId:id})});`;
   results.stalePing = await evaluate(popup, protocol + `await req({type:'start',target:'page'});await req({type:'restore'});const ping=await req({type:'ping'});p.disconnect();return ping})()`);
   assert.equal(results.stalePing.ok, false);
   await evaluate(fixture, "document.body.innerHTML='<div style=\"height:2400px;background:linear-gradient(red,blue)\">Geometry</div>';window.scrollTo(0,0)");
@@ -86,13 +87,17 @@ export async function runWorkflowRegressions(browser, fixture, existingPopup, ou
   await evaluate(editor, "window.downloads=[];HTMLAnchorElement.prototype.click=function(){if(this.download)window.downloads.push(this.download)}");
   await browser.draw(editor, "text", [150, 150], [150, 150]);
   await evaluate(editor, "document.querySelector('#text-input').value='Pending text';document.querySelector('#save-button').click()");
-  assert.equal(await evaluate(editor, "window.downloads.length"), 0);
-  assert.match(await evaluate(editor, "document.querySelector('#status').textContent"), /Apply|apply/);
-  await click(editor, "apply-text-button"); await saved(editor);
+  await browser.wait(editor, "window.downloads.length === 1");
+  await saved(editor);
+  assert.equal((await stored(editor)).annotations[0].text, "Pending text");
+  assert.equal(await evaluate(editor, "document.querySelector('#pending-edits').hidden"), true);
   await browser.draw(editor, "crop", [100, 100], [500, 400]);
   await click(editor, "save-button");
-  assert.equal(await evaluate(editor, "window.downloads.length"), 0);
-  await click(editor, "undo-button");
+  await browser.wait(editor, "window.downloads.length === 2");
+  await saved(editor);
+  assert.ok((await stored(editor)).crop?.width > 0);
+  await click(editor, "undo-button"); await saved(editor);
+  assert.equal((await stored(editor)).crop, null);
   assert.equal(await evaluate(editor, "document.querySelector('#pending-edits').hidden"), true);
   assert.equal((await stored(editor)).annotations.length, 1);
   await browser.draw(editor, "crop", [100, 100], [500, 400]);
@@ -131,8 +136,8 @@ export async function runWorkflowRegressions(browser, fixture, existingPopup, ou
   assert.ok(Math.abs(resized.width - shape.width - 60) < 1 && Math.abs(resized.height - shape.height - 40) < 1);
   await evaluate(editor, "document.querySelector('#export-filename').value='Custom:export.png'");
   await click(editor, "save-button");
-  await browser.wait(editor, "window.downloads.length === 1");
-  assert.equal(await evaluate(editor, "window.downloads[0]"), "Custom_export.png");
+  await browser.wait(editor, "window.downloads.length === 3");
+  assert.equal(await evaluate(editor, "window.downloads[2]"), "Custom_export.png");
   results.editorLayouts = [];
   for (const width of [390, 901, 960, 1280]) {
     await browser.setViewport(editor, width, 844, 1);
@@ -144,6 +149,8 @@ export async function runWorkflowRegressions(browser, fixture, existingPopup, ou
 
   const second = await browser.open(editorUrl, false);
   await browser.wait(second, "!document.querySelector('#save-button').disabled");
+  await browser.draw(second, "text", [200, 200], [200, 200]);
+  await evaluate(second, "document.querySelector('#text-input').value='Pending text during conflict'");
   await browser.setViewport(editor, 1280, 900, 1);
   await browser.draw(editor, "redact", [400, 100], [600, 250]); await saved(editor);
   await browser.wait(second, "!document.querySelector('#draft-conflict').hidden");
@@ -156,6 +163,7 @@ export async function runWorkflowRegressions(browser, fixture, existingPopup, ou
   await browser.wait(second, `!location.href.endsWith(${JSON.stringify(id)}) && !document.querySelector('#save-button').disabled`);
   assert.equal((await stored(second)).createdAt, originalExpiry);
   assert.notEqual((await stored(second)).id, id);
+  assert.ok((await stored(second)).annotations.some(annotation => annotation.text === 'Pending text during conflict'));
   await evaluate(popup, `(async()=>{const {getCapture,saveCaptureDraft}=await import('../common/capture-store.js');const c=await getCapture('${id}');await saveCaptureDraft('${id}',c.annotations,{x:1,y:1,width:30,height:30},c.revision);const next=await getCapture('${id}');await saveCaptureDraft('${id}',next.annotations,null,next.revision);return (await getCapture('${id}')).crop})()`).then(crop => assert.equal(crop, null));
   await evaluate(popup, `new Promise((resolve,reject)=>{const r=indexedDB.open('koalashot-captures',2);r.onsuccess=()=>{const db=r.result,t=db.transaction('drafts','readwrite');t.objectStore('drafts').put({id:'${id}',annotations:null,crop:null,revision:99});t.oncomplete=()=>{db.close();resolve()};t.onerror=()=>reject(t.error)}})`);
   const damaged = await browser.open(editorUrl, false);

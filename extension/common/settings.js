@@ -7,6 +7,6 @@ export function normalizeSettings(values = {}) {
   return {
     // Migrate the former combined action: Copy/Save never open the editor.
     openEditorAfterCapture: false,
-    captureTarget: values.captureTarget === "internal" ? "internal" : "page",
+    captureTarget: ["internal", "visible"].includes(values.captureTarget) ? values.captureTarget : "page",
   };
 }

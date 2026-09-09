@@ -1,3 +1,4 @@
+import { t } from "./i18n.js";
 export function selectClipboardMethod(capabilities) {
   if (capabilities.isFirefox && capabilities.hasFirefoxSetImageData) {
     return "firefox-set-image-data";
@@ -19,7 +20,7 @@ function getCapabilities(api) {
 
 export async function copyPngBlob(blob, api) {
   if (!(blob instanceof Blob) || blob.type !== "image/png") {
-    throw new Error("The screenshot is not a PNG Blob.");
+    throw new Error(t("ui_the_screenshot_is_not_a_png_blob"));
   }
 
   const method = selectClipboardMethod(getCapabilities(api));
@@ -35,5 +36,5 @@ export async function copyPngBlob(blob, api) {
     return;
   }
 
-  throw new Error("This browser does not provide an image clipboard API.");
+  throw new Error(t("ui_this_browser_does_not_provide_an_image_clipboard_api"));
 }

@@ -1,3 +1,4 @@
+import { t } from "../common/i18n.js";
 import { MAX_CANVAS_HEIGHT, MAX_CANVAS_PIXELS, MAX_CANVAS_WIDTH, MAX_RAW_CANVAS_BYTES } from "../common/constants.js";
 import { tryValidateAnnotations, tryValidateCrop, validateAnnotation } from "./annotation-model.js";
 import { drawAnnotation } from "./geometry.js";
@@ -11,7 +12,7 @@ async function decodeOriginal(blob) {
     const image = new Image();
     await new Promise((resolve, reject) => {
       image.onload = resolve;
-      image.onerror = () => reject(new Error("The original PNG could not be decoded."));
+      image.onerror = () => reject(new Error(t("ui_the_original_png_could_not_be_decoded")));
       image.src = url;
     });
     return { image, url };
@@ -34,7 +35,7 @@ function normalizeCropToImage(crop, width, height) {
   const right = Math.min(width, Math.max(left + 1, Math.round(crop.x + crop.width)));
   const bottom = Math.min(height, Math.max(top + 1, Math.round(crop.y + crop.height)));
   if (right <= left || bottom <= top) {
-    throw new Error("The crop selection is outside the screenshot.");
+    throw new Error(t("ui_the_crop_selection_is_outside_the_screenshot"));
   }
   return { x: left, y: top, width: right - left, height: bottom - top };
 }
@@ -87,7 +88,7 @@ function applyImageEffect(context, annotation, sourceImage) {
     preview.height = Math.max(1, Math.ceil(source.height * scale));
     const previewContext = preview.getContext("2d");
     if (!previewContext) {
-      throw new Error("The browser could not allocate the effect preview.");
+      throw new Error(t("ui_the_browser_could_not_allocate_the_effect_preview"));
     }
     previewContext.imageSmoothingEnabled = annotation.type !== "pixelate";
     if (annotation.type === "blur") {
@@ -129,24 +130,24 @@ export function drawEditorAnnotations(context, annotations, sourceImage) {
 
 export async function renderEditorResultBlob(capture, annotations = capture?.annotations || []) {
   if (!(capture?.blob instanceof Blob) || capture.blob.type !== "image/png") {
-    throw new Error("The editor capture is unavailable.");
+    throw new Error(t("ui_the_editor_capture_is_unavailable"));
   }
   if (!Number.isInteger(capture.width) || !Number.isInteger(capture.height) || capture.width <= 0 || capture.height <= 0) {
-    throw new Error("The screenshot dimensions are invalid.");
+    throw new Error(t("ui_the_screenshot_dimensions_are_invalid"));
   }
   const validation = tryValidateAnnotations(annotations);
   if (!validation.valid) {
-    throw new Error("The annotation draft is invalid.");
+    throw new Error(t("ui_the_annotation_draft_is_invalid"));
   }
   const cropValidation = tryValidateCrop(capture.crop || null);
   if (!cropValidation.valid) {
-    throw new Error("The crop selection is invalid.");
+    throw new Error(t("ui_the_crop_selection_is_invalid"));
   }
   const crop = normalizeCropToImage(cropValidation.crop, capture.width, capture.height);
   const rawBytes = capture.width * capture.height * 4;
   if (capture.width > MAX_CANVAS_WIDTH || capture.height > MAX_CANVAS_HEIGHT
     || capture.width * capture.height > MAX_CANVAS_PIXELS || rawBytes * 2 > MAX_RAW_CANVAS_BYTES) {
-    throw new Error("This page is too large to export as one PNG at the current resolution.");
+    throw new Error(t("ui_this_page_is_too_large_to_export_as_one_png_at_the_current_resolution"));
   }
   const existingImage = typeof document !== "undefined" && typeof document.querySelector === "function"
     ? document.querySelector("#capture-image")
@@ -160,11 +161,11 @@ export async function renderEditorResultBlob(capture, annotations = capture?.ann
     canvas.width = crop.width;
     canvas.height = crop.height;
     if (canvas.width !== crop.width || canvas.height !== crop.height) {
-      throw new Error("This page is too large to export as one PNG at the current resolution.");
+      throw new Error(t("ui_this_page_is_too_large_to_export_as_one_png_at_the_current_resolution"));
     }
     const context = canvas.getContext("2d");
     if (!context) {
-      throw new Error("The browser could not allocate an export canvas.");
+      throw new Error(t("ui_the_browser_could_not_allocate_an_export_canvas"));
     }
     context.drawImage(original.image, crop.x, crop.y, crop.width, crop.height, 0, 0, crop.width, crop.height);
     context.save();
@@ -174,7 +175,7 @@ export async function renderEditorResultBlob(capture, annotations = capture?.ann
     context.restore();
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
     if (!blob) {
-      throw new Error("The browser could not encode the edited PNG.");
+      throw new Error(t("ui_the_browser_could_not_encode_the_edited_png"));
     }
     return blob;
   } finally {

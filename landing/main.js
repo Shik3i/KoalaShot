@@ -26,6 +26,7 @@ if (versionTarget) {
         if (status) {
           const link = document.createElement("a"); link.href = url.href;
           link.textContent = browser === "chrome" ? "Get KoalaShot on Chrome Web Store" : "Get KoalaShot on Firefox Add-ons";
+          link.title = link.textContent;
           status.replaceChildren(link);
         }
       }

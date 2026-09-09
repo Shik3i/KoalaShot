@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "KoalaShot – Full Page Screenshot",
+  "name": "__MSG_extensionName__",
   "short_name": "KoalaShot",
-  "version": "0.5.4",
-  "description": "Capture full-page screenshots, add annotations or redactions, and copy or save a PNG. No accounts, uploads or tracking.",
+  "version": "0.6.0",
+  "description": "__MSG_extensionDescription__",
   "default_locale": "en",
   "permissions": [
     "activeTab",
@@ -15,7 +15,7 @@
   ],
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsnLZ4OJFXDycC4kPmXGERHwq+gtCpmhD1PJxMJynmdva4npwS0HpRvmJ9MsDhYyKOicQl8/lP4rTu1XQQaz2osMKl1xRl8UqfKsI4YPiqJD7puNCiG/ewuorG4FvHtCOYjz4L4dh/CmWc7L5q2wI+z3GyXcFdJyX8bXvXco0y1HR+5cVtzckul6M4IUPBw1enLwawcslRHKTwJhkdvDdmgqDvAcw1zbOiC0rBoCCpldysFRJf9h2j7noN37dqFXKorJi9RsSOxmZIPa0vOPMkc7tYksX2yXVeA1Xqfep56LbpgS8FlumUHrrzqxZNEq2pdUF2hXEExVNSlVvEszASQIDAQAB",
   "action": {
-    "default_title": "Capture full page with KoalaShot",
+    "default_title": "__MSG_actionTitle__",
     "default_popup": "popup/popup.html"
   },
   "icons": {

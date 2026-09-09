@@ -1,0 +1,15 @@
+.control-tooltip {
+  position: fixed;
+  z-index: 10000;
+  max-width: min(300px, calc(100vw - 16px));
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 3px 14px #0003;
+  font: 12px/1.45 system-ui, sans-serif;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+.control-tooltip[hidden] { display: none !important; }

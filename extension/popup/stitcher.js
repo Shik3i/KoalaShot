@@ -1,3 +1,4 @@
+import { t } from "../common/i18n.js";
 import {
   MAX_CANVAS_HEIGHT,
   MAX_CANVAS_PIXELS,
@@ -19,7 +20,7 @@ export function cssToBitmapPixel(cssPixels, scale) {
 
 export function generateCapturePositions(documentHeight, viewportHeight) {
   if (!Number.isFinite(documentHeight) || !Number.isFinite(viewportHeight) || viewportHeight <= 0) {
-    throw new TypeError("Document and viewport heights must be positive numbers.");
+    throw new TypeError(t("ui_document_and_viewport_heights_must_be_positive_numbers"));
   }
   const maximumScroll = Math.max(0, documentHeight - viewportHeight);
   const positions = [0];
@@ -71,13 +72,13 @@ export function calculateSectionPlacement({
 function dataUrlToBlob(dataUrl) {
   const match = /^data:image\/png;base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl);
   if (!match) {
-    throw new StitchingError("The browser returned an invalid PNG capture.", "decode-failed");
+    throw new StitchingError(t("ui_the_browser_returned_an_invalid_png_capture"), "decode-failed");
   }
   let binary;
   try {
     binary = atob(match[1]);
   } catch {
-    throw new StitchingError("The browser returned an undecodable PNG capture.", "decode-failed");
+    throw new StitchingError(t("ui_the_browser_returned_an_undecodable_png_capture"), "decode-failed");
   }
   const bytes = new Uint8Array(binary.length);
   for (let index = 0; index < binary.length; index += 1) {
@@ -92,7 +93,7 @@ async function decodePngDataUrl(dataUrl) {
     try {
       return await createImageBitmap(blob);
     } catch {
-      throw new StitchingError("The captured PNG could not be decoded.", "decode-failed");
+      throw new StitchingError(t("ui_the_captured_png_could_not_be_decoded"), "decode-failed");
     }
   }
 
@@ -101,7 +102,7 @@ async function decodePngDataUrl(dataUrl) {
     const image = new Image();
     await new Promise((resolve, reject) => {
       image.onload = resolve;
-      image.onerror = () => reject(new StitchingError("The captured PNG could not be decoded.", "decode-failed"));
+      image.onerror = () => reject(new StitchingError(t("ui_the_captured_png_could_not_be_decoded"), "decode-failed"));
       image.src = objectUrl;
     });
     return image;
@@ -167,14 +168,14 @@ export class PngStitcher {
     const height = cssToBitmapPixel(this.captureRect.height, this.scaleY);
     if (sourceX < 0 || sourceY < 0 || width <= 0 || height <= 0
       || sourceX + width > bitmap.width || sourceY + height > bitmap.height) {
-      throw new StitchingError("The browser capture did not contain the selected area.", "capture-region-failed");
+      throw new StitchingError(t("ui_the_browser_capture_did_not_contain_the_selected_area"), "capture-region-failed");
     }
     const maximumHeight = cssToBitmapPixel(this.maxDocumentHeight, this.scaleY);
     const bytes = estimateRawMemory(width, maximumHeight);
     if (width > MAX_CANVAS_WIDTH || maximumHeight > MAX_CANVAS_HEIGHT
       || width * maximumHeight > MAX_CANVAS_PIXELS
       || bytes * 2 > MAX_RAW_CANVAS_BYTES) {
-      throw new StitchingError("This page is too large to create as one PNG at the current resolution.", "too-large");
+      throw new StitchingError(t("ui_this_page_is_too_large_to_create_as_one_png_at_the_current_resolution"), "too-large");
     }
 
     let canvas;
@@ -184,17 +185,17 @@ export class PngStitcher {
       canvas.width = width;
       canvas.height = maximumHeight;
       if (canvas.width !== width || canvas.height !== maximumHeight) {
-        throw new StitchingError("This page is too large to create as one PNG at the current resolution.", "too-large");
+        throw new StitchingError(t("ui_this_page_is_too_large_to_create_as_one_png_at_the_current_resolution"), "too-large");
       }
       context = canvas.getContext("2d", { alpha: false });
       if (!context) {
-        throw new StitchingError("The browser could not allocate an image canvas.", "canvas-failed");
+        throw new StitchingError(t("ui_the_browser_could_not_allocate_an_image_canvas"), "canvas-failed");
       }
     } catch (error) {
       if (error instanceof StitchingError) {
         throw error;
       }
-      throw new StitchingError("This page is too large to create as one PNG at the current resolution.", "too-large");
+      throw new StitchingError(t("ui_this_page_is_too_large_to_create_as_one_png_at_the_current_resolution"), "too-large");
     }
     context.fillStyle = "#ffffff";
     context.fillRect(0, 0, width, maximumHeight);
@@ -212,7 +213,7 @@ export class PngStitcher {
     try {
       this.ensureCanvas(bitmap);
       if (bitmap.width !== this.lastBitmapWidth || bitmap.height !== this.lastBitmapHeight) {
-        throw new StitchingError("The browser viewport changed during capture.", "viewport-changed");
+        throw new StitchingError(t("ui_the_browser_viewport_changed_during_capture"), "viewport-changed");
       }
       const placement = calculateSectionPlacement({
         scrollY,
@@ -222,7 +223,7 @@ export class PngStitcher {
         outputHeight: this.canvas.height,
       });
       if (placement.destinationY > this.previousBottom + 1) {
-        throw new StitchingError("Capture stopped because scrolling left a gap in the image.", "capture-gap");
+        throw new StitchingError(t("ui_capture_stopped_because_scrolling_left_a_gap_in_the_image"), "capture-gap");
       }
       if (placement.availableHeight > 0) {
         this.context.drawImage(
@@ -245,17 +246,17 @@ export class PngStitcher {
 
   async toBlob() {
     if (!this.canvas) {
-      throw new StitchingError("No captured sections are available.", "empty-capture");
+      throw new StitchingError(t("ui_no_captured_sections_are_available"), "empty-capture");
     }
     const finalHeight = Math.min(
       this.canvas.height,
       Math.max(this.canvas.height > 0 ? 1 : 0, cssToBitmapPixel(this.targetDocumentHeight, this.scaleY)),
     );
     if (finalHeight <= 0) {
-      throw new StitchingError("The browser could not determine the PNG dimensions.", "canvas-failed");
+      throw new StitchingError(t("ui_the_browser_could_not_determine_the_png_dimensions"), "canvas-failed");
     }
     if (this.previousBottom < finalHeight - 1) {
-      throw new StitchingError("The page could not be captured completely. Please try again.", "incomplete-capture");
+      throw new StitchingError(t("ui_the_page_could_not_be_captured_completely_please_try_again"), "incomplete-capture");
     }
     let outputCanvas = this.canvas;
     if (finalHeight !== this.canvas.height) {
@@ -264,18 +265,18 @@ export class PngStitcher {
         outputCanvas.width = this.canvas.width;
         outputCanvas.height = finalHeight;
         if (outputCanvas.width !== this.canvas.width || outputCanvas.height !== finalHeight) {
-          throw new StitchingError("This page is too large to create as one PNG at the current resolution.", "too-large");
+          throw new StitchingError(t("ui_this_page_is_too_large_to_create_as_one_png_at_the_current_resolution"), "too-large");
         }
         const outputContext = outputCanvas.getContext("2d", { alpha: false });
         if (!outputContext) {
-          throw new StitchingError("The browser could not allocate an image canvas.", "canvas-failed");
+          throw new StitchingError(t("ui_the_browser_could_not_allocate_an_image_canvas"), "canvas-failed");
         }
         outputContext.drawImage(this.canvas, 0, 0, this.canvas.width, finalHeight, 0, 0, outputCanvas.width, outputCanvas.height);
       } catch (error) {
         if (error instanceof StitchingError) {
           throw error;
         }
-        throw new StitchingError("This page is too large to create as one PNG at the current resolution.", "too-large");
+        throw new StitchingError(t("ui_this_page_is_too_large_to_create_as_one_png_at_the_current_resolution"), "too-large");
       }
     }
     const blob = await new Promise((resolve) => outputCanvas.toBlob(resolve, "image/png"));
@@ -284,7 +285,7 @@ export class PngStitcher {
       outputCanvas.height = 1;
     }
     if (!blob) {
-      throw new StitchingError("The browser could not encode the PNG.", "encode-failed");
+      throw new StitchingError(t("ui_the_browser_could_not_encode_the_png"), "encode-failed");
     }
     this.outputWidth = this.canvas.width;
     this.outputHeight = finalHeight;

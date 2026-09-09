@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { createServer } from 'node:http';
 import assert from 'node:assert/strict';
 import { runWorkflowRegressions } from './workflow-regressions.mjs';
+import { runUsabilityRegressions } from './usability-regressions.mjs';
 
 const root = resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const version = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
@@ -43,7 +44,7 @@ try {
   results.mixedScroll = await browser.evaluate(popup, `(async () => {
     const api = chrome;
     const [tab] = await api.tabs.query({active:true,currentWindow:true});
-    await api.scripting.executeScript({target:{tabId:tab.id},files:['content/capture-page.js']});
+    await api.scripting.executeScript({target:{tabId:tab.id},files:['common/locale.js','content/capture-page.js']});
     const sessionId = crypto.randomUUID();
     const port = api.tabs.connect(tab.id,{name:'koalashot-capture:'+sessionId});
     const request = (message) => new Promise(resolve => { const listener = response => {port.onMessage.removeListener(listener);resolve(response)};port.onMessage.addListener(listener);port.postMessage({...message,sessionId}); });
@@ -225,6 +226,7 @@ try {
     }
   }
   results.workflows = await runWorkflowRegressions(browser, fixture, popup, output);
+  results.usability = await runUsabilityRegressions(browser, fixture, output);
   writeFileSync(join(output,'browser-results.json'),JSON.stringify(results,null,2));
   for (const row of results.landing) { assert.ok(row.contrast >= 4.5, JSON.stringify(row)); assert.ok(row.firstTextLeft > 0); assert.ok(row.scrollWidth <= row.width); }
   console.log(JSON.stringify(results,null,2));

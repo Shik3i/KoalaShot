@@ -15,12 +15,16 @@ test("uses a conservative settings default", () => {
   assert.deepEqual(DEFAULT_SETTINGS, { openEditorAfterCapture: false, captureTarget: "page" });
   assert.deepEqual(normalizeSettings({ openEditorAfterCapture: 1, captureTarget: "internal" }), { openEditorAfterCapture: false, captureTarget: "internal" });
   assert.deepEqual(normalizeSettings(), { openEditorAfterCapture: false, captureTarget: "page" });
+  assert.equal(normalizeSettings({captureTarget:"visible"}).captureTarget, "visible");
+  assert.equal(normalizeSettings({captureTarget:"invalid"}).captureTarget, "page");
 });
 
 test("validates capture sessions and rejects stale or malformed messages", () => {
   const sessionId = "12345678-1234-4234-8234-123456789012";
   assert.equal(isValidSessionId(sessionId), true);
   assert.equal(isValidCaptureMessage({ sessionId, type: "start" }), true);
+  assert.equal(isValidCaptureMessage({ sessionId, type: "start", target: "visible" }), true);
+  assert.equal(isValidCaptureMessage({ sessionId, type: "start", target: "invalid" }), false);
   assert.equal(isValidCaptureMessage({ sessionId, type: "scroll", requestedY: 20, sectionIndex: 0, sectionCount: 2, isFinal: false }), true);
   assert.equal(isValidCaptureMessage({ sessionId: "old", type: "start" }), false);
   assert.equal(isValidCaptureMessage({ sessionId, type: "scroll", requestedY: -1, sectionIndex: 0, sectionCount: 2, isFinal: false }), false);

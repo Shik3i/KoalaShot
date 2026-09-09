@@ -667,14 +667,57 @@ async function runFlow() {
     await browser.navigate(fixture, `${baseUrl}${INTERNAL_FIXTURE}`);
     await browser.setViewport(fixture, 1262, 804, 1);
     await browser.activate(fixture);
+    await browser.evaluate(fixture, `(() => {
+      const area = document.querySelector('.scroll-root');
+      area.insertAdjacentHTML('afterbegin', '<div id="fallback-sticky" style="position:sticky;top:0;background:#ffcc00;height:40px">Visible sticky heading</div>');
+      area.scrollTop = 180;
+      globalThis.fallbackScrollEvents = 0;
+      return new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => {
+        document.addEventListener('scroll', () => globalThis.fallbackScrollEvents++, {capture:true});
+        resolve(true);
+      })));
+    })()`);
+    await browser.evaluate(popup, `(async () => {
+      const {captureVisibleTab, queryActiveTab} = await import('./../common/browser-api.js');
+      const [tab] = await queryActiveTab();
+      globalThis.visibleBaseline = await captureVisibleTab(tab.windowId);
+    })()`);
+    const downloadsBeforeVisible = readdirSync(downloads).filter((name) => name.endsWith('.png')).length;
     await browser.evaluate(popup, "document.querySelector('#capture-target').value = 'page'; document.querySelector('#capture-target').dispatchEvent(new Event('change', { bubbles: true })); document.querySelector('#capture-again-button')?.click(); document.querySelector('#save-button').click()");
-    const internalStatus = await waitFor("internal-scroll rejection", () => browser.evaluate(popup, "document.querySelector('#status').textContent"), (value) => /scrollable area inside|internal scroll area|not supported/i.test(value));
-    assert.match(internalStatus, /scrollable area inside|internal scroll area|not supported/i);
-    await waitFor("cleanup after unsupported capture", () => browser.evaluate(fixture, "!document.documentElement.className.includes('koalashot-capturing')"));
+    await waitFor("visible-area fallback save", () => browser.evaluate(popup, "document.querySelector('#status').textContent"), (value) => /PNG save started/i.test(value));
+    await waitFor("visible-area PNG download", () => readdirSync(downloads).filter((name) => name.endsWith('.png')).length, (count) => count > downloadsBeforeVisible);
+    const visibleResult = await browser.evaluate(popup, `(async () => {
+      const preview = document.querySelector('#capture-preview');
+      await preview.decode();
+      const baseline = new Image(); baseline.src = globalThis.visibleBaseline; await baseline.decode();
+      const canvas = document.createElement('canvas'); canvas.width = baseline.naturalWidth; canvas.height = baseline.naturalHeight;
+      const context = canvas.getContext('2d');
+      context.drawImage(baseline, 0, 0); const expected = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(preview, 0, 0); const actual = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      return {width:preview.naturalWidth, height:preview.naturalHeight, pixelsMatch:expected.every((value, index) => value === actual[index]),
+        label:document.querySelector('#result-label').textContent, warning:document.querySelector('#capture-warning').textContent,
+        warningVisible:!document.querySelector('#capture-warning').hidden, resultVisible:!document.querySelector('#result-card').hidden};
+    })()`);
+    assert.equal(visibleResult.width, 1262);
+    assert.equal(visibleResult.height, 804);
+    assert.equal(visibleResult.pixelsMatch, true, 'Fallback must match the unchanged visible page, including sticky content');
+    assert.equal(visibleResult.label, 'Visible area captured');
+    assert.equal(visibleResult.warningVisible, true);
+    assert.equal(visibleResult.resultVisible, true);
+    assert.match(visibleResult.warning, /Only the visible area was captured, without scrolling/);
+    assert.match(visibleResult.warning, /Scrollable area inside the page/);
+    const visiblePageState = await browser.evaluate(fixture, `({scrollTop:document.querySelector('.scroll-root').scrollTop, scrollEvents:globalThis.fallbackScrollEvents,
+      stickyStyle:document.querySelector('#fallback-sticky').style.position, captureClass:document.documentElement.classList.contains('koalashot-capturing'),
+      captureStyle:Boolean(document.querySelector('#koalashot-capture-styles'))})`);
+    assert.deepEqual(visiblePageState, {scrollTop:180, scrollEvents:0, stickyStyle:'sticky', captureClass:false, captureStyle:false});
+    result.visibleFallback = visibleResult;
     await browser.evaluate(popup, "document.querySelector('#capture-target').value = 'internal'; document.querySelector('#capture-target').dispatchEvent(new Event('change', { bubbles: true })); document.querySelector('#capture-again-button')?.click(); document.querySelector('#save-button').click()");
     const internalCaptureStatus = await waitFor("internal-scroll capture", () => browser.evaluate(popup, "document.querySelector('#status').textContent"), (value) => /PNG save started/i.test(value));
     assert.match(internalCaptureStatus, /PNG save started/i);
-    await waitFor("internal area cleanup after capture", () => browser.evaluate(fixture, "({ scrollTop: document.querySelector('.scroll-root').scrollTop, className: document.documentElement.className, style: Boolean(document.querySelector('#koalashot-capture-styles')) })"), (state) => state?.scrollTop === 0 && !state.className.includes("koalashot-capturing") && !state.style);
+    await waitFor("internal area cleanup after capture", () => browser.evaluate(fixture, "({ scrollTop: document.querySelector('.scroll-root').scrollTop, className: document.documentElement.className, style: Boolean(document.querySelector('#koalashot-capture-styles')) })"), (state) => state?.scrollTop === 180 && !state.className.includes("koalashot-capturing") && !state.style);
+    assert.equal(await browser.evaluate(popup, "document.querySelector('#capture-warning').hidden"), true);
+    assert.equal(await browser.evaluate(popup, "document.querySelector('#capture-preview').naturalHeight > 804"), true);
 
     await browser.navigate(fixture, `${baseUrl}${FIXTURE}`);
     await browser.setViewport(fixture, 1262, 804, 1);

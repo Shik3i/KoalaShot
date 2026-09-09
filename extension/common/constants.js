@@ -1,6 +1,7 @@
+import { t } from "./i18n.js";
 export const APP_NAME = "KoalaShot";
-export const STORE_NAME = "KoalaShot – Full Page Screenshot";
-export const VERSION = "0.5.4";
+export const STORE_NAME = t("ui_koalashot_full_page_screenshot");
+export const VERSION = "0.6.0";
 
 export const CAPTURE_INTERVAL_MS = 600;
 export const PAINT_SETTLE_MS = 120;
@@ -18,8 +19,8 @@ export const STORAGE_OBJECT_STORE = "captures";
 export const STORAGE_DRAFT_STORE = "drafts";
 
 export const USER_MESSAGES = Object.freeze({
-  protectedPage: "KoalaShot cannot access this browser-protected page.",
-  internalScroll: "This page has a scrollable area inside the page. Select the internal capture mode to capture it.",
-  tooLarge: "This page is too large to create as one PNG at the current resolution.",
-  clipboardCopied: "Full-page screenshot copied.",
+  protectedPage: t("ui_koalashot_cannot_access_this_browser_protected_page"),
+  internalScroll: t("ui_only_the_visible_area_was_captured_without_scrolling_content_outside_the_visible_area"),
+  tooLarge: t("ui_this_page_is_too_large_to_create_as_one_png_at_the_current_resolution"),
+  clipboardCopied: t("ui_full_page_screenshot_copied"),
 });
