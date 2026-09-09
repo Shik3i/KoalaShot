@@ -42,6 +42,8 @@ def verify(directory, version, expected=None):
                 raise ValueError(f"Corrupt ZIP: {name}")
             landing = name == names[2]
             metadata = json.loads(archive.read("version.json" if landing else "manifest.json"))
+            if not landing and "key" in metadata:
+                raise ValueError(f"Development-only manifest key must not ship: {name}")
             if metadata.get("version") != version:
                 raise ValueError(f"Archive version mismatch: {name}")
             required = {"index.html", "help/index.html", "privacy/index.html", "legal/index.html", "404.html", "_headers"} if landing else {"popup/popup.html", "editor/editor.html", "common/product.json"}

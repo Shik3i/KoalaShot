@@ -1,7 +1,7 @@
 import { t } from "./i18n.js";
 export const APP_NAME = "KoalaShot";
 export const STORE_NAME = t("ui_koalashot_full_page_screenshot");
-export const VERSION = "0.6.0";
+export const VERSION = "0.6.1";
 
 export const CAPTURE_INTERVAL_MS = 600;
 export const PAINT_SETTLE_MS = 120;

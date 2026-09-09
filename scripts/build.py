@@ -76,6 +76,8 @@ def build_extension(browser: str, version: str) -> Path:
         fail(f"malformed {browser} manifest: {error}")
     if manifest.get("version") != version:
         fail(f"{browser} manifest version must be {version}")
+    if "key" in manifest:
+        fail(f"development-only manifest key must not ship in {browser}")
 
     output = DIST / browser
     output.mkdir(parents=True, exist_ok=True)

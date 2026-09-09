@@ -15,6 +15,8 @@ const INTERNAL_FIXTURE = "/tests/fixtures/internal-scroll-container.html";
 const VERY_TALL_FIXTURE = "/tests/fixtures/very-tall-page.html";
 const browserName = (process.env.KOALASHOT_BROWSER || "").toLowerCase();
 const clipboardDenialMode = process.env.KOALASHOT_CLIPBOARD_DENIAL === "1";
+// Stable identity belongs only to isolated test profiles, never store packages.
+const TEST_CHROME_KEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsnLZ4OJFXDycC4kPmXGERHwq+gtCpmhD1PJxMJynmdva4npwS0HpRvmJ9MsDhYyKOicQl8/lP4rTu1XQQaz2osMKl1xRl8UqfKsI4YPiqJD7puNCiG/ewuorG4FvHtCOYjz4L4dh/CmWc7L5q2wI+z3GyXcFdJyX8bXvXco0y1HR+5cVtzckul6M4IUPBw1enLwawcslRHKTwJhkdvDdmgqDvAcw1zbOiC0rBoCCpldysFRJf9h2j7noN37dqFXKorJi9RsSOxmZIPa0vOPMkc7tYksX2yXVeA1Xqfep56LbpgS8FlumUHrrzqxZNEq2pdUF2hXEExVNSlVvEszASQIDAQAB";
 
 if (!["chrome", "firefox"].includes(browserName)) {
   throw new Error("Set KOALASHOT_BROWSER=chrome or KOALASHOT_BROWSER=firefox.");
@@ -222,7 +224,7 @@ class ChromeBrowser {
     this.downloads = downloads;
     this.initialPath = initialPath;
     this.extensionPath = join(DIST, "chrome");
-    this.extensionId = extensionIdFromManifestKey(JSON.parse(readFileSync(join(this.extensionPath, "manifest.json"), "utf8")).key);
+    this.extensionId = extensionIdFromManifestKey(TEST_CHROME_KEY);
     this.process = null;
   }
 
@@ -231,6 +233,8 @@ class ChromeBrowser {
     cpSync(join(DIST, "chrome"), this.extensionPath, { recursive: true });
     const testManifestPath = join(this.extensionPath, "manifest.json");
     const testManifest = JSON.parse(readFileSync(testManifestPath, "utf8"));
+    assert.equal(Object.hasOwn(testManifest, "key"), false, "Store package must not contain a development key");
+    testManifest.key = TEST_CHROME_KEY;
     testManifest.host_permissions = ["<all_urls>"];
     testManifest.permissions = [...new Set([...(testManifest.permissions || []), "tabs", ...(clipboardDenialMode ? [] : ["clipboardWrite"])])];
     if (!clipboardDenialMode) {

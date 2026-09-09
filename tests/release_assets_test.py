@@ -60,6 +60,20 @@ class ReleaseAssetsTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Unsafe or duplicate"):
             assets.verify(self.directory, "1.2.3")
 
+    def test_development_key_rejected_even_with_valid_checksum(self):
+        path = self.directory / assets.asset_names("1.2.3")[0]
+        with zipfile.ZipFile(path) as archive:
+            files = {name: archive.read(name) for name in archive.namelist()}
+        manifest = json.loads(files["manifest.json"])
+        manifest["key"] = "test-development-key"
+        files["manifest.json"] = json.dumps(manifest).encode()
+        with zipfile.ZipFile(path, "w") as archive:
+            for name, content in files.items():
+                archive.writestr(name, content)
+        assets.write_checksums(self.directory, "1.2.3")
+        with self.assertRaisesRegex(ValueError, "Development-only manifest key"):
+            assets.verify(self.directory, "1.2.3")
+
     def test_remote_assets_must_match_local_verified_bytes(self):
         expected = self.directory / "expected"
         expected.mkdir()

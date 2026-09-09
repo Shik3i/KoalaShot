@@ -4,6 +4,12 @@ All notable user-visible changes are documented here. KoalaShot uses semantic ve
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-09-09
+
+- Fix Chrome Web Store ZIP uploads by removing the development-only manifest `key`. Keep the stable test identity exclusively in isolated browser-test profiles.
+- Reject development keys during builds, source/archive validation and downloaded-release verification, including packages with otherwise valid checksums.
+- Update ESLint, checkout, setup-node, setup-python and both CodeQL actions. Group future CodeQL updates so initialization and analysis cannot drift to incompatible versions.
+
 ## [0.6.0] - 2026-09-09
 
 - Add a visible-area capture mode. When a page only scrolls inside an embedded area, Full page now captures the visible area without scrolling and offers a direct action to capture the full scrollable area.

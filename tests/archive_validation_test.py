@@ -2,11 +2,13 @@
 import contextlib
 import importlib.util
 import io
+import json
 import shutil
 import tempfile
 import sys
 import os
 import unittest
+from unittest.mock import patch
 import zipfile
 from pathlib import Path
 
@@ -85,6 +87,25 @@ class ArchiveValidation(unittest.TestCase):
         self.mutate(lambda files: files.update({"manifest.json": manifest}))
         with self.assertRaisesRegex(SystemExit, "manifest differs"):
             self.validate()
+
+    def test_development_key_rejected_in_store_archive(self):
+        def add_key(files):
+            manifest = json.loads(files["manifest.json"])
+            manifest["key"] = "test-development-key"
+            files["manifest.json"] = json.dumps(manifest).encode()
+        self.mutate(add_key)
+        with self.assertRaisesRegex(SystemExit, "development-only manifest key"):
+            self.validate()
+
+    def test_build_refuses_development_manifest(self):
+        source = validator.DIST / "test-source"
+        (source / "manifests").mkdir(parents=True)
+        (source / "manifests/chrome.json").write_text(json.dumps({
+            "version": validator.project_version(), "key": "test-development-key",
+        }), encoding="utf-8")
+        with patch.object(builder, "EXTENSION", source):
+            with self.assertRaisesRegex(SystemExit, "development-only manifest key"):
+                builder.build_extension("chrome", validator.project_version())
 
     def test_unexpected_payload_rejected(self):
         self.mutate(lambda files: files.update({"unexpected.js": b"// extra"}))
