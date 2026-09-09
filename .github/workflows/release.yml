@@ -76,6 +76,9 @@ jobs:
         run: npm run build
       - name: Run target-browser success and denial flows
         run: npm run test:browser:${{ matrix.browser }}
+      - name: Load unmodified Chrome store ZIP
+        if: matrix.browser == 'chrome'
+        run: node tests/browser/store-package.test.mjs
       - name: Run capture and redaction regressions
         if: matrix.browser == 'chrome'
         run: node tests/browser/audit-regressions.test.mjs

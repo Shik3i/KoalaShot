@@ -218,11 +218,12 @@ class JsonSocket {
 }
 
 class ChromeBrowser {
-  constructor(baseUrl, profile, downloads, initialPath = FIXTURE) {
+  constructor(baseUrl, profile, downloads, initialPath = FIXTURE, { storePackagePath = null } = {}) {
     this.baseUrl = baseUrl;
     this.profile = profile;
     this.downloads = downloads;
     this.initialPath = initialPath;
+    this.storePackagePath = storePackagePath;
     this.extensionPath = join(DIST, "chrome");
     this.extensionId = extensionIdFromManifestKey(TEST_CHROME_KEY);
     this.process = null;
@@ -230,17 +231,19 @@ class ChromeBrowser {
 
   async start() {
     this.extensionPath = join(this.profile, "koalashot-chrome");
-    cpSync(join(DIST, "chrome"), this.extensionPath, { recursive: true });
+    cpSync(this.storePackagePath || join(DIST, "chrome"), this.extensionPath, { recursive: true });
     const testManifestPath = join(this.extensionPath, "manifest.json");
     const testManifest = JSON.parse(readFileSync(testManifestPath, "utf8"));
     assert.equal(Object.hasOwn(testManifest, "key"), false, "Store package must not contain a development key");
-    testManifest.key = TEST_CHROME_KEY;
-    testManifest.host_permissions = ["<all_urls>"];
-    testManifest.permissions = [...new Set([...(testManifest.permissions || []), "tabs", ...(clipboardDenialMode ? [] : ["clipboardWrite"])])];
-    if (!clipboardDenialMode) {
-      testManifest.optional_permissions = (testManifest.optional_permissions || []).filter((permission) => permission !== "clipboardWrite");
+    if (!this.storePackagePath) {
+      testManifest.key = TEST_CHROME_KEY;
+      testManifest.host_permissions = ["<all_urls>"];
+      testManifest.permissions = [...new Set([...(testManifest.permissions || []), "tabs", ...(clipboardDenialMode ? [] : ["clipboardWrite"])])];
+      if (!clipboardDenialMode) {
+        testManifest.optional_permissions = (testManifest.optional_permissions || []).filter((permission) => permission !== "clipboardWrite");
+      }
+      writeFileSync(testManifestPath, `${JSON.stringify(testManifest, null, 2)}\n`);
     }
-    writeFileSync(testManifestPath, `${JSON.stringify(testManifest, null, 2)}\n`);
     const executable = chromeExecutable();
     let port;
     const headless = process.env.KOALASHOT_CHROME_HEADLESS !== "0";
@@ -264,7 +267,7 @@ class ChromeBrowser {
     this.socket = new JsonSocket(version.webSocketDebuggerUrl);
     await this.socket.connect();
     await this.socket.request("Browser.setDownloadBehavior", { behavior: "allow", downloadPath: this.downloads });
-    await this.socket.request("Browser.grantPermissions", {
+    if (!this.storePackagePath) await this.socket.request("Browser.grantPermissions", {
       origin: `chrome-extension://${this.extensionId}`,
       permissions: ["clipboardReadWrite", "clipboardSanitizedWrite"],
     });
@@ -276,6 +279,16 @@ class ChromeBrowser {
     });
     const attached = await this.socket.request("Target.attachToTarget", { targetId: initial.targetId, flatten: true });
     await this.waitForDocument({ targetId: initial.targetId, sessionId: attached.result.sessionId }, initialUrl);
+    if (this.storePackagePath) {
+      const management = await this.open("chrome://extensions/", false);
+      const extensions = await this.evaluate(management, "new Promise(resolve=>chrome.developerPrivate.getExtensionsInfo({includeDisabled:true,includeTerminated:true},resolve))");
+      const installed = extensions.filter(item => item.name.startsWith("KoalaShot"));
+      assert.equal(installed.length, 1, "Unmodified store ZIP must load as exactly one extension");
+      assert.equal(installed[0].state, "ENABLED");
+      assert.deepEqual(installed[0].manifestErrors, []);
+      this.extensionId = installed[0].id;
+      await this.close(management);
+    }
   }
 
   async open(url, background = true, newWindow = false) {
