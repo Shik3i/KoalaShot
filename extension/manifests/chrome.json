@@ -2,9 +2,10 @@
   "manifest_version": 3,
   "name": "__MSG_extensionName__",
   "short_name": "KoalaShot",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "__MSG_extensionDescription__",
   "default_locale": "en",
+  "incognito": "not_allowed",
   "permissions": [
     "activeTab",
     "scripting",

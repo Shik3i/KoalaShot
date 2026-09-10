@@ -1,48 +1,36 @@
-# KoalaShot — Store-Paket
+# KoalaShot store packet
 
-Alle Texte und Bilder für die manuelle Einreichung an einem Ort, orientiert an KoalaSync/assets/StoreAssets/. Stand: Release-Paket v0.5.4 vom 8. September 2026. Passende Versionen für Extension, Website und Store-Bilder.
+English submission materials for v0.6.2. Use the matching verified GitHub release archives. Website deployment and store submission remain with the owner.
 
-## Texte
+## Text
 
-- [StoreDescription.md](StoreDescription.md): englische Hauptfassung mit Name, Kurzbeschreibung und vollständigem Eintrag.
-- [StoreDescription.de.md](StoreDescription.de.md): vorbereitete deutsche Übersetzung; die Produktoberfläche bleibt Englisch.
-- [ChromeWebStore.md](ChromeWebStore.md): Feldtexte, Berechtigungen und Datenschutzangaben.
-- [FirefoxAddons.md](FirefoxAddons.md): AMO-Angaben und Unterschiede zu Chrome.
-- [ReviewerNotes.txt](ReviewerNotes.txt): englische Anleitung für die Store-Prüfung.
-- [RELEASE_READINESS.md](RELEASE_READINESS.md): Hindernisse und letzte Schritte.
-- [SOURCES.md](SOURCES.md): recherchierte offizielle Vorgaben.
+- [StoreDescription.md](StoreDescription.md): English listing.
+- [ChromeWebStore.md](ChromeWebStore.md): dashboard fields, permissions and local-data disclosures.
+- [FirefoxAddons.md](FirefoxAddons.md): AMO fields and browser differences.
+- [ReviewerNotes.txt](ReviewerNotes.txt): reproducible review steps.
+- [RELEASE_READINESS.md](RELEASE_READINESS.md): remaining submission requirements.
+- [SOURCES.md](SOURCES.md): official guidance.
 
-## Bilder
+The extension ships only English. StoreDescription.de.md is an unused draft for future localization; it is not part of the English submission or extension package.
 
-[Bildübersicht öffnen](preview.html). Jedes Vorschaubild verlinkt die PNG-Datei in Originalgröße.
+## Images
 
-| Ordner / Datei | Inhalt |
-| --- | --- |
-| chrome/Screen_01.png bis Screen_05.png | Fünf Chrome-Motive, jeweils 1280 × 800 |
-| firefox/Screen_01.png bis Screen_05.png | Dieselben Themen mit echten Firefox-Aufnahmen |
-| chrome/StoreIcon.png, firefox/StoreIcon.png | 128 × 128, transparent, mit Store-Abstand |
-| chrome/SmallAD.png | Pflicht-Promo, 440 × 280 |
-| chrome/MarqueePromoTile.png | Optionales Marquee, 1400 × 560 |
-| screenshots/ | Originalaufnahmen und Aufnahmeprotokolle |
-| source/ | Editierbares HTML/CSS-Layout für Beschriftungen und Promo-Grafiken |
-| asset-manifest.json | Versionsstand, Formate und Bildzuordnung |
+[Open image preview](preview.html). Five 1280 × 800 images per browser are ordered: full page, export, annotations, redaction, crop. The chrome/ and firefox/ folders also contain transparent 128px store icons. Chrome includes a 440 × 280 small promo and optional 1400 × 560 marquee.
 
-Reihenfolge: ganze Seite → Kopieren/Speichern → Anmerkungen → Schwärzen → Zuschneiden. Die Popup-Motive sind echte Popup-Seiten, die als Tabs geöffnet und auf ihre gemessene Inhaltsfläche zugeschnitten wurden. Keine Aufnahme des Browser-Toolbar-Menüs. Keine Kundeninhalte; die Beispielseite gehört zum Repository.
+Raw screenshots and capture evidence are in screenshots/. Editable composition layouts are in source/. asset-manifest.json records the release version and image dimensions. Screenshots use repository-owned fictional content. Explanatory labels are composed around real product captures; the popup is photographed as an extension tab, not as the native toolbar menu.
 
-Die nummerierten Bilder kombinieren echte Screenshots mit separaten Erklärtexten. Die Produktoberfläche wurde nicht nachgebaut. Promo-Grafiken sind Markenmaterial, kein Funktionsnachweis. Die bisherigen Dateinamen chrome-small-promo-440x280.png und chrome-marquee-1400x560.png enthalten Kopien der neuen Motive.
-
-## Neu erzeugen
+## Regenerate
 
 ```sh
-npm run icons
 npm run build
 node scripts/capture-store-assets.mjs chrome
 node scripts/capture-store-assets.mjs firefox
 node scripts/render-store-assets.mjs
 npm run build
 npm run validate
+npm run audit:docs
 ```
 
-Das zweite Build übernimmt den aktualisierten Firefox-Editor-Screenshot in die Website. Die Aufnahmen verwenden isolierte Testprofile mit erweiterten Harness-Berechtigungen; die Produktionsmanifeste bleiben unverändert. Sie ersetzen keine Abnahme der echten Toolbar-Aktivierung.
+The second build copies the refreshed Firefox editor image into the website. The screenshot harness uses isolated profiles with added test permissions. The separate production-ZIP test verifies Chrome action activation and capture without modifying the shipping manifest. Neither proves a manual store upload.
 
-Für diese Einreichung die geprüften v0.5.4-Archive und die beiliegenden v0.5.4-Bilder verwenden. Bei späteren Versionsänderungen die Bilder erneut erzeugen. Die tatsächlichen Store-Felder beim Upload prüfen. Keine automatische Veröffentlichung oder Website-Bereitstellung.
+Regenerate images for every release. The documentation gate rejects stale screenshot evidence and submission version references.

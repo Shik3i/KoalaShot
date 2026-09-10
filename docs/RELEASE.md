@@ -7,7 +7,12 @@ Tag-driven release; no Docker step. Prepare the source in a feature branch, vali
 ```sh
 npm ci
 npm run release:prepare -- X.Y.Z
+npm run build
+node scripts/capture-store-assets.mjs chrome
+node scripts/capture-store-assets.mjs firefox
+node scripts/render-store-assets.mjs
 npm test
+node tests/browser/store-package.test.mjs
 npm run test:browser:chrome
 npm run test:browser:firefox
 npm run test:regressions

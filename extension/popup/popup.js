@@ -62,7 +62,7 @@ function showResult(result) {
   $("result-label").textContent = result.captureTarget === "visible" ? t("ui_visible_area_captured") : t("ui_completed_capture");
   $("capture-warning").textContent = result.warning || "";
   $("capture-warning").hidden = !result.warning;
-  $("capture-internal-button").hidden = !(result.captureTarget === "visible" && result.warning);
+  $("capture-internal-button").hidden = !result.canCaptureInternal;
 }
 
 function errorMessage(error) { return error instanceof Error ? error.message : t("ui_the_operation_failed"); }
@@ -115,7 +115,7 @@ async function runCapture(mode) {
     } else await deliver(mode, result);
   } catch (error) {
     const cancelled = error?.code === "cancelled" || controller.signal.aborted;
-    const protectedPage = ["protected-page", "no-active-tab"].includes(error?.code);
+    const protectedPage = ["protected-page", "no-active-tab", "private-window"].includes(error?.code);
     $("capture-visible-button").hidden = captured || cancelled || protectedPage || target === "visible";
     setStatus(cancelled ? t("ui_capture_cancelled_the_page_was_restored")
       : captured ? t(mode === "edit" ? "ui_editor_open_failed" : "ui_export_failed", { detail: errorMessage(error) })

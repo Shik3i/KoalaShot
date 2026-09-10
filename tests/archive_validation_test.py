@@ -14,6 +14,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.dont_write_bytecode = True
+sys.path.insert(0, str(ROOT / "scripts"))
+from manifest_policy import validate_manifest, validate_payload_names
 spec = importlib.util.spec_from_file_location("validator", ROOT / "scripts/validate.py")
 validator = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(validator)
@@ -111,6 +113,28 @@ class ArchiveValidation(unittest.TestCase):
         self.mutate(lambda files: files.update({"unexpected.js": b"// extra"}))
         with self.assertRaisesRegex(SystemExit, "file inventory"):
             self.validate()
+
+
+class ManifestPolicy(unittest.TestCase):
+    def test_source_policy_rejects_store_and_privacy_blockers(self):
+        original = json.loads((ROOT / "extension/manifests/chrome.json").read_text())
+        read = lambda name: (ROOT / "extension" / name).read_bytes()
+        validate_manifest(original, "chrome", read)
+        mutations = [
+            {"host_permissions": ["<all_urls>"]}, {"update_url": "https://example.test/update"},
+            {"incognito": "spanning"}, {"name": "__MSG_missing__"}, {"description": "x" * 133},
+            {"action": {"default_title": "Capture", "default_popup": "../missing.html"}},
+            {"action": {"default_title": "Capture", "default_popup": "missing.html"}},
+            {"browser_specific_settings": {}}, {"content_security_policy": {}},
+        ]
+        for mutation in mutations:
+            with self.subTest(mutation=mutation), self.assertRaises(ValueError):
+                validate_manifest({**original, **mutation}, "chrome", read)
+
+    def test_development_payloads_are_rejected(self):
+        for name in [".env", "tests/probe.js", "node_modules/lib/index.js", "popup/view.test.js", "secret.pem"]:
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                validate_payload_names([name])
 
 
 if __name__ == "__main__":

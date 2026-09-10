@@ -1,29 +1,24 @@
-# Übergabe für Deployment — v0.5.4
+# Submission readiness — v0.6.2
 
-## Vorbereitet
+## Repository release
 
-Dieses Paket enthält das neue Kamera-Icon, die überarbeiteten Datenschutz- und Store-Texte, fünf echte Produktmotive je Browser, Store-Icons, Promo-Grafiken sowie reproduzierbare Bildquellen. Alle Versionsangaben und Screenshots gehören zu v0.5.4.
+Use the matching [GitHub release](https://github.com/Shik3i/KoalaShot/releases/tag/v0.6.2), its three ZIPs and SHA256SUMS. An existing tag is never replaced. A repository build or GitHub publication does not mean the extension has been submitted to or approved by a browser store.
 
-Die Extension verarbeitet Screenshots lokal. Kein Screenshot-Upload, Konto, Tracking, Analytics, Telemetrie oder Remote-Code-Service. Bildinhalte, temporäre Herkunftsangaben und Editor-Entwürfe werden auf dem Gerät für die angeforderte Aufnahme verwendet. Die Datenschutztexte erklären Originale, 24-Stunden-Ablauf, tatsächliche Löschung, Clipboard/Downloads, Redact und Chrome Limited Use.
+The release gates cover unit/lifecycle tests, ESLint, dependency audit, manifest and archive validation, negative archive tests, AMO lint, Chrome/Firefox capture and editor workflows, permission denial, recovery, English tooltips and website routes. Chrome additionally loads the unmodified production ZIP and invokes the browser action to exercise activeTab, capture/editor opening and protected-page visible capture.
 
-Commit, Push, PR, CI, Tag, GitHub-Release und lokaler Neubau sind Aufgaben des Coding-Agenten. Den verbindlichen Publikationsstatus und die Prüfungen zeigt [GitHub v0.5.4](https://github.com/Shik3i/KoalaShot/releases/tag/v0.5.4). Bestehende Tags werden nicht ersetzt.
+Editor originals and drafts remain local, expire after 24 hours and are removed by documented cleanup. Private windows are explicitly unsupported: persistent editor storage is not a separate private store. No screenshot upload, account, telemetry, analytics or remote executable code is included.
 
-## Deployment durch den Eigentümer
+## Required before store submission
 
-Die Website ist laut Eigentümer noch nicht eingerichtet. Die frühere TLS-Antwort ist kein nachgewiesener Defekt einer bestehenden Website und kein Blocker für den GitHub-Release. Website bereitstellen und Extension in die Stores hochladen macht ausschließlich der Eigentümer.
+1. Deploy the verified landing archive and configure HTTPS for https://shot.koalastuff.net. Run `npm run verify:deployment -- https://shot.koalastuff.net 0.6.2`. The privacy page must be publicly accessible. On 10 September 2026 this check failed with `SSL alert number 80`; this is an unresolved submission requirement, not proof that the local website archive is defective.
+2. Confirm that hosting disclosures match the actual provider, operator and log retention. The repository does not invent hosting details.
+3. Upload the verified browser-specific ZIP with the English listing and matching images. Confirm contact verification and the factual trader declaration in the existing publisher account. These account states and store acceptance have not been verified by automated repository tests.
+4. After approval, populate the official store URLs in landing/version.json and release a matching build. Until then null values correctly hide install and rating links.
 
-1. Die statische Website aus dem geprüften v0.5.4-Landing-Archiv bereitstellen und Domain/HTTPS erstmals einrichten. Danach `npm run verify:deployment -- https://shot.koalastuff.net 0.5.4` ausführen. `/privacy/` muss bei der Store-Einreichung öffentlich erreichbar sein.
-2. Hostingbezogene Angaben an die tatsächlich eingerichtete Infrastruktur anpassen: Betreiber, Hosting-Dienst, Zugriffslogs und Fristen. Es wurde kein Anbieter und keine Speicherfrist erfunden. Die sieben Tage der zentralen KoalaStuff-Seite wurden nicht ungeprüft übernommen. Die vorhandene zentrale Legal-Verlinkung bleibt erhalten.
-3. Das passende Chrome-/Firefox-Archiv v0.5.4 zusammen mit den Unterlagen aus diesem Ordner hochladen. Konto-/Kontaktverifikation und die zutreffende Trader-Einstufung im bestehenden Publisher-Konto prüfen. Diese Account-Zustände wurden nicht eingesehen oder geändert.
-4. Nach Store-Freigabe die offiziellen URLs in `landing/version.json` eintragen lassen. Bis dahin ist `null` korrekt; Installations- und Bewertungslinks bleiben ausgeblendet. Ein weiterer Build übernimmt die URLs in Extension und Website.
+Website deployment and store submission remain manual owner actions. Neither has been performed by this audit.
 
-## Prüfumfang und verbleibende Grenzen
+## Evidence limits
 
-- `npm test`: 50/50 Unit-Tests, ESLint, Dokumentationsprüfung, Abhängigkeitsaudit, Build und vollständige ZIP-Inventarprüfung; acht negative Archivtests und AMO-Linter.
-- Chrome-/Firefox-Browser-Matrix: Capture-/Editor-Flows, Clipboard-Erfolg und Berechtigungsablehnung.
-- Workflow-Regressionsprüfungen: Ausgabewege, Editor-Konflikte, beschädigte Entwürfe, Recovery und Layouts.
-- Website: fünf Routen bei 360/1280 Pixeln, verschachtelte 404-Seite, Store-Zustände und fehlgeschlagene Metadaten.
-- Store-Bilder: zehn RGB-PNGs in 1280 × 800, 440 × 280 und 1400 × 560 Promo, transparente 128px-Icons. Die Kurzbeschreibung hat 119 Zeichen und stimmt mit den Manifesten überein.
-- Im geprüften Extension-Code ist der einzige Fetch die lokale product.json. Die Resource-Timing-Einträge der aufgenommenen Extension-Seiten enthalten keine externen HTTP(S)-Ressourcen. Das ist kein vollständiger Browser-/OS-Netzwerkmitschnitt.
+Browser workflows use isolated profiles. The production-ZIP Chrome test adds no extension permissions and uses CDP to invoke the real extension action; it is not a physical toolbar click. Screenshot composition uses a separate test harness. Native permission dialogs, physical HiDPI devices and screenreader use still require manual acceptance. See [TESTING.md](../docs/TESTING.md).
 
-Die Browser-Harnesses verwenden isolierte Kopien mit erweiterten Testberechtigungen. Echte Toolbar-Aktivierung mit dem Produktionsmanifest, native Clipboard-Dialoge, physische HiDPI-Geräte und Screenreader sind dadurch nicht als manuell bestanden belegt. Siehe [TESTING.md](../docs/TESTING.md). GitHub-CI, Store-Freigabe und Deployment sind getrennte Zustände.
+The only executable fetch in the extension reads packaged product.json. The resource checks are not a complete browser or operating-system network trace. No claim of encrypted local storage or guaranteed secure erasure is made.

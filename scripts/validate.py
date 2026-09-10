@@ -7,6 +7,7 @@ import json
 import re
 import zipfile
 from pathlib import Path
+from manifest_policy import validate_manifest
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -46,6 +47,10 @@ def validate_manifests() -> None:
         manifest = read_json(EXTENSION / "manifests" / f"{browser}.json")
         if "key" in manifest:
             fail(f"development-only manifest key must not ship in {browser}")
+        try:
+            validate_manifest(manifest, browser, lambda name: (EXTENSION / name).read_bytes())
+        except ValueError as error:
+            fail(str(error))
         permissions = set(manifest.get("permissions", []))
         optional = set(manifest.get("optional_permissions", []))
         if permissions - ALLOWED_PERMISSIONS:

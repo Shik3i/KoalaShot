@@ -157,6 +157,9 @@ async function getCaptureTab() {
   if (!tab || typeof tab.id !== "number" || typeof tab.windowId !== "number") {
     throw new CaptureError(USER_MESSAGES.protectedPage, "no-active-tab");
   }
+  if (tab.incognito) {
+    throw new CaptureError(t("ui_private_window_unavailable"), "private-window");
+  }
   return tab;
 }
 
@@ -165,7 +168,7 @@ async function verifyCaptureTab(expected) {
   if (current.id !== expected.id || current.windowId !== expected.windowId) {
     throw new CaptureError(t("ui_capture_stopped_because_the_active_tab_changed"), "tab-changed");
   }
-  if (expected.url && current.url && current.url !== expected.url) {
+  if (expected.url && current.url !== expected.url) {
     throw new CaptureError(t("ui_capture_stopped_because_the_page_navigated"), "navigation");
   }
   return current;
@@ -175,7 +178,7 @@ function normalizeCaptureError(error) {
   if (error instanceof CaptureError || error instanceof StitchingError) {
     return error;
   }
-  if (error?.message?.includes("Cannot access") || error?.message?.includes("not allowed")) {
+  if (/Cannot access|not allowed|extensions gallery cannot be scripted|Missing host permission/i.test(error?.message || "")) {
     return new CaptureError(USER_MESSAGES.protectedPage, "protected-page");
   }
   return new CaptureError(error instanceof Error ? error.message : t("ui_the_page_could_not_be_captured"));
@@ -212,11 +215,18 @@ async function captureFullPage(tab, { signal, onProgress, target = "page" }) {
   try {
     ensureNotCancelled(signal);
     onProgress?.({ phase: "preparing", message: t("ui_preparing_page") });
-    await withTimeout(
-      injectCaptureScript(tab.id),
-      CAPTURE_REQUEST_TIMEOUT_MS,
-      new CaptureError(t("ui_koalashot_could_not_start_on_this_page_in_time"), "injection-timeout"),
-    );
+    try {
+      await withTimeout(
+        injectCaptureScript(tab.id),
+        CAPTURE_REQUEST_TIMEOUT_MS,
+        new CaptureError(t("ui_koalashot_could_not_start_on_this_page_in_time"), "injection-timeout"),
+      );
+    } catch (error) {
+      if (normalizeCaptureError(error).code === "protected-page") {
+        return await captureVisibleArea(tab, { signal, onProgress, warning: t("ui_protected_visible_fallback") });
+      }
+      throw error;
+    }
     ensureNotCancelled(signal);
     channel = createPortChannel(connectCapture(tab.id, sessionId), sessionId, signal);
     const captureTarget = ["internal", "visible"].includes(target) ? target : "page";
@@ -356,6 +366,7 @@ async function captureFullPage(tab, { signal, onProgress, target = "page" }) {
       width: stitcher.outputWidth,
       height: stitcher.outputHeight,
       captureTarget: ready.captureTarget || captureTarget,
+      canCaptureInternal: visibleOnly && target !== "visible",
       warning: [visibleOnly && target !== "visible" ? USER_MESSAGES.internalScroll : "",
         growthWarning ? t("ui_the_page_kept_growing_dynamically_added_content_beyond_the_safe_limit_may_not_be_incl") : "",
         widthWarning ? t("ui_vertical_capture_only_content_beyond_the_right_edge_of_the_capture_area_is_not_includ") : ""].filter(Boolean).join(" "),
@@ -376,10 +387,37 @@ async function captureFullPage(tab, { signal, onProgress, target = "page" }) {
   }
 }
 
+async function captureVisibleArea(tab, { signal, onProgress, warning = "" }) {
+  try {
+    ensureNotCancelled(signal);
+    onProgress?.({ phase: "capturing", message: t("ui_capturing_visible_area_without_scrolling"), current: 1, total: 1 });
+    const dataUrl = await withTimeout(captureVisibleTab(tab.windowId, { signal, beforeCapture: async () => {
+      ensureNotCancelled(signal);
+      await verifyCaptureTab(tab);
+    } }), CAPTURE_REQUEST_TIMEOUT_MS,
+    new CaptureError(t("ui_the_browser_screenshot_request_timed_out"), "capture-timeout"));
+    ensureNotCancelled(signal);
+    await verifyCaptureTab(tab);
+    if (!dataUrl.startsWith("data:image/png;base64,")) {
+      throw new CaptureError(t("ui_the_page_could_not_be_captured"));
+    }
+    const blob = new Blob([Uint8Array.from(atob(dataUrl.slice(22)), character => character.charCodeAt(0))], { type: "image/png" });
+    const bitmap = await createImageBitmap(blob);
+    try {
+      ensureNotCancelled(signal);
+      await verifyCaptureTab(tab);
+      ensureNotCancelled(signal);
+      return { blob, filename: makeFilename(tab.url), sourceUrl: safeSourceOrigin(tab.url),
+        sourceTitle: typeof tab.title === "string" ? tab.title : "", width: bitmap.width, height: bitmap.height,
+        captureTarget: "visible", canCaptureInternal: false, warning };
+    } finally { bitmap.close(); }
+  } catch (error) { throw normalizeCaptureError(error); }
+}
+
 export async function captureScreenshot(options = {}) {
   ensureNotCancelled(options.signal);
   const tab = await getCaptureTab();
-  const result = await captureFullPage(tab, options);
+  const result = await (options.target === "visible" ? captureVisibleArea(tab, options) : captureFullPage(tab, options));
   return result;
 }
 

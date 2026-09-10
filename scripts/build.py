@@ -10,6 +10,7 @@ import shutil
 import zipfile
 from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
+from manifest_policy import validate_manifest, validate_payload_names
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -78,6 +79,12 @@ def build_extension(browser: str, version: str) -> Path:
         fail(f"{browser} manifest version must be {version}")
     if "key" in manifest:
         fail(f"development-only manifest key must not ship in {browser}")
+    try:
+        validate_manifest(manifest, browser, lambda name: (EXTENSION / name).read_bytes())
+        validate_payload_names(path.relative_to(EXTENSION).as_posix() for path in EXTENSION.rglob("*")
+                               if path.is_file() and path.relative_to(EXTENSION).parts[0] != "manifests")
+    except ValueError as error:
+        fail(str(error))
 
     output = DIST / browser
     output.mkdir(parents=True, exist_ok=True)

@@ -21,12 +21,15 @@ Current results belong in [audit fix status](audits/2026-09-07/FIXES.md). Build 
 | Model | Placement, limits, expiry, settings, protocol, annotations, geometry, immutable history and crop |
 | Controller | Stalled scroll, shrinking page, cancellation during final encoding, width warning and source-origin minimization |
 | Archive gate | Exact two packages, source bytes and inventories; missing, stale, altered and foreign payload rejection |
+| Production Chrome ZIP | Unchanged manifest; CDP browser-action activation grants activeTab; capture opens the editor; visible and fallback capture on chrome://version/ |
 | Chrome and Firefox | Real page/internal capture, cleanup, target persistence, editor tools, crop, draft reload, keyboard annotation, zoom, PNG, clipboard success and denial, expiry and discard |
 | Chromium regressions | Mixed scroll roots, late sticky, internal candidate selection, late abort, redaction plus effects, export race, native control Space, cross-tab deletion/orphan draft, responsive light/dark landing |
 | Responsive editor | Chrome 390px and DPR 2; Firefox real window at 500px minimum |
 | Landing | 320, 390, 768, 1440px; light/dark contrast and horizontal overflow |
 
 The isolated harness adds temporary `<all_urls>` and `tabs` permissions to replace the toolbar's trusted activeTab grant. The Firefox test archive also adds a small background bootstrap to open its own popup tab. These changes are test-only.
+
+`node tests/browser/store-package.test.mjs` separately extracts the shipping Chrome ZIP and uses no added extension permissions or development key. The isolated browser enables experimental extension debugging to invoke `Extensions.triggerAction` on the real tab target. This proves action permission handling without asserting a physical mouse click or store acceptance.
 
 Firefox starts with `--remote-allow-system-access` in a disposable profile on loopback because WebDriver BiDi otherwise rejects extension-page script access. Firefox privileged-page pointer events are synthetic, and extension viewport/DPR emulation is unsupported. Real browser-window resizing tests 500px; Chromium covers 390px and DPR 2. These results do not prove trusted toolbar activation, native screen-reader operation or physical HiDPI devices.
 

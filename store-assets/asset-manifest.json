@@ -1,6 +1,6 @@
 {
-  "version": "0.5.4",
-  "generatedAt": "2026-09-08T21:03:15.317Z",
+  "version": "0.6.2",
+  "generatedAt": "2026-09-10T17:50:20.263Z",
   "screenshots": "Actual packaged UI with separately composed explanatory labels; see screenshots/*-capture-evidence.json for capture scope.",
   "files": [
     {

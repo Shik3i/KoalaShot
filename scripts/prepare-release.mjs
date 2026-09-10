@@ -61,5 +61,12 @@ writeJson("landing/version.json", landingVersion);
 fs.writeFileSync(constantsPath, updatedConstants, "utf8");
 fs.writeFileSync(readmePath, updatedReadme, "utf8");
 
+for (const relative of ["store-assets/README.md", "store-assets/ChromeWebStore.md", "store-assets/RELEASE_READINESS.md", "store-assets/preview.html", "docs/STORE_LISTING.md"]) {
+  const file = path.join(root, relative);
+  const source = fs.readFileSync(file, "utf8");
+  fs.writeFileSync(file, source.replace(/\b\d+\.\d+\.\d+\b/g, version).replace(/v\d+\.\d+\.\d+/g, `v${version}`), "utf8");
+}
+
 console.log(`Prepared KoalaShot v${version}.`);
+console.log("Regenerate both browser store screenshots and rendered assets before verification; stale screenshot evidence fails the documentation gate.");
 console.log("Review the diff and run all verification gates. Merge through a reviewed PR before creating a release tag.");
