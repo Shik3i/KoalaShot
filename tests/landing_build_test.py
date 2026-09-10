@@ -3,11 +3,13 @@ import importlib.util
 import json
 import tempfile
 import unittest
+import sys
 from html.parser import HTMLParser
 from urllib.parse import urlsplit, unquote
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
 spec = importlib.util.spec_from_file_location("build", ROOT / "scripts/build.py")
 build = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(build)

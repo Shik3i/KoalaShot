@@ -4,6 +4,14 @@ All notable user-visible changes are documented here. KoalaShot uses semantic ve
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-09-10
+
+- Capture visible areas directly through the browser without injecting or scrolling. When scrolling access is blocked, retain a usable visible screenshot if the browser permits it, with an accurate explanation.
+- Disable private-window capture explicitly because the editor stores temporary originals and drafts locally without a separate private store.
+- Validate shipping manifest assets, localized metadata, minimal permissions, browser separation and executable policy during builds and downloaded-release verification. Reject development payloads.
+- Exercise real Chrome action activation, activeTab permission, capture/editor opening and protected-page screenshots with the unmodified production ZIP.
+- Refresh English submission instructions and screenshots, and fail verification when the store packet references a different release version.
+
 ## [0.6.1] - 2026-09-09
 
 - Fix Chrome Web Store ZIP uploads by removing the development-only manifest `key`. Keep the stable test identity exclusively in isolated browser-test profiles.

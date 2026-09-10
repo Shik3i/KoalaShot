@@ -5,6 +5,7 @@ import json
 import re
 import zipfile
 from pathlib import Path, PurePosixPath
+from manifest_policy import validate_manifest, validate_payload_names
 
 
 def asset_names(version):
@@ -46,6 +47,9 @@ def verify(directory, version, expected=None):
                 raise ValueError(f"Development-only manifest key must not ship: {name}")
             if metadata.get("version") != version:
                 raise ValueError(f"Archive version mismatch: {name}")
+            if not landing:
+                validate_payload_names(members)
+                validate_manifest(metadata, "chrome" if name == names[0] else "firefox", archive.read)
             required = {"index.html", "help/index.html", "privacy/index.html", "legal/index.html", "404.html", "_headers"} if landing else {"popup/popup.html", "editor/editor.html", "common/product.json"}
             if not required.issubset(members):
                 raise ValueError(f"Missing required ZIP members: {name}")

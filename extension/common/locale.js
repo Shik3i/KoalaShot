@@ -2,6 +2,8 @@
 // This classic script also runs in the isolated capture world; no network or page globals are used.
 (() => {
   const messages = Object.freeze({
+  "ui_private_window_unavailable": "KoalaShot is unavailable in private windows because editor drafts use local storage. Open the page in a regular window to capture it.",
+  "ui_protected_visible_fallback": "This page blocks scrolling access. The visible area was captured without changing the page.",
   "ui_highlighter": "Highlighter",
   "ui_privacy": "Privacy",
   "ui_legal": "Legal",

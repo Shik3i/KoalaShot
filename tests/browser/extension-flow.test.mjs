@@ -248,7 +248,7 @@ class ChromeBrowser {
     let port;
     const headless = process.env.KOALASHOT_CHROME_HEADLESS !== "0";
     this.process = spawn(executable, [
-      ...(headless ? ["--headless=new"] : []), "--no-sandbox", "--disable-gpu", "--no-first-run", "--no-default-browser-check",
+      ...(headless ? ["--headless=new"] : []), "--no-sandbox", "--disable-gpu", "--no-first-run", "--no-default-browser-check", "--enable-unsafe-extension-debugging",
       `--user-data-dir=${this.profile}`, `--load-extension=${this.extensionPath}`, `--disable-extensions-except=${this.extensionPath}`,
       "--remote-debugging-port=0", "--window-size=1280,900", `${this.baseUrl}${this.initialPath}`,
     ], { stdio: ["ignore", "pipe", "pipe"] });

@@ -3,8 +3,11 @@ import json
 import tempfile
 import unittest
 import zipfile
+import sys
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
 spec = importlib.util.spec_from_file_location("assets", Path(__file__).resolve().parents[1] / "scripts/release_assets.py")
 assets = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(assets)
@@ -24,8 +27,13 @@ class ReleaseAssetsTest(unittest.TestCase):
                 else:
                     for member in ("popup/popup.html", "editor/editor.html"):
                         archive.writestr(member, "fixture")
-                    for member in ("manifest.json", "common/product.json"):
-                        archive.writestr(member, json.dumps({"version": "1.2.3"}))
+                    browser = "chrome" if "chrome" in name else "firefox"
+                    manifest = json.loads((ROOT / f"extension/manifests/{browser}.json").read_text())
+                    manifest["version"] = "1.2.3"
+                    archive.writestr("manifest.json", json.dumps(manifest))
+                    archive.writestr("common/product.json", json.dumps({"version": "1.2.3"}))
+                    for member in ["_locales/en/messages.json", *manifest["icons"].values()]:
+                        archive.writestr(member, (ROOT / "extension" / member).read_bytes())
         assets.write_checksums(self.directory, "1.2.3")
 
     def test_portable_checksums_and_zip_contents(self):

@@ -1,6 +1,12 @@
 # Store preparation sources
 
-Checked on 8 September 2026. Official guidance only; wording in the dashboard can change. Product descriptions are based on KoalaShot's code and observed behavior, not copied from other listings.
+Listing sources checked on 8 September 2026; extension architecture rechecked on 10 September 2026. Official guidance only; wording in the dashboard can change. Product descriptions are based on KoalaShot's code and observed behavior, not copied from other listings.
+
+- [Prepare your extension](https://developer.chrome.com/docs/webstore/prepare): test the shipping package, put manifest.json at the ZIP root and increase its version for updates.
+- [Tabs API](https://developer.chrome.com/docs/extensions/reference/api/tabs): extension pages can use the API without a background worker. Native visible capture can support protected pages with activeTab even when script injection is forbidden.
+- [User privacy](https://developer.chrome.com/docs/extensions/develop/security-privacy/user-privacy): minimize permissions and preserve private-browsing expectations.
+- [Incognito manifest behavior](https://developer.chrome.com/docs/extensions/reference/manifest/incognito): spanning is the implicit default; split changes execution contexts but chrome.storage.local remains shared. KoalaShot explicitly disables private windows until a separate private editor-storage lifecycle exists.
+- [Extension CSP](https://developer.chrome.com/docs/extensions/reference/manifest/content-security-policy): keep executable content packaged and disallow remote execution.
 
 - [Creating a great listing page](https://developer.chrome.com/docs/webstore/best-listing): lead with the task, keep the summary within 132 characters, use specific features and current screenshots, avoid keyword repetition and unsupported superlatives.
 - [Supplying images](https://developer.chrome.com/docs/webstore/images): icon, small promo and at least one screenshot are required. This packet supplies five 1280 × 800 images, a 440 × 280 promo and optional 1400 × 560 marquee. Store-icon padding is separate from toolbar sizing.

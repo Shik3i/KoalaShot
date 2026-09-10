@@ -1,7 +1,7 @@
 {
-  "version": "0.5.4",
+  "version": "0.6.2",
   "browser": "chrome",
-  "capturedAt": "2026-09-08T21:03:03.642Z",
+  "capturedAt": "2026-09-10T17:50:07.967Z",
   "fixture": "tests/fixtures/store-demo.html",
   "permissionModel": "Isolated test profile with expanded harness permissions; not proof of trusted toolbar activation.",
   "resourceCheck": "Resource Timing entries on the captured extension pages; not a complete browser or OS network trace.",
@@ -48,7 +48,7 @@
       "height": 800,
       "dpr": 1,
       "contentWidth": 360,
-      "contentHeight": 393.671875,
+      "contentHeight": 425.546875,
       "externalResources": []
     },
     {

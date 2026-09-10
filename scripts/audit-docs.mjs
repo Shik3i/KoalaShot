@@ -17,7 +17,7 @@ const requiredDocuments = [
 function markdownFiles(directory) {
   const result = [];
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-    if ([".git", "dist", "node_modules"].includes(entry.name)) {
+    if ([".git", ".cache", "dist", "node_modules"].includes(entry.name)) {
       continue;
     }
     const absolute = path.join(directory, entry.name);
@@ -38,6 +38,18 @@ for (const relative of requiredDocuments) {
 
 const linkPattern = /!?\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
 const problems = [];
+const version = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")).version;
+for (const relative of ["store-assets/asset-manifest.json", "store-assets/screenshots/chrome-capture-evidence.json", "store-assets/screenshots/firefox-capture-evidence.json"]) {
+  if (JSON.parse(fs.readFileSync(path.join(root, relative), "utf8")).version !== version) {
+    problems.push(`${relative}: regenerate store screenshots for v${version}`);
+  }
+}
+for (const relative of ["store-assets/README.md", "store-assets/ChromeWebStore.md", "store-assets/RELEASE_READINESS.md", "store-assets/preview.html", "docs/STORE_LISTING.md"]) {
+  const source = fs.readFileSync(path.join(root, relative), "utf8");
+  for (const match of source.matchAll(/(?:\bv|koalashot-(?:chrome|firefox|landing)-)(\d+\.\d+\.\d+)/g)) {
+    if (match[1] !== version) problems.push(`${relative}: stale release reference ${match[0]}`);
+  }
+}
 for (const file of markdownFiles(root)) {
   const source = fs.readFileSync(file, "utf8");
   let match;
@@ -58,7 +70,7 @@ for (const file of markdownFiles(root)) {
 }
 
 if (problems.length > 0) {
-  throw new Error(`Broken Markdown links:\n${problems.join("\n")}`);
+  throw new Error(`Documentation audit failed:\n${problems.join("\n")}`);
 }
 
 console.log(`Documentation audit passed: ${markdownFiles(root).length} Markdown files checked.`);

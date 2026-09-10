@@ -3,13 +3,13 @@ KoalaShot – reviewer notes
 No account, subscription, API key or server connection is required.
 The extension UI is English. It captures vertically and exports PNG files.
 
-1. Install the production package in desktop Chrome or Firefox. Open a normal HTTPS webpage long enough to scroll. Browser settings pages, extension stores and some built-in viewers are deliberately unsupported.
+1. Install the production package in desktop Chrome or Firefox. Open a normal HTTPS webpage long enough to scroll. Use a regular window; private windows are unsupported because editor drafts persist locally. On protected pages, visible capture is available only when the browser permits it. Full-page capture falls back to a visible screenshot when scrolling access is denied.
 2. Open KoalaShot from the browser toolbar. Leave Capture area on Full page. Choose Capture & edit and keep the popup open until capture completes. The page scrolls and is restored; the editor opens with the original screenshot. This action does not automatically copy or download the original.
 3. Add an arrow or text, use Crop and Apply crop, or cover a detail with Redact. Copy edited or Save edited PNG exports the result. Blur and Pixelate are cosmetic; Redact is the opaque export protection. The original stored for editing is not overwritten by redaction.
 4. In a fresh capture, choose Capture & copy. Grant the optional clipboard permission when prompted, then paste into a local image editor. No KoalaShot editor should open automatically. If permission is denied, saving remains available.
 5. Choose Capture & save for a direct original download. The completed popup lets you copy, save or explicitly open that same capture for editing while it remains open.
 6. In the editor, More → Close and discard deletes the temporary original and draft. Existing downloads and clipboard copies are unaffected. Temporary originals and drafts become unavailable after 24 hours; cleanup runs in an open editor or when KoalaShot is next opened.
-7. For a nested scroller, select Scrollable area inside the page on a page with one suitable, fully visible scroll area. Unsupported or unstable layouts produce an error or completeness warning rather than bypassing browser restrictions.
+7. Full page on an internally scrolling page first produces a visible screenshot and offers Capture scrollable area. For a nested scroller, select Scrollable area inside the page on a page with one suitable, fully visible scroll area. Unsupported or unstable layouts produce an error or completeness warning rather than bypassing browser restrictions.
 
 The production manifest requests activeTab, scripting and storage, with optional clipboardWrite. It requests no persistent host permissions, history, clipboardRead or downloads permission. Editor originals/drafts use local IndexedDB; capture-area preferences use browser-local storage. No chrome.storage.sync, upload, analytics, telemetry or remote code is used.
 
