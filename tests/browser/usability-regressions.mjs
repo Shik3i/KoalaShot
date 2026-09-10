@@ -38,13 +38,23 @@ export async function runUsabilityRegressions(browser, fixture, output) {
   await evaluate(fixture, `document.documentElement.style.cssText='';document.head.innerHTML='<title>Usability fixture</title>';document.body.style.cssText='margin:0';document.body.innerHTML='<div style="height:2400px;background:linear-gradient(#ff8800,#0000ff)">A normal long page</div>';window.scrollTo(0,600)`);
   await browser.wait(fixture, "scrollY === 600");
   const viewport = await evaluate(fixture, "({width:innerWidth,height:innerHeight})");
-  const nativeSize = await evaluate(popup, `(async()=>{
-    const {captureVisibleTab,queryActiveTab}=await import('../common/browser-api.js');const [tab]=await queryActiveTab();
-    globalThis.nativeBaseline=new Image();globalThis.nativeBaseline.src=await captureVisibleTab(tab.windowId);await globalThis.nativeBaseline.decode();
-    return {width:globalThis.nativeBaseline.naturalWidth,height:globalThis.nativeBaseline.naturalHeight};
+  // Observe the actual native response. Separate screenshots can differ while
+  // Chromium paints a scroll or fades its scrollbar, even on a static fixture.
+  await evaluate(popup, `(() => {
+    globalThis.originalNativeCapture=chrome.tabs.captureVisibleTab;
+    chrome.tabs.captureVisibleTab=function(windowId,options,callback){
+      return globalThis.originalNativeCapture.call(chrome.tabs,windowId,options,dataUrl=>{
+        globalThis.nativeCaptureDataUrl=dataUrl;callback(dataUrl);
+      });
+    };
   })()`);
   await choose("visible");
-  await click(popup, "save-button"); await saved();
+  try { await click(popup, "save-button"); await saved(); }
+  finally { await evaluate(popup, "chrome.tabs.captureVisibleTab=globalThis.originalNativeCapture"); }
+  const nativeSize = await evaluate(popup, `(async()=>{
+    globalThis.nativeBaseline=new Image();globalThis.nativeBaseline.src=globalThis.nativeCaptureDataUrl;await globalThis.nativeBaseline.decode();
+    return {width:globalThis.nativeBaseline.naturalWidth,height:globalThis.nativeBaseline.naturalHeight};
+  })()`);
   assert.equal(await evaluate(fixture, "scrollY"), 600);
   assert.deepEqual(await evaluate(popup, "({width:document.querySelector('#capture-preview').naturalWidth,height:document.querySelector('#capture-preview').naturalHeight,warning:document.querySelector('#capture-warning').hidden})"), {...nativeSize,warning:true});
   assert.equal(await evaluate(popup, `(() => {
