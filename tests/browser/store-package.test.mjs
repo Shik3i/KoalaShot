@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createServer } from "node:http";
-import { mkdtempSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, readdirSync, existsSync, statSync } from "node:fs";
 import { setTimeout as delay } from "node:timers/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -64,13 +64,20 @@ try {
   await browser.activate(editor);
   assert.equal(await browser.evaluate(editor, "document.querySelector('#capture-image').naturalHeight > 1800"), true);
   await browser.evaluate(editor, "document.querySelector('#save-button').click()");
-  let exported;
-  for (let attempt = 0; attempt < 50 && !exported; attempt++) {
-    exported = readdirSync(downloads).find(name => name.endsWith("_edited.png"));
-    if (!exported) await delay(100);
+  let exportedPath;
+  for (let attempt = 0; attempt < 50 && !exportedPath; attempt++) {
+    const exported = readdirSync(downloads).find(name => name.endsWith("_edited.png"));
+    if (exported) {
+      const full = join(downloads, exported);
+      if (existsSync(full) && statSync(full).size >= 8) {
+        exportedPath = full;
+        break;
+      }
+    }
+    await delay(100);
   }
-  assert.ok(exported, "The production editor downloads an actual PNG");
-  assert.equal(readFileSync(join(downloads, exported)).subarray(0, 8).toString("hex"), "89504e470d0a1a0a");
+  assert.ok(exportedPath, "The production editor downloads an actual PNG");
+  assert.equal(readFileSync(exportedPath).subarray(0, 8).toString("hex"), "89504e470d0a1a0a");
   const protectedPage = await browser.open("chrome://version/", false);
   await triggerAction(protectedPage);
   const protectedResult = await browser.evaluate(popup, `(async()=>{
