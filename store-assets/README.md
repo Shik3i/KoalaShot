@@ -1,6 +1,6 @@
 # KoalaShot store packet
 
-English submission materials for v0.6.2. Use the matching verified GitHub release archives. Website deployment and store submission remain with the owner.
+English submission materials for v0.6.3. Use the matching verified GitHub release archives. Website deployment and store submission remain with the owner.
 
 ## Text
 
