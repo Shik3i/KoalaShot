@@ -1,8 +1,8 @@
-# Submission readiness — v0.6.2
+# Submission readiness — v0.6.3
 
 ## Repository release
 
-Use the matching [GitHub release](https://github.com/Shik3i/KoalaShot/releases/tag/v0.6.2), its three ZIPs and SHA256SUMS. An existing tag is never replaced. A repository build or GitHub publication does not mean the extension has been submitted to or approved by a browser store.
+Use the matching [GitHub release](https://github.com/Shik3i/KoalaShot/releases/tag/v0.6.3), its three ZIPs and SHA256SUMS. An existing tag is never replaced. A repository build or GitHub publication does not mean the extension has been submitted to or approved by a browser store.
 
 The release gates cover unit/lifecycle tests, ESLint, dependency audit, manifest and archive validation, negative archive tests, AMO lint, Chrome/Firefox capture and editor workflows, permission denial, recovery, English tooltips and website routes. Chrome additionally loads the unmodified production ZIP and invokes the browser action to exercise activeTab, capture/editor opening and protected-page visible capture.
 
@@ -10,7 +10,7 @@ Editor originals and drafts remain local, expire after 24 hours and are removed 
 
 ## Required before store submission
 
-1. Deploy the verified landing archive and configure HTTPS for https://shot.koalastuff.net. Run `npm run verify:deployment -- https://shot.koalastuff.net 0.6.2`. The privacy page must be publicly accessible. On 10 September 2026 this check failed with `SSL alert number 80`; this is an unresolved submission requirement, not proof that the local website archive is defective.
+1. Deploy the verified landing archive and configure HTTPS for https://shot.koalastuff.net. Run `npm run verify:deployment -- https://shot.koalastuff.net 0.6.3`. The privacy page must be publicly accessible. On 10 September 2026 this check failed with `SSL alert number 80`; this is an unresolved submission requirement, not proof that the local website archive is defective.
 2. Confirm that hosting disclosures match the actual provider, operator and log retention. The repository does not invent hosting details.
 3. Upload the verified browser-specific ZIP with the English listing and matching images. Confirm contact verification and the factual trader declaration in the existing publisher account. These account states and store acceptance have not been verified by automated repository tests.
 4. After approval, populate the official store URLs in landing/version.json and release a matching build. Until then null values correctly hide install and rating links.

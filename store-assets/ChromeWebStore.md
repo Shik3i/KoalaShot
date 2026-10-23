@@ -1,6 +1,6 @@
 # Chrome Web Store submission
 
-Submission packet for KoalaShot v0.6.2. Use the matching verified GitHub release archives and these version-matched screenshots. No dashboard submission has been made; website and store uploads are performed only by the owner.
+Submission packet for KoalaShot v0.6.3. Use the matching verified GitHub release archives and these version-matched screenshots. No dashboard submission has been made; website and store uploads are performed only by the owner.
 
 ## Listing fields
 
@@ -78,7 +78,7 @@ Use `chrome/Screen_01.png` through `chrome/Screen_05.png` in numerical order. Th
 - `chrome/MarqueePromoTile.png`: optional 1400 × 560 promo tile.
 - `ReviewerNotes.txt`: test instructions, no account required.
 
-Upload koalashot-chrome-0.6.2.zip from the verified v0.6.2 release with these screenshots. Do not upload older or test-profile ZIPs. The build rejects development keys and unexpected permissions.
+Upload koalashot-chrome-0.6.3.zip from the verified v0.6.3 release with these screenshots. Do not upload older or test-profile ZIPs. The build rejects development keys and unexpected permissions.
 
 ## Account and final submission
 
