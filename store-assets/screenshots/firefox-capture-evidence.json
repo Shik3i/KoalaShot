@@ -1,73 +1,87 @@
 {
-  "version": "0.6.2",
-  "browser": "firefox",
-  "capturedAt": "2026-09-10T17:50:15.697Z",
-  "fixture": "tests/fixtures/store-demo.html",
-  "permissionModel": "Isolated test profile with expanded harness permissions; not proof of trusted toolbar activation.",
-  "resourceCheck": "Resource Timing entries on the captured extension pages; not a complete browser or OS network trace.",
-  "screenshots": [
-    {
-      "file": "firefox-popup-result.png",
-      "width": 1280,
-      "height": 800,
-      "dpr": 1,
-      "contentWidth": 360,
-      "contentHeight": 427.79998779296875,
-      "externalResources": []
-    },
-    {
-      "file": "firefox-editor-full-page.png",
-      "width": 1280,
-      "height": 800,
-      "dpr": 1,
-      "contentWidth": 1280,
-      "contentHeight": 800,
-      "externalResources": []
-    },
-    {
-      "file": "firefox-editor-clean.png",
-      "width": 1280,
-      "height": 800,
-      "dpr": 1,
-      "contentWidth": 1280,
-      "contentHeight": 800,
-      "externalResources": []
-    },
-    {
-      "file": "firefox-editor-annotated.png",
-      "width": 1280,
-      "height": 800,
-      "dpr": 1,
-      "contentWidth": 1280,
-      "contentHeight": 800,
-      "externalResources": []
-    },
-    {
-      "file": "firefox-popup-capture.png",
-      "width": 1280,
-      "height": 800,
-      "dpr": 1,
-      "contentWidth": 360,
-      "contentHeight": 425.6000061035156,
-      "externalResources": []
-    },
-    {
-      "file": "firefox-editor-redact.png",
-      "width": 1280,
-      "height": 800,
-      "dpr": 1,
-      "contentWidth": 1280,
-      "contentHeight": 800,
-      "externalResources": []
-    },
-    {
-      "file": "firefox-editor-crop.png",
-      "width": 1280,
-      "height": 800,
-      "dpr": 1,
-      "contentWidth": 1280,
-      "contentHeight": 800,
-      "externalResources": []
-    }
-  ]
+    "version":  "0.6.3",
+    "browser":  "firefox",
+    "capturedAt":  "2026-09-10T17:50:15.697Z",
+    "fixture":  "tests/fixtures/store-demo.html",
+    "permissionModel":  "Isolated test profile with expanded harness permissions; not proof of trusted toolbar activation.",
+    "resourceCheck":  "Resource Timing entries on the captured extension pages; not a complete browser or OS network trace.",
+    "screenshots":  [
+                        {
+                            "file":  "firefox-popup-result.png",
+                            "width":  1280,
+                            "height":  800,
+                            "dpr":  1,
+                            "contentWidth":  360,
+                            "contentHeight":  427.79998779296875,
+                            "externalResources":  [
+
+                                                  ]
+                        },
+                        {
+                            "file":  "firefox-editor-full-page.png",
+                            "width":  1280,
+                            "height":  800,
+                            "dpr":  1,
+                            "contentWidth":  1280,
+                            "contentHeight":  800,
+                            "externalResources":  [
+
+                                                  ]
+                        },
+                        {
+                            "file":  "firefox-editor-clean.png",
+                            "width":  1280,
+                            "height":  800,
+                            "dpr":  1,
+                            "contentWidth":  1280,
+                            "contentHeight":  800,
+                            "externalResources":  [
+
+                                                  ]
+                        },
+                        {
+                            "file":  "firefox-editor-annotated.png",
+                            "width":  1280,
+                            "height":  800,
+                            "dpr":  1,
+                            "contentWidth":  1280,
+                            "contentHeight":  800,
+                            "externalResources":  [
+
+                                                  ]
+                        },
+                        {
+                            "file":  "firefox-popup-capture.png",
+                            "width":  1280,
+                            "height":  800,
+                            "dpr":  1,
+                            "contentWidth":  360,
+                            "contentHeight":  425.6000061035156,
+                            "externalResources":  [
+
+                                                  ]
+                        },
+                        {
+                            "file":  "firefox-editor-redact.png",
+                            "width":  1280,
+                            "height":  800,
+                            "dpr":  1,
+                            "contentWidth":  1280,
+                            "contentHeight":  800,
+                            "externalResources":  [
+
+                                                  ]
+                        },
+                        {
+                            "file":  "firefox-editor-crop.png",
+                            "width":  1280,
+                            "height":  800,
+                            "dpr":  1,
+                            "contentWidth":  1280,
+                            "contentHeight":  800,
+                            "externalResources":  [
+
+                                                  ]
+                        }
+                    ]
 }
